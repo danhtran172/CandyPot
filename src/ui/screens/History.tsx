@@ -10,6 +10,7 @@ import { TransferList } from '../components/TransferList'
 import { ask, tell } from '../dialog'
 import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { playerMap, roundNumber, signed, timeOf, toneOf } from '../format'
+import { canHostOf, useMe } from '../me'
 
 interface Entry {
   game: Game
@@ -19,6 +20,9 @@ interface Entry {
 
 export function History() {
   const session = useSession()
+  const [me] = useMe(session)
+  // Mở lại / xóa ván: việc của host (bàn nhiều người)
+  const canHost = canHostOf(session, me)
   const [tab, setTab] = useState<'rounds' | 'people'>('rounds')
   const [open, setOpen] = useState<ID | null>(null)
   const [who, setWho] = useState<ID>(session.players[0]?.id ?? '')
@@ -125,7 +129,7 @@ export function History() {
                         players={players}
                         showReason
                       />
-                      <div className="mt-3 flex gap-2">
+                      <div className={`mt-3 flex gap-2 ${canHost ? '' : 'hidden'}`}>
                         {e.round.kind === 'play' && (
                           <Button className="flex-1 text-sm" onClick={() => reopen(e)}>
                             Mở lại để sửa

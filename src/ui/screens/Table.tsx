@@ -39,7 +39,7 @@ import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { guideSeen, guideSteps, markGuideSeen, type GuideRole } from '../guides'
-import { useMe } from '../me'
+import { canHostOf, useMe } from '../me'
 import { hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
@@ -73,7 +73,7 @@ export function Table() {
   const net = netOf(session)
   const [me] = useMe(session)
   /** Điều khiển ván (mở / chốt / hủy / đổi game…): bàn một máy thì máy này; bàn nhiều người thì chỉ host. */
-  const canHost = session.mode !== 'multi' || (!!me && me === session.hostId)
+  const canHost = canHostOf(session, me)
   const base = `/s/${session.id}`
 
   const flash = (text: string, bad = false) => {
@@ -492,14 +492,16 @@ export function Table() {
       />
 
       <div data-guide="picker">
-        <GamePicker value={game?.type} onPick={pickType} />
+        <GamePicker value={game?.type} onPick={pickType} locked={!canHost} />
       </div>
 
       {!game ? (
         <Card className="mt-4 text-center">
-          <p className="font-display text-xl font-bold">Chơi game gì trước?</p>
-          <p className="mt-1 text-sm text-muted">Đổi game lúc nào cũng được — lời/lỗ của cả bàn vẫn cộng dồn.</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <p className="font-display text-xl font-bold">{canHost ? 'Chơi game gì trước?' : `Chờ ${hostName} chọn game…`}</p>
+          <p className="mt-1 text-sm text-muted">
+            {canHost ? 'Đổi game lúc nào cũng được — lời/lỗ của cả bàn vẫn cộng dồn.' : 'Host chọn xong là bàn hiện ra ở đây.'}
+          </p>
+          <div className={`mt-4 grid grid-cols-2 gap-2 ${canHost ? '' : 'hidden'}`}>
             {GAME_ORDER.map((t) => (
               <Button key={t} className="flex flex-col items-center gap-1 py-3 text-lg" onClick={() => pickType(t)}>
                 <GameIcon type={t} className="size-8" />
@@ -554,6 +556,7 @@ export function Table() {
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
+            hatLocked={!canHost}
             center={
               <>
                 {withRules && (
@@ -571,7 +574,7 @@ export function Table() {
               </>
             }
             cornerTop={
-              withRules ? (
+              withRules && canHost ? (
                 <button
                   type="button"
                   aria-label={`Cài đặt ${GAMES[game.type].label}`}
@@ -772,7 +775,7 @@ export function Table() {
       {toast && (
         <div
           role="status"
-          className={`pop fixed inset-x-4 top-4 z-50 mx-auto max-w-md rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-xl ${
+          className={`pop fixed inset-x-4 top-[calc(env(safe-area-inset-top)+1rem)] z-50 mx-auto max-w-md rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-xl ${
             toast.bad ? 'bg-berry text-night' : 'bg-mint text-night'
           }`}
         >

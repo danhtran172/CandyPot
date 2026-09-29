@@ -38,7 +38,7 @@ export function RequestInbox({ session, onOpenAll }: { session: Session; onOpenA
   }
 
   return (
-    <div role="alertdialog" aria-label="Thông báo" className="fixed inset-x-0 top-0 z-30 mx-auto max-w-lg px-3 pt-3">
+    <div role="alertdialog" aria-label="Thông báo" className="fixed inset-x-0 top-0 z-30 mx-auto max-w-lg px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <div className="pop rounded-3xl border-2 border-lemon bg-plum-2 p-4 shadow-2xl">
         <TaskSummary session={session} task={task} />
         {error && <p className="mt-2 text-sm text-berry">{error}</p>}

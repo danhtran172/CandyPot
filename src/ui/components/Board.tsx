@@ -76,6 +76,7 @@ export function Board({
   betLocked,
   onBetHold,
   hat,
+  hatLocked,
   shape = 'oval',
   onTransfer,
   onTap,
@@ -103,6 +104,8 @@ export function Board({
   onBetHold?: () => void
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
+  /** Không đổi được nhà cái (không phải host) → ô 🎩 chỉ để xem. */
+  hatLocked?: boolean
   onTransfer: (from: ID, to: ID) => void
   /** Bấm (không kéo) vào một người / pot / ô Bet / mũ nhà cái. */
   onTap?: (id: ID) => void
@@ -254,7 +257,15 @@ export function Board({
                 <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'bấm để đặt cược'}</span>
               </div>
             )}
-            {hat && (
+            {hat && hatLocked && (
+              <span data-guide="hat" className="flex items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs">
+                <span aria-hidden className="text-base leading-none">
+                  🎩
+                </span>
+                <b className="max-w-24 truncate">{hat}</b>
+              </span>
+            )}
+            {hat && !hatLocked && (
               <button
                 type="button"
                 onPointerDown={start(DEALER)}

@@ -5,7 +5,7 @@ import { GameIcon } from './GameIcon'
 import { GameName } from './GameName'
 
 /** Chọn 1 trong các game = đổi cách tính của bàn (lời/lỗ vẫn cộng chung). */
-export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type: GameType) => void }) {
+export function GamePicker({ value, onPick, locked }: { value?: GameType; onPick: (type: GameType) => void; locked?: boolean }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -21,7 +21,8 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label="Chọn game"
+        aria-label={locked ? 'Game đang chơi' : 'Chọn game'}
+        disabled={locked}
         onClick={() => setOpen((o) => !o)}
         className="font-display flex w-full items-center gap-2.5 rounded-2xl border border-line bg-plum-2 py-1.5 pr-4 pl-2 text-lg font-bold"
       >
@@ -35,9 +36,12 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
         ) : (
           <span className="flex-1 py-1 pl-2 text-left text-muted">Chọn game…</span>
         )}
-        <span aria-hidden className={`text-muted transition ${open ? 'rotate-180' : ''}`}>
-          ▾
-        </span>
+        {/* Không đổi được game (không phải host) → chỉ hiện game đang chơi, không có mũi tên */}
+        {!locked && (
+          <span aria-hidden className={`text-muted transition ${open ? 'rotate-180' : ''}`}>
+            ▾
+          </span>
+        )}
       </button>
 
       {open && (

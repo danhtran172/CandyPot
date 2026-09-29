@@ -21,7 +21,9 @@ const History = lazy(() => import('./ui/screens/History').then((m) => ({ default
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="mx-auto min-h-dvh max-w-lg px-4 pb-28">
+      {/* iPhone tai thỏ / Dynamic Island: che dải trên cùng để nội dung cuộn không lẫn vào thanh trạng thái */}
+      <div aria-hidden className="fixed inset-x-0 top-0 z-[26] h-[env(safe-area-inset-top)] bg-night" />
+      <div className="mx-auto min-h-dvh max-w-lg px-4 pt-[env(safe-area-inset-top)] pb-28">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new" element={<NewSession />} />

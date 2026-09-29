@@ -48,6 +48,11 @@ export function writeMeHere(sessionId: ID, playerId: ID): void {
   else writeMe(sessionId, playerId)
 }
 
+/** Được điều khiển bàn (mở / chốt ván, đổi game, cài đặt, sửa người khác…): bàn một máy luôn được; bàn nhiều người chỉ host. */
+export function canHostOf(session: Session, me: ID | undefined): boolean {
+  return session.mode !== 'multi' || (!!me && me === session.hostId)
+}
+
 /**
  * Người chơi của cửa sổ/máy này. Bàn nhiều người: chưa chọn (vừa join) thì chưa là ai — không mặc định
  * thành host. Bàn một máy: mặc định là host (người cầm máy ghi hộ cả bàn).

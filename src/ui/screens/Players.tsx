@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNod
 import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
-import { useMe } from '../me'
+import { canHostOf, useMe } from '../me'
 import { useSession } from '../components/useSession'
 import { ask, tell } from '../dialog'
 import { hostVoteTally, hostVotesNeeded } from '../../core/hostVote'
@@ -20,6 +20,8 @@ export function Players() {
 
   // "Bạn là ai" chọn lúc tạo / join bàn, không đổi ở đây — tránh máy này giả làm người khác
   const [me] = useMe(session)
+  // Bàn nhiều người: người thường chỉ sửa được chính mình; thêm / xóa / sửa người khác là việc của host
+  const canHost = canHostOf(session, me)
 
   const inRoom = session.players.filter((p) => !p.removed)
   const [swiped, setSwiped] = useState<string | null>(null)
@@ -78,14 +80,16 @@ export function Players() {
       {session.code && <RoomCode session={session} />}
       <ul className="mb-3 space-y-0.5 text-sm text-muted">
         <li>
-          <b className="text-cream">Chạm avatar</b> để đổi biểu tượng · dấu <MeIcon className="inline size-3.5 align-[-2px] text-lemon" /> là bạn (chọn lúc tạo / join bàn, không đổi được).
+          <b className="text-cream">Chạm avatar{canHost ? '' : ' của bạn'}</b> để đổi biểu tượng · dấu <MeIcon className="inline size-3.5 align-[-2px] text-lemon" /> là bạn (chọn lúc tạo / join bàn, không đổi được).
         </li>
         <li>
           🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
         </li>
-        <li>
-          👈 <b className="text-cream">Vuốt trái</b> một dòng để xóa người khỏi phòng.
-        </li>
+        {canHost && (
+          <li>
+            👈 <b className="text-cream">Vuốt trái</b> một dòng để xóa người khỏi phòng.
+          </li>
+        )}
       </ul>
 
       <div className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-sm">
@@ -114,9 +118,12 @@ export function Players() {
 
       <Card className="p-2">
         <ul>
-          {inRoom.map((p) => (
+          {inRoom.map((p) => {
+            const editable = canHost || p.id === me
+            return (
             <SwipeRow
               key={p.id}
+              locked={!canHost}
               open={swiped === p.id}
               onOpen={() => setSwiped(p.id)}
               onClose={() => setSwiped((x) => (x === p.id ? null : x))}
@@ -128,7 +135,7 @@ export function Players() {
                 isMe={me === p.id}
                 resting={!p.active}
                 name={p.name}
-                onTap={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
+                onTap={editable ? () => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) }) : undefined}
               />
               <input
                 aria-label={`Tên ${p.name}`}
@@ -136,6 +143,7 @@ export function Players() {
                   p.active ? '' : 'text-muted line-through'
                 }`}
                 defaultValue={p.name}
+                readOnly={!editable}
                 onBlur={(e) => {
                   const v = e.target.value.trim()
                   if (v && !nameTaken(v, p.id)) actions().updatePlayer(p.id, { name: v })
@@ -159,19 +167,24 @@ export function Players() {
                 badge={tally[p.id] ? `${tally[p.id]}/${needed}` : undefined}
                 marked={myVote === p.id}
               />
-              <IconToggle
-                on={!p.active}
-                icon="💤"
-                label={p.active ? `Cho ${p.name} tạm nghỉ` : `${p.name} đang nghỉ — bấm để chơi lại`}
-                onClick={() => actions().updatePlayer(p.id, { active: !p.active })}
-                onClass="bg-grape/30 border-grape"
-              />
+              {editable ? (
+                <IconToggle
+                  on={!p.active}
+                  icon="💤"
+                  label={p.active ? `Cho ${p.name} tạm nghỉ` : `${p.name} đang nghỉ — bấm để chơi lại`}
+                  onClick={() => actions().updatePlayer(p.id, { active: !p.active })}
+                  onClass="bg-grape/30 border-grape"
+                />
+              ) : (
+                <span className="size-10 shrink-0" />
+              )}
             </SwipeRow>
-          ))}
+            )
+          })}
         </ul>
       </Card>
 
-      <Card className="mt-3">
+      <Card className={`mt-3 ${canHost ? '' : 'hidden'}`}>
         <SectionTitle>Thêm người</SectionTitle>
         <div className="flex gap-2">
           <input
@@ -205,8 +218,11 @@ function SwipeRow({
   onClose,
   onDelete,
   deleteLabel,
+  locked,
   children,
 }: {
+  /** Không được xóa (không phải host) → không vuốt được. */
+  locked?: boolean
   open: boolean
   onOpen: () => void
   onClose: () => void
@@ -220,7 +236,7 @@ function SwipeRow({
   const offset = drag ?? (open ? DELETE_W : 0)
 
   const down = (e: ReactPointerEvent) => {
-    if (e.button !== 0) return
+    if (e.button !== 0 || locked) return
     const base = open ? DELETE_W : 0
     gesture.current = { x: e.clientX, y: e.clientY, base, swiping: false, at: base }
     suppressClick.current = false
@@ -290,7 +306,7 @@ function SwipeRow({
   )
 }
 
-/** Avatar người chơi: chạm = đổi biểu tượng; dấu hình người = bạn (máy này). */
+/** Avatar người chơi: chạm = đổi biểu tượng (không có onTap = chỉ xem); dấu hình người = bạn (máy này). */
 function Avatar({
   emoji,
   isMe,
@@ -302,12 +318,13 @@ function Avatar({
   isMe: boolean
   resting?: boolean
   name: string
-  onTap: () => void
+  onTap?: () => void
 }) {
   return (
     <button
       type="button"
-      aria-label={isMe ? `${name} (bạn) — chạm để đổi biểu tượng` : `Đổi biểu tượng của ${name}`}
+      aria-label={!onTap ? name : isMe ? `${name} (bạn) — chạm để đổi biểu tượng` : `Đổi biểu tượng của ${name}`}
+      disabled={!onTap}
       onClick={onTap}
       className={`relative grid size-11 shrink-0 touch-none place-items-center rounded-full border-2 bg-plum-2 text-2xl transition select-none active:scale-95 ${
         isMe ? 'border-lemon shadow-[0_0_14px_rgb(255_210_63/0.35)]' : 'border-line'
