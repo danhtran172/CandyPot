@@ -4,11 +4,11 @@ import { appStore, repo } from '../../store'
 import { ask } from '../dialog'
 import { dateOf } from '../format'
 
-/** 3 lý do nên dùng app — hiện ngay dưới tên app. */
+/** 3 lý do dùng app thay cho tiền mặt / ghi giấy — hiện ngay dưới tên app. */
 const BENEFITS = [
-  { icon: '🍬', text: 'Chơi cho đã — sổ sách để app lo.' },
-  { icon: '🤝', text: 'Tàn cuộc biết ngay ai trả ai.' },
-  { icon: '📱', text: 'Cả bàn cùng xem, khỏi cãi nhau.' },
+  { icon: '💵', text: 'Không cần tiền lẻ, tàn cuộc mới trả.' },
+  { icon: '🧹', text: 'Bàn gọn, không tiền vương vãi.' },
+  { icon: '📝', text: 'Khỏi ghi sổ — app tự cộng, không sót.' },
 ]
 
 export function Home() {
