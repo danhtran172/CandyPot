@@ -24,7 +24,7 @@ export function HostTasks() {
   const mine = myUndos(session, me)
 
   const acceptAll = async () => {
-    const ok = await ask(`Hoàn tác cả ${tasks.length} lượt?`, { icon: <UndoIcon className="size-10" />, okLabel: 'Hoàn tác hết' })
+    const ok = await ask(`Hoàn tác cả ${tasks.length} lượt?`, { icon: '↩️', okLabel: 'Hoàn tác hết' })
     if (!ok) return
     const errors = tasks.flatMap((t) => answerTask(t, true))
     if (errors.length) await tell(errors[0], { icon: '⚠️' })

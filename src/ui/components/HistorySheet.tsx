@@ -33,7 +33,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
     if (!me) return
     if (isHost) {
       const ok = await ask('Hoàn tác lượt này?', {
-        icon: <UndoIcon className="size-10" />,
+        icon: '↩️',
         message: `${players[m.from]?.name} → ${players[m.to]?.name} · ${m.amount} kẹo`,
         okLabel: 'Hoàn tác',
       })

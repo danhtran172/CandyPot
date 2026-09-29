@@ -23,7 +23,6 @@ import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
-import { UndoIcon } from '../components/UndoIcon'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
@@ -454,7 +453,7 @@ export function Table() {
                     className="shrink-0 bg-night/90 px-2 py-1.5 text-sm"
                     onClick={pokerUndo}
                   >
-                    <UndoIcon className="size-5" />
+                    ↩
                   </Button>
                   {hand.street === 'done' ? (
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>

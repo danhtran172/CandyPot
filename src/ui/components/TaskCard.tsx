@@ -3,7 +3,6 @@ import type { Session } from '../../core/types'
 import { playerMap, roundNumber, timeOf } from '../format'
 import { answerTask, okLabel, type Task } from '../tasks'
 import { Button, Who } from './kit'
-import { UndoIcon } from './UndoIcon'
 
 /** Nội dung một việc — dùng chung cho thông báo trên cùng và các màn Host / Yêu cầu. */
 export function TaskSummary({ session, task }: { session: Session; task: Task }) {
@@ -33,7 +32,9 @@ export function TaskSummary({ session, task }: { session: Session; task: Task })
 
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <UndoIcon className="size-8" />
+      <span aria-hidden className="text-3xl">
+        ↩️
+      </span>
       <div className="min-w-0 flex-1">
         <div className="font-display text-lg leading-tight font-bold">
           <span className="text-sky">{players[task.undo.by]?.name}</span> muốn hoàn tác
