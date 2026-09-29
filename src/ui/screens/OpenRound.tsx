@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { GAME_ICONS, GAMES } from '../../core/games'
+import { GAMES } from '../../core/games'
 import type { ID } from '../../core/types'
 import { actions } from '../../store'
+import { GameIcon } from '../components/GameIcon'
 import { defaultDraft, type OpenDraft } from '../../store/appStore'
 import { Button, Card, Chip, Errors, SectionTitle, Stepper, TopBar, Who } from '../components/kit'
 import { TienlenBetInputs } from '../components/TienlenBetInputs'
@@ -50,7 +51,7 @@ export function OpenRound() {
 
   return (
     <main className="pb-24">
-      <TopBar title={`${GAME_ICONS[game.type]} Mở ván ${playCount(game) + 1}`} back={back} />
+      <TopBar title={<><GameIcon type={game.type} /> Mở ván {playCount(game) + 1}</>} back={back} />
 
       <Card>
         <SectionTitle

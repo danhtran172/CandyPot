@@ -1,6 +1,6 @@
 export type ID = string
 
-export type GameType = 'tienlen' | 'xidach' | 'poker'
+export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto'
 
 /** Id đặc biệt cho pot giữa bàn (Poker). */
 export const POT = 'pot'
@@ -131,4 +131,6 @@ export interface GameModule {
   maxPlayers: number
   /** Cách đặt cược lúc mở ván. */
   stakeMode: 'common' | 'dealer' | 'pot'
+  /** Chưa có luật riêng (sắp có): không mở ván, chỉ kéo kẹo chuyển tay. */
+  soon?: boolean
 }

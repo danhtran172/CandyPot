@@ -100,6 +100,7 @@ export function isPlayerUsed(session: Session, playerId: ID): boolean {
 
 function validateOpen(game: Game, d: OpenDraft): string[] {
   const mod = GAMES[game.type]
+  if (mod.soon) return [`${mod.label} chưa có luật tính — tạm thời chỉ kéo kẹo chuyển tay.`]
   const errors: string[] = []
   const n = d.participants.length
   if (n < mod.minPlayers || n > mod.maxPlayers) {

@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from 'react-router'
-import { GAME_ICONS } from '../../core/games'
 import { actions } from '../../store'
+import { GameIcon } from '../components/GameIcon'
 import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
@@ -23,7 +23,7 @@ export function GameSettings() {
 
   return (
     <main>
-      <TopBar title={`${GAME_ICONS[game.type]} Cài đặt game`} back={back} />
+      <TopBar title={<><GameIcon type={game.type} /> Cài đặt game</>} back={back} />
 
       <Card>
         <label htmlFor="game-name" className="text-sm text-muted">

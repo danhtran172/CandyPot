@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
+import { GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
@@ -11,6 +11,8 @@ import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
+import { GameIcon } from '../components/GameIcon'
+import { GamePicker } from '../components/GamePicker'
 import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
@@ -194,35 +196,17 @@ export function Table() {
         }
       />
 
-      {game && (
-        <div className="relative">
-          <select
-            aria-label="Chọn game"
-            value={game.type}
-            onChange={(e) => pickType(e.target.value as GameType)}
-            className="font-display w-full cursor-pointer appearance-none rounded-2xl border border-line bg-plum-2 py-2 pr-10 pl-4 text-lg font-bold text-cream [&_option]:bg-plum-2"
-          >
-            {GAME_ORDER.map((t) => (
-              <option key={t} value={t}>
-                {GAME_ICONS[t]} {GAMES[t].label}
-                {gameOf(t) && openRound(session, gameOf(t)!.id) ? ' · đang chơi' : ''}
-              </option>
-            ))}
-          </select>
-          <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted">
-            ▾
-          </span>
-        </div>
-      )}
+      <GamePicker value={game?.type} onPick={pickType} />
 
       {!game ? (
         <Card className="mt-4 text-center">
           <p className="font-display text-xl font-bold">Chơi game gì trước?</p>
-          <p className="mt-1 text-sm text-muted">Một buổi có thể chơi nhiều game, thêm game khác lúc nào cũng được.</p>
-          <div className="mt-4 grid gap-2">
+          <p className="mt-1 text-sm text-muted">Đổi game lúc nào cũng được — lời/lỗ của cả bàn vẫn cộng dồn.</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {GAME_ORDER.map((t) => (
-              <Button key={t} className="py-3 text-lg" onClick={() => pickType(t)}>
-                {GAME_ICONS[t]} {GAMES[t].label}
+              <Button key={t} className="flex flex-col items-center gap-1 py-3 text-lg" onClick={() => pickType(t)}>
+                <GameIcon type={t} className="size-12" />
+                {GAMES[t].label}
               </Button>
             ))}
           </div>
@@ -243,12 +227,11 @@ export function Table() {
                   </span>
                 )}
               </span>
+            ) : GAMES[game.type].soon ? (
+              <span className="text-muted">Chưa có luật tính — kéo kẹo để chuyển tay</span>
             ) : (
               <span className="text-muted">{playCount(game) ? `Đã chốt ${playCount(game)} ván` : 'Chưa có ván nào'}</span>
             )}
-            <Link to={`${base}/g/${game.id}/settings`} className="font-semibold text-muted">
-              ⚙ Game
-            </Link>
           </div>
 
           <Board
@@ -288,7 +271,7 @@ export function Table() {
 
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {game.type === 'xidach' ? (
+            {GAMES[game.type].soon ? null : game.type === 'xidach' ? (
               <>
                 {!round && (
                   <Button
@@ -426,13 +409,12 @@ function TableCenter({ game, round, onEditBets }: { game: Game; round?: Round; o
     )
   }
   if (!round) {
+    const soon = GAMES[game.type].soon
     return (
       <>
-        <span aria-hidden className="text-3xl">
-          {GAME_ICONS[game.type]}
-        </span>
-        <span className="font-display text-lg leading-tight font-bold">{game.name}</span>
-        <span className="text-xs text-muted">Chưa mở ván</span>
+        <GameIcon type={game.type} className="size-14" />
+        <span className="font-display text-lg leading-tight font-bold">{GAMES[game.type].label}</span>
+        <span className="text-xs text-muted">{soon ? 'Sắp có · kéo kẹo để chuyển tay' : 'Chưa mở ván'}</span>
       </>
     )
   }

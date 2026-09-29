@@ -50,5 +50,7 @@ export function suggestOptions({ game, round, from, to }: DragContext): Option[]
       if (to === POT) return pokerBetOptions(round, from)
       if (from === POT) return pokerWinOptions(round, to)
       return scaledOptions(round.bet)
+    case 'loto':
+      return scaledOptions(round.bet)
   }
 }

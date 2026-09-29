@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { GAME_ICONS } from '../../core/games'
 import { netOfTransfers } from '../../core/ledger'
 import { actions } from '../../store'
+import { GameIcon } from '../components/GameIcon'
 import type { Game, ID, Round } from '../../core/types'
 import { useSession } from '../components/useSession'
 import { TransferList } from '../components/TransferList'
@@ -104,7 +104,7 @@ export function History() {
                   >
                     <div className="flex items-baseline justify-between">
                       <span className="font-semibold">
-                        {GAME_ICONS[e.game.type]} {e.game.name} · {label(e)}
+                        <GameIcon type={e.game.type} /> {e.game.name} · {label(e)}
                       </span>
                       <span className="text-xs text-muted">{timeOf(e.round.at)}</span>
                     </div>
@@ -179,7 +179,7 @@ export function History() {
             {[...personal].reverse().map(({ e, delta }) => (
               <li key={e.round.id} className="flex items-center justify-between rounded-2xl bg-plum px-4 py-2.5">
                 <span className="text-sm">
-                  {GAME_ICONS[e.game.type]} {e.game.name} · {label(e)}
+                  <GameIcon type={e.game.type} /> {e.game.name} · {label(e)}
                 </span>
                 <b className={`num ${toneOf(delta)}`}>{signed(delta)}</b>
               </li>

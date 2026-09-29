@@ -32,7 +32,8 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Tiến lên là bàn vuông:** 4 người ngồi giữa 4 cạnh ("tôi" ở cạnh dưới); chưa mở ván mà có hơn 4 người thì xếp đều quanh các cạnh. Poker và Xì dách giữ bàn oval.
 - **Nút Host / Yêu cầu:** góc dưới bên phải bàn chơi (đối diện 📜 Trả/nhận) có 2 nút 🛎️ Host và 📨 Yêu cầu cho mọi người, có số đếm việc cần trả lời; bấm mở màn tương ứng (có nút quay lại). Thanh dưới giữ 4 tab. *Host*: host duyệt xin hoàn tác (từng cái / OK tất cả) + xem và hủy lời đòi giữa người khác; người thường thấy yêu cầu hoàn tác của mình "⏳ chờ host" và rút lại được. *Yêu cầu*: người khác đòi bạn (Không / OK / OK tất cả) và bạn đang đòi ai (hủy được). Thông báo trên cùng hiện việc cũ nhất, có "Để sau" (ẩn đến khi có việc mới) và "Xem cả N việc" (mở tab tương ứng).
 - **Tiến lên có ô Rule** (không gọi là Bet — Bet là của Xì dách)**:** giữa bàn vuông là ô Rule hiện mức Nhất/Nhì (kể cả khi chưa mở ván). Host bấm vào để đặt 2 mức (Nhì ≤ Nhất); đổi luôn ván đang mở và làm mặc định cho ván sau. Kéo trả kẹo gợi ý Nhì, Nhất, Nhất × 1,5, Nhất × 2 theo 2 mức này. Người khác bấm thì báo "Chỉ host mới đổi Rule được".
-- **Chọn game bằng ô chọn (dropdown):** chỉ 3 lựa chọn Tiến lên / Xì dách / Poker (ghi "· đang chơi" nếu có ván mở); chọn loại nào thì dùng game loại đó trong buổi, chưa có thì tự tạo. Không còn nút "+ Game".
+- **Chọn game = đổi cách tính:** ô chọn tự vẽ (có ảnh) ở đầu bàn gồm Tiến lên / Xì dách / Poker / Lô tô. Cùng một bàn, đổi game chỉ đổi cách tính (gợi ý, ô Rule/Bet/Pot, hình bàn) — lời/lỗ và lịch sử kẹo cộng dồn chung; không còn nhãn "đang chơi" hay nút "⚙ Game". Biểu tượng game là ảnh (`src/assets/games/*.webp`): 2♥ Tiến lên, A♦ Xì dách, chip ♠ Poker, Bingo Lô tô.
+- **Lô tô (tạm để trống):** chưa có luật tính — không mở ván, chỉ kéo kẹo chuyển tay; trong ô chọn ghi "sắp có".
 - **Cược Tiến lên tự tính:** ở ô Rule và màn Mở ván, nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì, Nhì = Nhất ÷ 2 làm tròn); sửa tiếp ô vừa được tự tính là đặt riêng, bấm "Tự tính lại" để nối lại.
 - **Nút +/− nhảy theo hệ số:** mọi ô số (cược, "Số khác" khi trả/đòi/đặt kẹo…) có + nhảy ×1,5 → ×2 → ×3 của số gốc rồi lặp lại từ ×3 (4 → 6 → 8 → 12 → 18 → 24 → 36), − đi lùi đúng các bậc đó. Số gốc là số đang có hoặc số vừa gõ; muốn số khác thì gõ thẳng vào ô (số có gạch chân chấm).
 - **Màn Người chơi gọn lại:** bỏ nút "Tôi" — chạm avatar để chọn mình (avatar viền vàng + 🙋), giữ avatar để đổi biểu tượng; Host là icon 🛎️, Tạm nghỉ là icon 💤 (bật thì sáng màu, tắt thì mờ). Tên hiện đủ, không bị cắt.
@@ -45,7 +46,7 @@ CandyPot là **sổ ghi kẹo** cho một nhóm bạn chơi bài **ngoài đời
 
 ### Trong phạm vi
 
-- 3 game: **Tiến lên miền Nam**, **Xì dách**, **Poker (Texas Hold'em)**.
+- 3 game: **Tiến lên miền Nam**, **Xì dách**, **Poker (Texas Hold'em)** (+ **Lô tô**, tạm để trống).
 - Một **buổi** gồm nhiều **game**; một game gồm nhiều **ván**.
 - 2 chế độ: **Chỉ host** (1 máy, offline) và **Host + người chơi** (người chơi vào phòng để **xem**).
 - Lời/lỗ và phương án trả kẹo **luôn sẵn sàng sau mỗi ván** — không có khái niệm "kết thúc buổi".

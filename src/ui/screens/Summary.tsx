@@ -1,9 +1,9 @@
 import { toPng } from 'html-to-image'
 import { useRef, useState } from 'react'
-import { GAME_ICONS } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { settle } from '../../core/settle'
 import type { ID } from '../../core/types'
+import { GameIcon } from '../components/GameIcon'
 import { useSession } from '../components/useSession'
 import { TransferList } from '../components/TransferList'
 import { Button, Card, Chip, SectionTitle, TopBar, Who } from '../components/kit'
@@ -73,7 +73,7 @@ export function Summary() {
           </Chip>
           {session.games.map((g) => (
             <Chip key={g.id} active={gameId === g.id} onClick={() => setGameId(g.id)}>
-              {GAME_ICONS[g.type]} {g.name}
+              <GameIcon type={g.type} /> {g.name}
             </Chip>
           ))}
         </nav>
