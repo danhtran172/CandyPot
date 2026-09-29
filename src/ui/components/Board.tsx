@@ -309,7 +309,8 @@ export function Board({
               <div
                 key={s.player.id}
                 data-drop={s.player.id}
-                data-guide={s.isMe ? 'me' : undefined}
+                // Hướng dẫn: 'me' = mình; 'other' = người ngồi đối diện (bàn tay mẫu kéo / bấm vào đây)
+                data-guide={s.isMe ? 'me' : i === Math.ceil((n - 1) / 2) ? 'other' : undefined}
                 onPointerDown={start(s.player.id)}
                 role="button"
                 tabIndex={0}

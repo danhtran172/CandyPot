@@ -1,92 +1,79 @@
 import type { GameType } from '../core/types'
 
 /**
- * Hướng dẫn trên bàn chơi: mỗi bước chỉ vào một phần tử có `data-guide="<target>"`.
- * Bước không tìm thấy phần tử (vd chưa có ván) thì tự bỏ qua; `target` rỗng = thẻ giữa màn hình.
+ * Hướng dẫn trên bàn chơi: mỗi bước chỉ vào phần tử có `data-guide="<target>"` (không có = thẻ giữa màn hình).
+ * `demo`: bàn tay mẫu làm thử ngay trên bàn — bấm vào một chỗ, hoặc kéo gói kẹo từ chỗ này sang chỗ kia.
+ * Bước không tìm thấy phần tử (vd chưa có ván) thì tự bỏ qua.
  */
 export type GuideRole = 'player' | 'host'
 
 export interface GuideStep {
   target?: string
+  demo?: { kind: 'tap'; at: string } | { kind: 'drag'; from: string; to: string }
   title: string
   text: string
 }
 
+// ---------- Người chơi: 3 thao tác cốt lõi (bấm để trả, kéo để trả, kéo về để đòi) ----------
+
 const PLAYER_START: GuideStep[] = [
-  { target: 'picker', title: 'Chọn game', text: 'Đổi game ở đây. Đổi game chỉ đổi cách tính — lời/lỗ của cả bàn vẫn cộng dồn.' },
+  { target: 'me', title: 'Đây là bạn', text: 'Chỗ của bạn luôn ở dưới cùng bàn.' },
   {
-    target: 'me',
-    title: 'Đây là bạn',
-    text: 'Chỗ của bạn luôn ở dưới cùng. Bấm vào người khác để trả kẹo cho họ; trong popup bấm ⇄ để đòi kẹo thay vì trả.',
+    demo: { kind: 'tap', at: 'other' },
+    title: 'Bấm người = trả kẹo',
+    text: 'Bấm vào người khác → chọn số kẹo → xong. Popup gợi ý sẵn mức hay dùng.',
+  },
+  {
+    demo: { kind: 'drag', from: 'me', to: 'other' },
+    title: 'Hoặc kéo kẹo sang',
+    text: 'Kéo từ chỗ bạn thả vào người nhận — cũng là trả kẹo.',
+  },
+  {
+    demo: { kind: 'drag', from: 'other', to: 'me' },
+    title: 'Kéo về mình = đòi',
+    text: 'Kéo người khác về chỗ bạn để đòi kẹo. Họ bấm OK thì kẹo mới chuyển.',
   },
 ]
 
-const PLAYER_END: GuideStep[] = [
-  { target: 'rule', title: 'Rule ?', text: 'Bấm để xem luật đang dùng (mức cược, giá…).' },
-  { target: 'log', title: 'Trả/nhận', text: 'Lịch sử kẹo bạn trả và nhận. Lỡ tay thì bấm biểu tượng hoàn tác — host sẽ xác nhận.' },
-  { target: 'requests', title: 'Yêu cầu', text: 'Ai đòi kẹo bạn sẽ hiện ở đây (có số đỏ) — bấm OK để trả.' },
-  { title: 'Xong rồi!', text: 'Muốn xem lại thì bấm ❓ cạnh nút Người chơi.' },
-]
-
 const PLAYER_GAME: Record<GameType, GuideStep[]> = {
-  tienlen: [
-    { target: 'actions', title: 'Mở ván', text: 'Host bấm + Mở ván. Hết ván, người thua bấm vào người thắng để trả — gợi ý sẵn Nhì, Nhất, heo.' },
-  ],
-  xidach: [
-    { target: 'bet', title: 'Đặt cược', text: 'Bấm ô Bet để đặt cược cho mình (trong khoảng min–max của Rule).' },
-    { target: 'hat', title: 'Nhà cái', text: 'Nhà cái có nơ xanh ở avatar (tên cũng hiện ở ô 🎩). Cái không đặt cược — cái trả/nhận kẹo với từng người con.' },
-    { target: 'actions', title: 'Các bước', text: 'Chốt cược → chia bài ngoài đời → bấm vào người để trả kẹo → Kết thúc (ván sau giữ cược cũ).' },
-  ],
-  poker: [
-    { target: 'actions', title: 'Tới lượt', text: 'Người có viền xanh là người đang tới lượt: Bỏ bài · Theo / Xem bài · Tố · All-in.' },
-    { target: 'pot', title: 'Pot', text: 'Chip của mọi người vào đây. App tự chia pot chính / pot phụ khi có người all-in thiếu.' },
-    { target: 'undo', title: 'Hoàn tác', text: 'Bấm nhầm thì bấm ↩ cạnh avatar của bạn để lùi thao tác vừa làm.' },
-  ],
-  loto: [
-    { target: 'pot', title: 'Mua tờ', text: 'Bấm Pot để mua tờ — chọn số tờ, app tự tính kẹo theo giá.' },
-    { target: 'actions', title: 'Chốt & trao', text: 'Mua xong thì Chốt. Có người kinh thì host trao pot cho người đó.' },
-  ],
-  free: [
-    { target: 'pot', title: 'Cược', text: 'Bấm Pot để cược — số kẹo mỗi người đã cược hiện trước chỗ ngồi.' },
-    { target: 'actions', title: 'Chốt cược', text: 'Cược xong thì bấm Chốt cược — sau đó không cược thêm được (host bấm Bỏ chốt nếu cần).' },
-    { target: 'pot', title: 'Trao thưởng', text: 'Đã chốt thì kéo Pot vào người thắng (hoặc bấm Pot → chọn người). Pot hết là xong ván.' },
-  ],
+  tienlen: [],
+  xidach: [{ demo: { kind: 'tap', at: 'bet' }, title: 'Đặt cược', text: 'Bấm ô Bet để đặt cược cho mình. Nhà cái có nơ xanh, không đặt cược.' }],
+  poker: [{ target: 'actions', title: 'Tới lượt bạn', text: 'Người viền xanh đang tới lượt: Bỏ bài · Theo · Tố · All-in. App tự tính pot.' }],
+  loto: [{ demo: { kind: 'tap', at: 'pot' }, title: 'Mua tờ', text: 'Bấm Pot → chọn số tờ, app tự tính kẹo theo giá.' }],
+  free: [{ demo: { kind: 'tap', at: 'pot' }, title: 'Cược', text: 'Bấm Pot để cược. Số kẹo mỗi người đã cược hiện trước chỗ ngồi.' }],
 }
 
-const HOST_START: GuideStep[] = [
-  { title: 'Bạn là host', text: 'Host mở/chốt ván, chỉnh luật và duyệt các yêu cầu hoàn tác. Cùng xem nhanh nhé!' },
-  { target: 'players', title: 'Người chơi', text: 'Thêm người, chạm avatar để chọn "bạn", 🛎️ chuyển host, 💤 cho tạm nghỉ, vuốt trái để xóa.' },
-  { target: 'settings', title: 'Cài đặt luật', text: 'Chỉnh luật của mode này (mức cược, giá…). Chỉ host thấy được popup này.' },
+const PLAYER_END: GuideStep[] = [
+  { target: 'log', title: 'Trả/nhận', text: 'Lịch sử kẹo của bạn. Lỡ tay thì bấm ↩ để xin host hoàn tác.' },
+  { target: 'requests', title: 'Ai đòi bạn', text: 'Lời đòi kẹo hiện ở đây (số đỏ) — bấm OK để trả. Xem lại hướng dẫn: nút ? trên cùng.' },
 ]
 
-const HOST_END: GuideStep[] = [
-  { target: 'back', title: 'Quay lại ván trước', text: 'Chốt nhầm? Bấm nút ⏮ bên trái nút chính để mở lại ván vừa chốt (ván đang mở sẽ bị bỏ).' },
-  { target: 'host', title: 'Duyệt yêu cầu', text: 'Ai xin hoàn tác sẽ hiện ở đây (có số đỏ) — duyệt từng cái hoặc OK tất cả.' },
-  { title: 'Sẵn sàng!', text: 'Bấm ❓ → Người chơi để xem phần hướng dẫn chơi.' },
-]
+// ---------- Host: điều khiển ván + những việc chỉ host làm ----------
+
+const HOST_START: GuideStep[] = [{ title: 'Bạn là host', text: 'Bạn mở / chốt ván cho cả bàn. Mọi người tự trả, tự đòi kẹo trên máy mình.' }]
 
 const HOST_GAME: Record<GameType, GuideStep[]> = {
-  tienlen: [
-    {
-      target: 'players',
-      title: 'Ai chơi',
-      text: 'Tiến lên tối đa 4 người, ngồi ở 4 cạnh bàn. Ai không chơi thì cho nghỉ 💤 ở tab Người chơi.',
-    },
-    { target: 'actions', title: 'Ván', text: '+ Mở ván để bắt đầu; hết ván bấm Chốt ván để tính lời/lỗ, bấm nhầm thì Hủy ván.' },
-  ],
+  tienlen: [{ target: 'actions', title: 'Ván', text: '+ Mở ván → mọi người trả kẹo → Chốt ván. Nhầm thì Hủy ván.' }],
   xidach: [
-    { target: 'hat', title: 'Đổi cái', text: 'Bấm 🎩 để chọn nhà cái khác (trước khi chốt cược).' },
-    { target: 'bet', title: 'Bỏ chốt', text: 'Đã chốt mà cần sửa cược: host nhấn giữ ô Bet để bỏ chốt.' },
-    { target: 'actions', title: 'Một nút', text: 'Chốt cược → Kết thúc → ván mới tự mở với cược cũ.' },
+    { target: 'actions', title: 'Một nút', text: 'Chốt cược → Kết thúc → ván mới tự mở, giữ cược cũ.' },
+    { demo: { kind: 'drag', from: 'hat', to: 'other' }, title: 'Đổi nhà cái', text: 'Kéo 🎩 thả vào người mới (hoặc bấm 🎩 rồi chọn), trước khi chốt cược.' },
   ],
-  poker: [
-    { target: 'actions', title: 'Tay bài', text: 'Tay mới tự xoay nút D và bỏ blind. Tới Showdown bấm người bài mạnh nhất — app tự chia pot.' },
-  ],
+  poker: [{ target: 'actions', title: 'Tay bài', text: 'Tay mới tự xoay nút D và bỏ blind. Tới Showdown bấm người bài mạnh nhất — app tự chia pot.' }],
   loto: [
-    { target: 'actions', title: 'Trao pot', text: 'Sau khi Chốt, bấm Pot → chọn người thắng → xác nhận. Ván xong thì bấm Ván mới.' },
+    { target: 'actions', title: 'Chốt', text: 'Mọi người mua tờ xong thì bấm Chốt.' },
+    { demo: { kind: 'drag', from: 'pot', to: 'other' }, title: 'Trao pot', text: 'Có người kinh: kéo Pot thả vào người đó (hoặc bấm Pot → chọn người).' },
   ],
-  free: [{ target: 'actions', title: 'Hủy ván', text: 'Ván đang có cược mà muốn bỏ thì bấm Hủy ván.' }],
+  free: [
+    { target: 'actions', title: 'Chốt cược', text: 'Cược xong thì Chốt cược. Nhầm thì Bỏ chốt / Hủy ván.' },
+    { demo: { kind: 'drag', from: 'pot', to: 'other' }, title: 'Trao thưởng', text: 'Kéo Pot thả vào người thắng. Pot hết là xong ván.' },
+  ],
 }
+
+const HOST_END: GuideStep[] = [
+  { target: 'settings', title: 'Luật', text: 'Chỉnh mức cược / giá của mode này.' },
+  { target: 'players', title: 'Người chơi', text: 'Thêm người, 💤 cho nghỉ, 🛎️ chuyển host, vuốt trái để xóa.' },
+  { target: 'host', title: 'Duyệt hoàn tác', text: 'Ai xin hoàn tác hiện ở đây — duyệt từng cái hoặc OK tất cả. Chốt nhầm ván: nút ⏮ cạnh nút chính.' },
+]
 
 export function guideSteps(game: GameType, role: GuideRole): GuideStep[] {
   return role === 'host'
@@ -94,8 +81,9 @@ export function guideSteps(game: GameType, role: GuideRole): GuideStep[] {
     : [...PLAYER_START, ...PLAYER_GAME[game], ...PLAYER_END]
 }
 
-/** Đã xem hướng dẫn nào trên máy này (theo game + vai trò). */
+/** Đã xem hướng dẫn nào trên máy này (theo game + vai trò). Đổi bản khi viết lại hướng dẫn → mọi người xem lại một lần. */
 const SEEN_KEY = 'candypot:guides-seen'
+const VERSION = 'v2'
 
 function readSeen(): string[] {
   try {
@@ -106,12 +94,12 @@ function readSeen(): string[] {
 }
 
 export function guideSeen(game: GameType, role: GuideRole): boolean {
-  return readSeen().includes(`${game}:${role}`)
+  return readSeen().includes(`${game}:${role}:${VERSION}`)
 }
 
 export function markGuideSeen(game: GameType, role: GuideRole): void {
   try {
-    const seen = new Set(readSeen()).add(`${game}:${role}`)
+    const seen = new Set(readSeen()).add(`${game}:${role}:${VERSION}`)
     localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]))
   } catch {
     // Không lưu được thì lần sau hiện lại hướng dẫn — không sao
