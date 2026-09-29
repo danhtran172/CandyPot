@@ -41,14 +41,11 @@ export function PileSheet({
           )}
         </div>
         <div className={`num font-display mt-3 text-3xl font-extrabold ${toneOf(amount)}`}>{signed(amount)} kẹo</div>
-        <div className="mt-1 text-xs text-muted">
-          {round !== undefined && round !== 0 && (
-            <>
-              ván này <b className={toneOf(round)}>{signed(round)}</b> ·{' '}
-            </>
-          )}
-          mỗi hình ≈ {unit} kẹo
-        </div>
+        {round !== undefined && round !== 0 && (
+          <div className="mt-1 text-xs text-muted">
+            ván này <b className={toneOf(round)}>{signed(round)}</b>
+          </div>
+        )}
         <button type="button" onClick={onClose} className="mt-4 w-full rounded-2xl bg-plum-2 py-2.5 font-semibold">
           Đóng
         </button>
