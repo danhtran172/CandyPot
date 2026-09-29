@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ORDER, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
+import { seatedOf } from '../../core/games/tienlen'
 import { xidachBetOptions } from '../../core/games/xidach'
 import {
   blindsOf,
@@ -80,7 +81,6 @@ export function Table() {
   /** Ván trước (đã chốt) — dùng để hiện lại cược/cái khi chưa mở ván mới. */
   const lastPlay = game && [...game.rounds].reverse().find((r) => r.kind === 'play' && r.status === 'closed')
   const dealerNow = round ? round.dealer : (lastPlay?.dealer ?? null)
-  const hasPrev = !!game?.rounds.some((r) => r.kind === 'play')
 
   /**
    * Mở ván mới: có ván trước thì lấy lại y hệt cài đặt; chưa có thì vào màn Mở ván
@@ -88,10 +88,6 @@ export function Table() {
    */
   const openNext = () => {
     if (!game) return false
-    if (!hasPrev && game.type === 'tienlen') {
-      navigate(`${base}/g/${game.id}/open`)
-      return false
-    }
     const errors = actions().quickOpen(game.id)
     if (errors.length) {
       flash(errors[0], true)
@@ -369,7 +365,19 @@ export function Table() {
 
   const roundDelta = round ? movesNet(round.moves) : {}
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không
-  const visible = session.players.filter((p) => !p.removed && (!round || round.participants.includes(p.id) || !p.active))
+  // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); Tiến lên hiện cả người tạm vắng (bỏ tick)
+  const visible = session.players.filter(
+    (p) => !p.removed && (!round || game?.type === 'tienlen' || round.participants.includes(p.id) || !p.active),
+  )
+  const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session, game)) : undefined
+
+  /** Tiến lên: host tick / bỏ tick người chơi (chỉ khi chưa mở ván). */
+  const toggleSeat = (id: ID) => {
+    if (!game) return
+    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới chọn người chơi được.`, true)
+    const errors = actions().toggleSeat(game.id, id)
+    if (errors.length) flash(errors[0], true)
+  }
 
   const seats: Seat[] = visible.map((p) => ({
     player: p,
@@ -387,6 +395,7 @@ export function Table() {
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
     highlight: !!hand && hand.toAct === p.id,
+    tick: seated && !round && p.active ? { on: seated.includes(p.id), onToggle: () => toggleSeat(p.id) } : undefined,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
       hand && p.id === me ? (
@@ -403,6 +412,7 @@ export function Table() {
         </button>
       ) : undefined,
     dim: !!hand?.folded.includes(p.id),
+    away: !!seated && p.active && !seated.includes(p.id),
   }))
 
   return (
@@ -661,11 +671,6 @@ export function Table() {
               </>
             ) : (
               <>
-                {hasPrev && (
-                  <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/g/${game.id}/open`)}>
-                    ⚙ Tùy chỉnh
-                  </Button>
-                )}
                 <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                   + Mở ván
                 </Button>

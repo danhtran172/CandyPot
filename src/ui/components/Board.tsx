@@ -23,6 +23,10 @@ export interface Seat {
   highlight?: boolean
   /** Đã bỏ bài (Poker) — mờ đi. */
   dim?: boolean
+  /** Tiến lên: ô tick "đang chơi" ở góc trên bên trái avatar (bỏ tick = tạm vắng). */
+  tick?: { on: boolean; onToggle: () => void }
+  /** Tạm vắng (Tiến lên, không được tick) — avatar và tên mờ, ô tick vẫn rõ. */
+  away?: boolean
   /** Nhà cái (Xì dách) — gắn nơ ở góc dưới bên phải avatar. */
   dealer?: boolean
   /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
@@ -314,9 +318,28 @@ export function Board({
                         : 'border-line'
                   } ${ring(s.player.id)}`}
                 >
-                  <span aria-hidden className={`leading-none ${s.player.active ? '' : 'opacity-40'}`}>
+                  <span aria-hidden className={`leading-none ${s.player.active && !s.away ? '' : 'opacity-40'}`}>
                     {s.player.emoji}
                   </span>
+                  {s.tick && (
+                    <button
+                      type="button"
+                      role="checkbox"
+                      data-guide={s.isMe ? 'tick' : undefined}
+                      aria-checked={s.tick.on}
+                      aria-label={s.tick.on ? `${s.player.name} đang chơi — bấm để cho tạm vắng` : `${s.player.name} tạm vắng — bấm để cho chơi`}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        s.tick?.onToggle()
+                      }}
+                      className={`absolute -top-1.5 -left-1.5 z-10 grid size-5.5 place-items-center rounded-md border-2 text-[11px] leading-none font-black ${
+                        s.tick.on ? 'border-mint bg-mint text-night' : 'border-muted bg-night text-transparent'
+                      }`}
+                    >
+                      ✓
+                    </button>
+                  )}
                   {s.dealer && (
                     <img
                       src={bowtie}
@@ -334,7 +357,7 @@ export function Board({
                   {side !== 'below' && stake}
                 </span>
                 <span
-                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active ? '' : 'opacity-50'}`}
+                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active && !s.away ? '' : 'opacity-50'}`}
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>

@@ -117,6 +117,8 @@ export interface Game {
   lotoMax?: number
   /** Xì dách: mức cược tối thiểu / tối đa (mặc định 1 và 5 × min). */
   xidachLimits?: { min: number; max: number }
+  /** Tiến lên: người được tick "đang chơi" (tối đa 4; còn lại tạm vắng). */
+  seated?: ID[]
   /** Poker: small blind và mức all-in (tổng tối đa mỗi người một tay). */
   pokerSettings?: { sb: number; cap: number }
 }

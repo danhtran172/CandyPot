@@ -4,6 +4,7 @@ import { openRound } from '../core/round'
 import { POT } from '../core/types'
 import { LocalRepo, MemoryKV } from '../storage/LocalRepo'
 import { createAppStore, type AppStore } from './appStore'
+import { seatedOf } from '../core/games/tienlen'
 
 let repo: LocalRepo
 let store: AppStore
@@ -428,5 +429,31 @@ describe('appStore — cài đặt từng mode', () => {
     expect(session().games[0].bets).toEqual({ bet: 4, bet2: 2, red: undefined, black: undefined })
     s().setTienlenBets(g, 4, 2, { red: 10, black: 6 })
     expect(session().games[0].bets).toMatchObject({ red: 10, black: 6 })
+  })
+})
+
+describe('appStore — Tiến lên: 4 người được tick chơi', () => {
+  it('mặc định 4 người đầu; tick người thứ 5 phải bỏ tick 1 người trước; mở ván dùng đúng người được tick', () => {
+    s().addPlayer('Dũng', '🦊')
+    s().addPlayer('Em', '🐯')
+    const [, , , d, e] = session().players.map((p) => p.id)
+    const g = s().addGame('tienlen')
+    const seated = () => seatedOf(session(), session().games[0])
+    expect(seated()).toEqual([a, b, c, d])
+    expect(s().toggleSeat(g, e)).toEqual(['Tiến lên tối đa 4 người — bỏ tick 1 người đang chơi trước.'])
+    expect(s().toggleSeat(g, b)).toEqual([])
+    expect(s().toggleSeat(g, e)).toEqual([])
+    expect(seated()).toEqual([a, c, d, e])
+    expect(s().quickOpen(g)).toEqual([])
+    expect(openRound(session(), g)!.participants).toEqual([a, c, d, e])
+    expect(s().toggleSeat(g, b)).toEqual(['Đang có ván — kết thúc ván rồi mới đổi người chơi.'])
+  })
+
+  it('không bỏ tick dưới 2 người; người tạm nghỉ không tick được', () => {
+    const g = s().addGame('tienlen')
+    s().toggleSeat(g, c)
+    expect(s().toggleSeat(g, b)).toEqual(['Cần ít nhất 2 người chơi.'])
+    s().updatePlayer(c, { active: false })
+    expect(s().toggleSeat(g, c)).toEqual(['Cường đang tạm nghỉ.'])
   })
 })

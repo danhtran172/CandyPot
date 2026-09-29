@@ -65,6 +65,11 @@ const HOST_END: GuideStep[] = [
 
 const HOST_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [
+    {
+      target: 'tick',
+      title: 'Ai chơi',
+      text: 'Tiến lên 4 người: tick ✓ ở góc avatar để chọn người chơi, bỏ tick = tạm vắng. Đủ 4 rồi thì bỏ tick 1 người trước khi tick người khác.',
+    },
     { target: 'actions', title: 'Ván', text: '+ Mở ván để bắt đầu; hết ván bấm Chốt ván để tính lời/lỗ, bấm nhầm thì Hủy ván.' },
   ],
   xidach: [
