@@ -4,10 +4,12 @@ import { DialogHost } from './ui/components/Dialog'
 import { SessionLayout } from './ui/components/SessionLayout'
 import { Demo } from './ui/screens/Demo'
 import { GameSettings } from './ui/screens/GameSettings'
+import { HostTasks } from './ui/screens/HostTasks'
 import { Home } from './ui/screens/Home'
 import { NewSession } from './ui/screens/NewSession'
 import { OpenRound } from './ui/screens/OpenRound'
 import { Players } from './ui/screens/Players'
+import { Requests } from './ui/screens/Requests'
 import { Summary } from './ui/screens/Summary'
 import { Table } from './ui/screens/Table'
 import { Titles } from './ui/screens/Titles'
@@ -35,6 +37,8 @@ export default function App() {
               }
             />
             <Route path="titles" element={<Titles />} />
+            <Route path="host" element={<HostTasks />} />
+            <Route path="requests" element={<Requests />} />
             <Route path="players" element={<Players />} />
             <Route path="g/:gid/settings" element={<GameSettings />} />
             <Route path="g/:gid/open" element={<OpenRound />} />

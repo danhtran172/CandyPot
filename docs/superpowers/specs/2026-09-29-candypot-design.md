@@ -30,6 +30,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Bỏ đống kẹo** (hiển thị lời/lỗ bằng icon), bỏ hàng nút "Cái ăn/đền cả bàn" và dòng hướng dẫn dưới bàn; bàn to hơn, nút Hủy/Chốt nhỏ lại.
 - **Xác nhận bằng popup trong app:** mọi câu hỏi xác nhận (hủy ván, bỏ chốt, hoàn tác, xóa buổi/game/ván, bỏ người chơi) và báo lỗi đều là popup của CandyPot (`ask()`/`tell()` trong `src/ui/dialog.ts`, hiển thị bởi `DialogHost`), không dùng `confirm()`/`alert()` của trình duyệt. Hành động xóa có nút đỏ; Esc = Thôi, Enter = Đồng ý.
 - **Tiến lên là bàn vuông:** 4 người ngồi giữa 4 cạnh ("tôi" ở cạnh dưới); chưa mở ván mà có hơn 4 người thì xếp đều quanh các cạnh. Poker và Xì dách giữ bàn oval.
+- **Tab Host / Yêu cầu:** thanh dưới có thêm 2 tab cho mọi người, có số đếm việc cần trả lời. *Host*: host duyệt xin hoàn tác (từng cái / OK tất cả) + xem và hủy lời đòi giữa người khác; người thường thấy yêu cầu hoàn tác của mình "⏳ chờ host" và rút lại được. *Yêu cầu*: người khác đòi bạn (Không / OK / OK tất cả) và bạn đang đòi ai (hủy được). Thông báo trên cùng hiện việc cũ nhất, có "Để sau" (ẩn đến khi có việc mới) và "Xem cả N việc" (mở tab tương ứng).
 
 ## 1. Mục tiêu
 

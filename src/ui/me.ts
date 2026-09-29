@@ -38,12 +38,13 @@ export function writeWindowMe(sessionId: ID, playerId: ID): void {
 }
 
 /** Người chơi của cửa sổ/máy này; mặc định là người đầu tiên đang chơi. */
-export function useMe(session: Session): [ID | undefined, (id: ID) => void] {
+export function useMe(session: Session | null | undefined): [ID | undefined, (id: ID) => void] {
   const [, rerender] = useState(0)
-  const stored = readMe(session.id)
-  const valid = session.players.find((p) => p.id === stored)
-  const me = valid?.id ?? session.players.find((p) => p.active)?.id
+  const stored = session ? readMe(session.id) : null
+  const valid = session?.players.find((p) => p.id === stored)
+  const me = valid?.id ?? session?.players.find((p) => p.active)?.id
   const set = (id: ID) => {
+    if (!session) return
     if (safeGet(() => sessionStorage, windowKey(session.id))) writeWindowMe(session.id, id)
     else writeMe(session.id, id)
     rerender((n) => n + 1)
