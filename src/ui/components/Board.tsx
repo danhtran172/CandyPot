@@ -52,6 +52,7 @@ function sizeFor(n: number) {
 export function Board({
   seats,
   center,
+  corner,
   pot,
   betBox,
   betLocked,
@@ -61,6 +62,8 @@ export function Board({
   seats: Seat[]
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
+  /** Nút ở góc dưới bên trái bàn. */
+  corner?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   /** Hiện ô Bet giữa bàn (Xì dách): thả vào để đặt cược. Không giữ kẹo, không cộng tổng. */
@@ -180,6 +183,8 @@ export function Board({
           )}
           {center}
         </div>
+
+        {corner && <div className="absolute bottom-1 left-3 z-10">{corner}</div>}
 
         {ordered.map((s, i) => {
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n

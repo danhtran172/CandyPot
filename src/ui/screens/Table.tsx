@@ -8,8 +8,9 @@ import { suggestOptions } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
+import { HistorySheet } from '../components/HistorySheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
-import { Button, Card, Chip, TopBar, Who } from '../components/kit'
+import { Button, Card, Chip, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { useMe } from '../me'
@@ -19,6 +20,7 @@ export function Table() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
+  const [showLog, setShowLog] = useState(false)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -237,57 +239,26 @@ export function Table() {
             betLocked={round?.phase === 'playing'}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             center={<TableCenter game={game} round={round} />}
+            corner={
+              <button
+                type="button"
+                onClick={() => setShowLog(true)}
+                className="flex items-center gap-1.5 rounded-2xl border border-line/60 bg-night/70 px-2.5 py-1.5 text-xs font-semibold"
+              >
+                📜 Trả/nhận
+                {(round?.moves.length ?? 0) + asking.length > 0 && (
+                  <span className="num rounded-full bg-lemon px-1.5 text-[10px] leading-4 text-night">
+                    {(round?.moves.length ?? 0) + asking.length}
+                  </span>
+                )}
+              </button>
+            }
             onTransfer={onTransfer}
           />
 
 
 
-          {asking.length > 0 && (
-            <Card className="mt-3 p-3">
-              <h2 className="font-display mb-1 px-1 font-bold">Đang đòi · chờ xác nhận</h2>
-              <ul>
-                {asking.map((r) => (
-                  <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-1 py-1.5 text-sm last:border-0">
-                    <Who player={players[r.from]} className="min-w-0 font-semibold" />
-                    <span className="text-muted">→ bạn</span>
-                    <span className="candy num ml-auto text-sm">{r.amount}</span>
-                    <button
-                      type="button"
-                      aria-label="Hủy lời đòi"
-                      className="px-1.5 text-muted hover:text-berry"
-                      onClick={() => actions().cancelRequest(r.id)}
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
 
-          {round && round.moves.length > 0 && (
-            <Card className="mt-3 p-3">
-              <h2 className="font-display mb-1 px-1 font-bold">Ván này</h2>
-              <ul>
-                {[...round.moves].reverse().map((m) => (
-                  <li key={m.id} className="flex items-center gap-2 border-b border-line/40 px-1 py-1.5 text-sm last:border-0">
-                    <Who player={players[m.from]} className="min-w-0 font-semibold" />
-                    <span className="text-muted">→</span>
-                    <Who player={players[m.to]} className="min-w-0 font-semibold" />
-                    <span className="candy num ml-auto text-sm">{m.amount}</span>
-                    <button
-                      type="button"
-                      aria-label="Hoàn tác lượt này"
-                      className="px-1.5 text-muted hover:text-berry"
-                      onClick={() => actions().removeMove(game.id, round.id, m.id)}
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
             {game.type === 'xidach' ? (
@@ -345,6 +316,8 @@ export function Table() {
           {toast.text}
         </div>
       )}
+
+      {showLog && game && <HistorySheet session={session} game={game} me={me} onClose={() => setShowLog(false)} />}
 
       {pending && game && (
         <AmountSheet
