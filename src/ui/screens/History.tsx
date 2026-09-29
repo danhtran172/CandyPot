@@ -116,7 +116,7 @@ export function History() {
 
       {tab === 'people' && entries.length > 0 && (
         <>
-          <nav aria-label="Người chơi" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
+          <nav aria-label="Người chơi" className="-mx-4 mb-3 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">
             {session.players.map((p) => (
               <Chip key={p.id} active={who === p.id} onClick={() => setWho(p.id)}>
                 <Who player={p} />

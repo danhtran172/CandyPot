@@ -67,7 +67,7 @@ export function Summary() {
       <TopBar title="Tổng kết" />
 
       {session.games.length > 1 && (
-        <nav aria-label="Phạm vi" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
+        <nav aria-label="Phạm vi" className="-mx-4 mb-3 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">
           <Chip active={!gameId} onClick={() => setGameId(undefined)}>
             Cả buổi
           </Chip>

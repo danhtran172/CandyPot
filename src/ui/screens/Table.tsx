@@ -36,18 +36,20 @@ export function Table() {
         }
       />
 
-      <nav aria-label="Game" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {session.games.map((g) => (
-          <Chip key={g.id} active={g.id === game?.id} onClick={() => setParams({ g: g.id }, { replace: true })}>
-            {GAME_ICONS[g.type]} {g.name}
-          </Chip>
-        ))}
+      <div className="flex items-center gap-2">
+        <nav aria-label="Game" className="no-scrollbar -ml-4 flex min-w-0 flex-1 gap-2 overflow-x-auto pl-4">
+          {session.games.map((g) => (
+            <Chip key={g.id} active={g.id === game?.id} onClick={() => setParams({ g: g.id }, { replace: true })}>
+              {GAME_ICONS[g.type]} {g.name}
+            </Chip>
+          ))}
+        </nav>
         {session.games.length > 0 && (
-          <details className="relative">
-            <summary className="list-none rounded-full border border-dashed border-line px-3 py-1.5 text-sm font-semibold text-muted">
+          <details className="relative shrink-0">
+            <summary className="cursor-pointer list-none rounded-full border border-dashed border-line px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-muted">
               + Game
             </summary>
-            <div className="absolute left-0 z-10 mt-2 w-44 space-y-1 rounded-2xl border border-line bg-plum-2 p-2 shadow-xl">
+            <div className="absolute right-0 z-10 mt-2 w-44 space-y-1 rounded-2xl border border-line bg-plum-2 p-2 shadow-xl">
               {GAME_ORDER.map((t) => (
                 <button
                   key={t}
@@ -64,7 +66,7 @@ export function Table() {
             </div>
           </details>
         )}
-      </nav>
+      </div>
 
       {!game ? (
         <Card className="mt-4 text-center">
