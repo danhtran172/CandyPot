@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 /** Hộp thoại trong app thay cho confirm()/alert() của trình duyệt. */
 export type Dialog = {
   id: number
-  icon?: string
+  icon?: ReactNode
   title: ReactNode
   message?: ReactNode
   okLabel: string
@@ -12,7 +12,7 @@ export type Dialog = {
   resolve: (ok: boolean) => void
 }
 
-type Options = { icon?: string; message?: ReactNode; okLabel?: string; cancelLabel?: string; danger?: boolean }
+type Options = { icon?: ReactNode; message?: ReactNode; okLabel?: string; cancelLabel?: string; danger?: boolean }
 
 let queue: Dialog[] = []
 let nextId = 1

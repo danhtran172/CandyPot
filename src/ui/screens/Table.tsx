@@ -23,6 +23,7 @@ import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
+import { UndoIcon } from '../components/UndoIcon'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
@@ -450,10 +451,10 @@ export function Table() {
                   <Button
                     aria-label="Hoàn tác thao tác cuối"
                     disabled={!hand.undo.length}
-                    className="bg-night/90 px-2.5 py-1.5 text-sm"
+                    className="shrink-0 bg-night/90 px-2 py-1.5 text-sm"
                     onClick={pokerUndo}
                   >
-                    ↩
+                    <UndoIcon className="size-5" />
                   </Button>
                   {hand.street === 'done' ? (
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
@@ -471,12 +472,12 @@ export function Table() {
                     </Button>
                   ) : actor && handState ? (
                     <>
-                      <Button variant="danger" className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
+                      <Button variant="danger" className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
                         Bỏ bài
                       </Button>
                       <Button
                         variant="primary"
-                        className="flex-1 px-2 py-1.5 text-sm whitespace-nowrap"
+                        className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm whitespace-nowrap"
                         onClick={() => pokerDo(toCall(hand, actor) ? { type: 'call' } : { type: 'check' })}
                       >
                         {toCall(hand, actor)
@@ -484,14 +485,14 @@ export function Table() {
                           : 'Xem bài'}
                       </Button>
                       <Button
-                        className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap"
+                        className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap"
                         disabled={!raiseOptions(handState, actor).length}
                         onClick={() => setPokerSheet('raise')}
                       >
                         Tố
                       </Button>
                       <Button
-                        className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap text-berry"
+                        className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap text-berry"
                         disabled={!remaining(handState, actor)}
                         onClick={() => setPokerSheet('allin')}
                       >

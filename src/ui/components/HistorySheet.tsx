@@ -3,6 +3,7 @@ import type { Game, ID, Move, Round, Session } from '../../core/types'
 import { actions } from '../../store'
 import { playerMap, roundNumber, signed, timeOf } from '../format'
 import { ask } from '../dialog'
+import { UndoIcon } from './UndoIcon'
 import { Who } from './kit'
 
 /**
@@ -32,7 +33,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
     if (!me) return
     if (isHost) {
       const ok = await ask('Hoàn tác lượt này?', {
-        icon: '↩️',
+        icon: <UndoIcon className="size-10" />,
         message: `${players[m.from]?.name} → ${players[m.to]?.name} · ${m.amount} kẹo`,
         okLabel: 'Hoàn tác',
       })
