@@ -4,10 +4,12 @@ import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS } from '../../store/appStore'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
+import hostIcon from '../../assets/rules/host.webp'
+import groupIcon from '../../assets/rules/group.webp'
 
 const MODES = [
-  { value: 'solo', icon: '🙋', title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
-  { value: 'multi', icon: '📱', title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
+  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
+  { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
 ] as const
 
 interface Draft {
@@ -65,7 +67,7 @@ export function NewSession() {
               mode === m.value ? 'border-lemon bg-lemon/10' : 'border-line bg-plum'
             }`}
           >
-            <span className="text-2xl leading-none">{m.icon}</span>
+            <img src={m.icon} alt="" draggable={false} className="size-9 max-w-none" />
             <span className="font-display leading-tight font-bold">{m.title}</span>
             <span className="text-xs text-muted">{m.hint}</span>
           </button>
