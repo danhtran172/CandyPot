@@ -36,7 +36,7 @@ npm run build    # bản production + service worker trong dist/
 powershell -ExecutionPolicy Bypass -File scripts/create-shortcut.ps1
 ```
 
-Tạo 3 shortcut trên Desktop: **CandyPot** (app), **CandyPot Demo 6 nguoi** (bàn mẫu 6 người, bạn là Minh, đang mở sẵn ván Xì dách — mở `/demo?reset=1` để dựng lại từ đầu) và **CandyPot Demo (An)** (cùng bàn đó nhưng nhìn từ An — mở song song để thử đòi kẹo giữa 2 "máy"; các cửa sổ tự đồng bộ).
+Tạo 3 shortcut trên Desktop: **CandyPot** (app), **CandyPot Demo 6 nguoi** (bàn mẫu 6 người, bạn là Minh, đang mở sẵn ván Xì dách — mở `/demo?reset=1` để dựng lại từ đầu, `/demo?host=1` để lấy lại quyền host mà không mất dữ liệu) và **CandyPot Demo (An)** (cùng bàn đó nhưng nhìn từ An — mở song song để thử đòi kẹo giữa 2 "máy"; các cửa sổ tự đồng bộ).
 
 Shortcut Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu chưa chạy) và mở app bằng Edge ở chế độ app, khung 400×880. Sửa code là app tự cập nhật (hot reload). Dữ liệu của cửa sổ này nằm trong profile riêng `%LOCALAPPDATA%\CandyPot\browser-profile`.
 

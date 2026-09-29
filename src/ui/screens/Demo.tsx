@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { actions, repo } from '../../store'
-import { writeMe, writeWindowMe } from '../me'
+import { readMe, writeMe, writeWindowMe } from '../me'
 
 const DEMO_KEY = 'candypot:demo:v2'
 
@@ -17,6 +17,7 @@ const PLAYERS = [
 /**
  * Buổi mẫu 6 người (bạn là Minh) đang mở sẵn một ván Xì dách.
  * `?as=1` mở cửa sổ này dưới vai người thứ 2 (An) để giả lập máy của người khác.
+ * `?host=1` đưa quyền host về lại cho "tôi" của cửa sổ này (không dựng lại demo).
  */
 function seedDemo(): { sessionId: string; gameId: string } {
   const a = actions()
@@ -61,6 +62,13 @@ export function Demo() {
     }
     if (existing && repo.load(existing)) {
       playAs(existing)
+      if (params.get('host')) {
+        const s = repo.load(existing)!
+        const me = readMe(existing)
+        const id = s.players.some((p) => p.id === me && !p.removed) ? me! : s.players[0].id
+        actions().openSession(existing)
+        actions().setHost(id)
+      }
       navigate(`/s/${existing}`, { replace: true })
       return
     }
