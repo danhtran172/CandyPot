@@ -23,10 +23,11 @@ export function OpenRound() {
     const active = session.players.filter((p) => p.active).map((p) => p.id)
     const fromPrev = prev?.participants.filter((id) => active.includes(id))
     const participants = (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
-    const bet = prev?.bet || 1
+    const bet = prev?.bet || (mod.stakeMode === 'common' ? 4 : 1)
+    const bet2 = prev?.bet2 || Math.max(1, Math.round(bet / 2))
     const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
     const stakes = Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
-    return { participants, bet, stakes, dealer }
+    return { participants, bet, bet2, stakes, dealer }
   })
 
   if (!game || !draft) return <p className="pt-24 text-center text-muted">Không tìm thấy game.</p>
@@ -95,17 +96,35 @@ export function OpenRound() {
       )}
 
       <Card className="mt-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">{mod.stakeMode === 'common' ? 'Mức cược chung' : 'Cược mặc định'}</div>
-            <div className="text-xs text-muted">
-              {mod.stakeMode === 'common'
-                ? 'Kéo hũ kẹo sẽ gợi ý mức này × 1, × 1,5, × 2'
-                : 'Đổi ở đây sẽ đặt lại cược của mọi người bên dưới'}
+        {mod.stakeMode === 'common' ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold">Cược Nhất</div>
+                <div className="text-xs text-muted">Bét trả Nhất</div>
+              </div>
+              <Stepper value={draft.bet} min={1} onChange={(bet) => setDraft({ ...draft, bet })} label="cược Nhất" />
             </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-semibold">Cược Nhì</div>
+                <div className="text-xs text-muted">Ba trả Nhì</div>
+              </div>
+              <Stepper value={draft.bet2 ?? 1} min={1} onChange={(bet2) => setDraft({ ...draft, bet2 })} label="cược Nhì" />
+            </div>
+            <p className="mt-3 border-t border-line/60 pt-3 text-xs text-muted">
+              Kéo hũ kẹo sẽ gợi ý: cược Nhì, cược Nhất, Nhất × 1,5 và Nhất × 2.
+            </p>
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold">Cược mặc định</div>
+              <div className="text-xs text-muted">Đổi ở đây sẽ đặt lại cược của mọi người bên dưới</div>
+            </div>
+            <Stepper value={draft.bet} min={1} onChange={setAll} label="mức cược" />
           </div>
-          <Stepper value={draft.bet} min={1} onChange={setAll} label="mức cược" />
-        </div>
+        )}
 
         {mod.stakeMode !== 'common' && stakeIds.length > 0 && (
           <ul className="mt-4 space-y-2 border-t border-line/60 pt-4">

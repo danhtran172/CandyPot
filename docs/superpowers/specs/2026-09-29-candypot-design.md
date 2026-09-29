@@ -20,6 +20,8 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
   - Không có ván đang mở: kéo = chuyển tay (gợi ý ×1, ×2, ×5, ×10 cược gần nhất).
 - Bỏ form nhập thứ hạng/thối/chặt/thắng-thua. Bỏ danh hiệu Nuôi heo, Đồ tể, Vua renew.
 - **Cập nhật sau (bàn oval + hũ kẹo):** bàn oval tối đa 10 người, "Tôi" ngồi dưới cùng; mỗi người có **hũ kẹo** để kéo. Popup chỉ ghi **3 số = cược × 1 / × 1,5 / × 2** (làm tròn), không ghi tình huống hay hệ số. Cược gốc: Tiến lên = cược chung; Xì dách = cược của người con; Poker vào pot = số kẹo cần theo (chưa ai tố thì cược mở ván). Kéo pot cho người thắng: cả pot / phần được ăn / nửa pot. Bỏ hệ số luật và luật nhà (thay thế các gợi ý 4 mức ở trên).
+- **Đòi kẹo:** kéo hũ kẹo của người khác thả vào chỗ "Tôi" → tạo lời đòi (chờ xác nhận). Người bị đòi thấy thông báo "X đòi bạn N" với Không / OK; OK thì ghi lượt kéo (vào ván đang mở, hoặc chuyển tay). Người đòi thấy danh sách "Đang đòi" và có thể hủy. Giai đoạn 1 giả lập "máy người khác" bằng cửa sổ thứ hai (vai riêng từng cửa sổ, đồng bộ qua sự kiện `storage`); giai đoạn 2 thay bằng Firebase.
+- **Tiến lên 2 mức cược:** Nhất / Nhì (vd 4/2). Gợi ý: Nhì, Nhất, Nhất × 1,5, Nhất × 2.
 
 ## 1. Mục tiêu
 

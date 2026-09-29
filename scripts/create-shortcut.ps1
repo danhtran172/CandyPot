@@ -1,6 +1,7 @@
 # Create Desktop shortcuts that run open-phone.ps1:
 #   CandyPot               - the app
 #   CandyPot Demo 6 nguoi  - a 6-player demo table where you are one of the players
+#   CandyPot Demo (An)     - the same table seen by An, to try requests between two windows
 
 $Root = Split-Path -Parent $PSScriptRoot
 $Script = Join-Path $PSScriptRoot 'open-phone.ps1'
@@ -22,3 +23,4 @@ function New-CandyShortcut([string]$Name, [string]$PagePath, [string]$Descriptio
 
 New-CandyShortcut 'CandyPot' '/' 'CandyPot (phone view, live reload)'
 New-CandyShortcut 'CandyPot Demo 6 nguoi' '/demo' 'CandyPot demo: 6 players, you are one of them'
+New-CandyShortcut 'CandyPot Demo (An)' '/demo?as=1' 'CandyPot demo seen by An (second player)'

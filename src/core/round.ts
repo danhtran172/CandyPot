@@ -42,6 +42,7 @@ export function normalizeSession(session: Session): Session {
     createdAt,
     updatedAt,
     players,
+    requests: session.requests ?? [],
     games: session.games.map((g) => ({
       ...g,
       rounds: g.rounds.map((r) => {

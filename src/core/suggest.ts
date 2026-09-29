@@ -1,4 +1,4 @@
-import { scaledOptions } from './games/options'
+import { dedupe, scaledOptions } from './games/options'
 import { pokerBetOptions, pokerWinOptions } from './games/poker'
 import { POT, type Game, type ID, type Option, type Round } from './types'
 
@@ -16,13 +16,21 @@ export function lastBet(game: Game): number {
   return last?.bet || 1
 }
 
+/** Tiến lên: cược Nhì, cược Nhất, Nhất × 1,5, Nhất × 2 — tăng dần. */
+function tienlenOptions(first: number, second: number): Option[] {
+  return dedupe([
+    { amount: second, label: 'Nhì' },
+    ...scaledOptions(first),
+  ]).sort((a, b) => a.amount - b.amount)
+}
+
 /** Các mức kẹo gợi ý khi kéo hũ kẹo từ `from` sang `to`: cược × 1 / 1,5 / 2. */
 export function suggestOptions({ game, round, from, to }: DragContext): Option[] {
   if (!round) return scaledOptions(lastBet(game))
 
   switch (game.type) {
     case 'tienlen':
-      return scaledOptions(round.bet)
+      return round.bet2 ? tienlenOptions(round.bet, round.bet2) : scaledOptions(round.bet)
     case 'xidach': {
       const con = from === round.dealer ? to : from
       return scaledOptions(round.stakes[con] ?? round.bet)

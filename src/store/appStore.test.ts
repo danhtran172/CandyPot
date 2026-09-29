@@ -36,7 +36,7 @@ describe('appStore — buổi & người chơi', () => {
 
   it('không xóa được người đã chơi', () => {
     const g = s().addGame('tienlen')
-    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
     expect(s().removePlayer(a)).toBe(false)
     expect(s().removePlayer(c)).toBe(true)
   })
@@ -51,7 +51,7 @@ describe('appStore — buổi & người chơi', () => {
 describe('appStore — ván Tiến lên', () => {
   it('mở ván → kéo → chốt', () => {
     const g = s().addGame('tienlen')
-    expect(s().openRound(g, { participants: [a, b, c], bet: 5, stakes: {}, dealer: null })).toEqual([])
+    expect(s().openRound(g, { participants: [a, b, c], bet: 5, bet2: 1, stakes: {}, dealer: null })).toEqual([])
     expect(s().addMove(g, c, a, 10, 'Bét→Nhất')).toEqual([])
     expect(netOf(session())[a]).toBe(0) // chưa chốt
     expect(s().closeRound(g)).toEqual([])
@@ -61,17 +61,18 @@ describe('appStore — ván Tiến lên', () => {
 
   it('validate khi mở ván', () => {
     const g = s().addGame('tienlen')
-    expect(s().openRound(g, { participants: [a], bet: 5, stakes: {}, dealer: null })).not.toEqual([])
-    expect(s().openRound(g, { participants: [a, b], bet: 0, stakes: {}, dealer: null })).not.toEqual([])
-    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
-    expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })).toEqual([
+    expect(s().openRound(g, { participants: [a], bet: 5, bet2: 1, stakes: {}, dealer: null })).not.toEqual([])
+    expect(s().openRound(g, { participants: [a, b], bet: 0, bet2: 1, stakes: {}, dealer: null })).not.toEqual([])
+    expect(s().openRound(g, { participants: [a, b], bet: 4, stakes: {}, dealer: null })).not.toEqual([])
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
+    expect(s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })).toEqual([
       'Game này đang có ván chưa chốt.',
     ])
   })
 
   it('chỉ kéo giữa người trong ván, hoàn tác được', () => {
     const g = s().addGame('tienlen')
-    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
     expect(s().addMove(g, c, a, 1, '')).not.toEqual([])
     s().addMove(g, b, a, 2, '')
     const r = openRound(session(), g)!
@@ -81,7 +82,7 @@ describe('appStore — ván Tiến lên', () => {
 
   it('mở lại ván đã chốt để sửa', () => {
     const g = s().addGame('tienlen')
-    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
     s().addMove(g, b, a, 2, '')
     s().closeRound(g)
     const r = session().games[0].rounds[0]
@@ -132,3 +133,42 @@ describe('appStore — kéo khi không có ván', () => {
   })
 })
 
+
+describe('appStore — đòi kẹo', () => {
+  it('đòi kẹo chờ người bị đòi bấm OK rồi mới chuyển', () => {
+    const g = s().addGame('xidach')
+    expect(s().requestCandy(g, b, a, 5)).toEqual([])
+    expect(session().requests).toMatchObject([{ from: b, to: a, amount: 5 }])
+    expect(netOf(session())[a]).toBe(0)
+    expect(s().answerRequest(session().requests[0].id, true)).toEqual([])
+    expect(session().requests).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 5, [b]: -5, [c]: 0 })
+  })
+
+  it('từ chối hoặc hủy thì không chuyển', () => {
+    const g = s().addGame('xidach')
+    s().requestCandy(g, b, a, 5)
+    s().answerRequest(session().requests[0].id, false)
+    s().requestCandy(g, c, a, 3)
+    s().cancelRequest(session().requests[0].id)
+    expect(session().requests).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 0, [b]: 0, [c]: 0 })
+  })
+
+  it('có ván đang mở thì kẹo đòi được ghi vào ván', () => {
+    const g = s().addGame('tienlen')
+    s().openRound(g, { participants: [a, b], bet: 4, bet2: 2, stakes: {}, dealer: null })
+    s().requestCandy(g, b, a, 4)
+    s().answerRequest(session().requests[0].id, true)
+    expect(openRound(session(), g)!.moves).toMatchObject([{ from: b, to: a, amount: 4, label: 'Đòi kẹo' }])
+  })
+
+  it('không đòi được pot hoặc số kẹo sai; xóa game thì xóa lời đòi', () => {
+    const g = s().addGame('xidach')
+    expect(s().requestCandy(g, POT, a, 5)).not.toEqual([])
+    expect(s().requestCandy(g, b, a, 0)).not.toEqual([])
+    s().requestCandy(g, b, a, 5)
+    s().removeGame(g)
+    expect(session().requests).toEqual([])
+  })
+})

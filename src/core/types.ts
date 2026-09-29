@@ -46,8 +46,10 @@ export interface Round {
   kind: 'play' | 'manual'
   status: 'open' | 'closed'
   participants: ID[]
-  /** Mức cược chung (Tiến lên); các game khác dùng làm cược mặc định. */
+  /** Mức cược chung (Tiến lên: cược Nhất); các game khác dùng làm cược mặc định. */
   bet: number
+  /** Tiến lên: cược Nhì (Ba trả Nhì). */
+  bet2?: number
   /** Cược riêng từng người: tiền cược của con (Xì dách), số kẹo bỏ vào pot lúc mở ván (Poker). */
   stakes: Record<ID, number>
   dealer: ID | null
@@ -64,6 +66,16 @@ export interface Game {
   rounds: Round[]
 }
 
+/** Đòi kẹo: `to` đòi `from` trả `amount` kẹo, chờ `from` bấm OK. */
+export interface CandyRequest {
+  id: ID
+  gameId: ID
+  from: ID
+  to: ID
+  amount: number
+  at: number
+}
+
 export interface Session {
   id: ID
   name: string
@@ -71,6 +83,7 @@ export interface Session {
   updatedAt: number
   players: Player[]
   games: Game[]
+  requests: CandyRequest[]
 }
 
 export type Net = Record<ID, number>

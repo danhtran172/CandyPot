@@ -4,6 +4,8 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 
 - Game: **Tiến lên miền Nam**, **Xì dách** (có nhà cái), **Poker** (có pot, tính side pot)
 - Bàn oval tối đa 10 người, bạn ngồi dưới cùng: mở ván đặt cược → **kéo hũ kẹo** thả vào người nhận (popup 3 số: cược × 1 / × 1,5 / × 2) → chốt ván
+- **Đòi kẹo:** kéo hũ kẹo của người khác về chỗ mình → người đó nhận thông báo, bấm OK mới chuyển
+- Tiến lên cược 2 mức Nhất / Nhì (vd 4/2)
 - Lời/lỗ cộng dồn từ 0, lịch sử theo ván / theo người, danh hiệu, luật nhà
 - Web app (PWA) — thêm vào màn hình chính, chạy offline, dữ liệu lưu trên máy
 
@@ -24,7 +26,7 @@ npm run build    # bản production + service worker trong dist/
 powershell -ExecutionPolicy Bypass -File scripts/create-shortcut.ps1
 ```
 
-Tạo 2 shortcut trên Desktop: **CandyPot** (app) và **CandyPot Demo 6 nguoi** (bàn mẫu 6 người, bạn là 1 người, đang mở sẵn ván Xì dách — mở `/demo?reset=1` để dựng lại từ đầu).
+Tạo 3 shortcut trên Desktop: **CandyPot** (app), **CandyPot Demo 6 nguoi** (bàn mẫu 6 người, bạn là Minh, đang mở sẵn ván Xì dách — mở `/demo?reset=1` để dựng lại từ đầu) và **CandyPot Demo (An)** (cùng bàn đó nhưng nhìn từ An — mở song song để thử đòi kẹo giữa 2 "máy"; các cửa sổ tự đồng bộ).
 
 Shortcut Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu chưa chạy) và mở app bằng Edge ở chế độ app, khung 400×880. Sửa code là app tự cập nhật (hot reload). Dữ liệu của cửa sổ này nằm trong profile riêng `%LOCALAPPDATA%\CandyPot\browser-profile`.
 

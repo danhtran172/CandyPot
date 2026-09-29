@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { actions, repo } from '../../store'
-import { writeMe } from '../me'
+import { writeMe, writeWindowMe } from '../me'
 
-const DEMO_KEY = 'candypot:demo'
+const DEMO_KEY = 'candypot:demo:v2'
 
 const PLAYERS = [
-  { name: 'Bạn', emoji: '🐱' },
+  { name: 'Minh', emoji: '🐱' },
   { name: 'An', emoji: '🐶' },
   { name: 'Bình', emoji: '🐸' },
   { name: 'Cường', emoji: '🐼' },
@@ -14,7 +14,10 @@ const PLAYERS = [
   { name: 'Em', emoji: '🐯' },
 ]
 
-/** Buổi mẫu 6 người (bạn là 1 người) đang mở sẵn một ván Xì dách. */
+/**
+ * Buổi mẫu 6 người (bạn là Minh) đang mở sẵn một ván Xì dách.
+ * `?as=1` mở cửa sổ này dưới vai người thứ 2 (An) để giả lập máy của người khác.
+ */
 function seedDemo(): { sessionId: string; gameId: string } {
   const a = actions()
   const sessionId = a.createSession('Demo 6 người', PLAYERS)
@@ -51,11 +54,18 @@ export function Demo() {
     } catch {
       existing = null
     }
+    const as = Number(params.get('as'))
+    const playAs = (sessionId: string) => {
+      const player = repo.load(sessionId)?.players[as]
+      if (as > 0 && player) writeWindowMe(sessionId, player.id)
+    }
     if (existing && repo.load(existing)) {
+      playAs(existing)
       navigate(`/s/${existing}`, { replace: true })
       return
     }
     const { sessionId, gameId } = seedDemo()
+    playAs(sessionId)
     navigate(`/s/${sessionId}?g=${gameId}`, { replace: true })
   }, [navigate, params])
 

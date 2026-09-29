@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router'
 import { actions, useApp } from '../../store'
+import { RequestInbox } from './RequestInbox'
 
 const TABS = [
   { to: '', label: 'Bàn chơi', icon: '🃏' },
@@ -20,6 +21,16 @@ export function SessionLayout() {
   useEffect(() => {
     if (sid && !loaded) actions().openSession(sid)
   }, [sid, loaded])
+
+  // Cửa sổ khác (cùng máy) vừa sửa buổi này → nạp lại để thấy ngay
+  useEffect(() => {
+    if (!sid) return
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === `candypot:session:${sid}`) actions().openSession(sid)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [sid])
 
   if (!loaded) {
     return (
@@ -42,6 +53,7 @@ export function SessionLayout() {
         </div>
       )}
       <Outlet />
+      {session && <RequestInbox session={session} />}
       {showNav && (
         <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line/60 bg-night/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
           <ul className="mx-auto grid max-w-lg grid-cols-4">

@@ -4,7 +4,7 @@ import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { suggestOptions } from '../../core/suggest'
-import type { Game, GameType, ID, Option, Round } from '../../core/types'
+import { POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
@@ -39,13 +39,24 @@ export function Table() {
 
   const onTransfer = useCallback((from: ID, to: ID) => setPending({ from, to }), [])
 
+  /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
+  const isRequest = (p: { from: ID; to: ID }) => p.to === me && p.from !== me && p.from !== POT
+
   const pick = (o: Option) => {
     if (!game || !pending) return
-    const errors = actions().addMove(game.id, pending.from, pending.to, o.amount, round ? o.label : 'Chuyển tay')
-    if (errors.length) flash(errors[0], true)
-    else flyCandy(pending.from, pending.to, o.amount)
+    if (isRequest(pending)) {
+      const errors = actions().requestCandy(game.id, pending.from, pending.to, o.amount)
+      if (errors.length) flash(errors[0], true)
+      else flash(`Đã đòi ${players[pending.from]?.name} ${o.amount} kẹo — chờ xác nhận.`)
+    } else {
+      const errors = actions().addMove(game.id, pending.from, pending.to, o.amount, round ? o.label : 'Chuyển tay')
+      if (errors.length) flash(errors[0], true)
+      else flyCandy(pending.from, pending.to, o.amount)
+    }
     setPending(null)
   }
+
+  const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
 
   const closeRound = () => {
     if (!game) return
@@ -141,7 +152,13 @@ export function Table() {
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
                 Ván {roundNumber(game, round)} đang chơi
-                {game.type === 'tienlen' && <span className="text-muted"> · cược {round.bet}</span>}
+                {game.type === 'tienlen' && (
+                  <span className="text-muted">
+                    {' '}
+                    · cược {round.bet}
+                    {round.bet2 ? `/${round.bet2}` : ''}
+                  </span>
+                )}
               </span>
             ) : (
               <span className="text-muted">{playCount(game) ? `Đã chốt ${playCount(game)} ván` : 'Chưa có ván nào'}</span>
@@ -160,7 +177,7 @@ export function Table() {
 
           <p className="text-center text-xs text-muted">
             {round
-              ? 'Kéo hũ kẹo của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
+              ? 'Kéo hũ kẹo của bạn vào người khác để trả, kéo hũ của người khác về chỗ bạn để đòi.'
               : 'Chưa mở ván: kéo hũ kẹo sang người khác sẽ được ghi là chuyển tay.'}
           </p>
 
@@ -178,6 +195,29 @@ export function Table() {
                 </Chip>
               ))}
             </div>
+          )}
+
+          {asking.length > 0 && (
+            <Card className="mt-3 p-3">
+              <h2 className="font-display mb-1 px-1 font-bold">Đang đòi · chờ xác nhận</h2>
+              <ul>
+                {asking.map((r) => (
+                  <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-1 py-1.5 text-sm last:border-0">
+                    <Who player={players[r.from]} className="min-w-0 font-semibold" />
+                    <span className="text-muted">→ bạn</span>
+                    <span className="candy num ml-auto text-sm">{r.amount}</span>
+                    <button
+                      type="button"
+                      aria-label="Hủy lời đòi"
+                      className="px-1.5 text-muted hover:text-berry"
+                      onClick={() => actions().cancelRequest(r.id)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
 
           {round && round.moves.length > 0 && (
@@ -248,6 +288,7 @@ export function Table() {
             from: pending.from,
             to: pending.to,
           })}
+          mode={isRequest(pending) ? 'request' : 'pay'}
           onPick={pick}
           onClose={() => setPending(null)}
         />
@@ -272,8 +313,21 @@ function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; d
   if (game.type === 'tienlen') {
     return (
       <>
-        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · cược chung</span>
-        <span className="candy num text-2xl">{round.bet}</span>
+        <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
+        {round.bet2 ? (
+          <div className="flex gap-3">
+            <span className="flex flex-col items-center">
+              <span className="candy num text-xl">{round.bet}</span>
+              <span className="text-[11px] text-muted">Nhất</span>
+            </span>
+            <span className="flex flex-col items-center">
+              <span className="candy num text-xl">{round.bet2}</span>
+              <span className="text-[11px] text-muted">Nhì</span>
+            </span>
+          </div>
+        ) : (
+          <span className="candy num text-2xl">{round.bet}</span>
+        )}
       </>
     )
   }

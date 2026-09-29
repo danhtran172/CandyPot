@@ -34,6 +34,12 @@ describe('suggestOptions', () => {
     expect(amounts(suggestOptions({ game: game('tienlen'), round: round({ bet: 4 }), from: 'a', to: 'b' }))).toEqual([4, 6, 8])
   })
 
+  it('Tiến lên 2 mức cược: Nhì, Nhất, Nhất × 1,5, Nhất × 2', () => {
+    const r = round({ bet: 4, bet2: 2 })
+    expect(amounts(suggestOptions({ game: game('tienlen'), round: r, from: 'a', to: 'b' }))).toEqual([2, 4, 6, 8])
+    expect(amounts(suggestOptions({ game: game('tienlen'), round: round({ bet: 2, bet2: 2 }), from: 'a', to: 'b' }))).toEqual([2, 3, 4])
+  })
+
   it('làm tròn ×1,5 thành số nguyên và bỏ mức trùng', () => {
     expect(amounts(suggestOptions({ game: game('tienlen'), round: round({ bet: 5 }), from: 'a', to: 'b' }))).toEqual([5, 8, 10])
     expect(amounts(suggestOptions({ game: game('tienlen'), round: round({ bet: 1 }), from: 'a', to: 'b' }))).toEqual([1, 2])

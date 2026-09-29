@@ -8,6 +8,7 @@ function session(): Session {
     name: 'Test',
     createdAt: 0,
     updatedAt: 0,
+    requests: [],
     players: [
       { id: 'a', name: 'An', emoji: '🐱', active: true },
       { id: 'b', name: 'Bình', emoji: '🐶', active: true },

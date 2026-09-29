@@ -13,8 +13,10 @@ export function newId(): ID {
 
 export interface OpenDraft {
   participants: ID[]
-  /** Mức cược chung (Tiến lên) hoặc cược mặc định. */
+  /** Mức cược chung (Tiến lên: cược Nhất) hoặc cược mặc định. */
   bet: number
+  /** Tiến lên: cược Nhì. */
+  bet2?: number
   /** Cược riêng: con Xì dách, kẹo bỏ vào pot lúc mở ván Poker. */
   stakes: Record<ID, number>
   dealer: ID | null
@@ -41,6 +43,11 @@ export interface AppState {
   /** Kéo kẹo. Có ván đang mở thì ghi vào ván, không thì ghi thành chuyển tay. */
   addMove(gameId: ID, from: ID, to: ID, amount: number, label: string): string[]
   removeMove(gameId: ID, roundId: ID, moveId: ID): void
+  /** Đòi kẹo: `to` đòi `from` trả `amount`, chờ `from` xác nhận. */
+  requestCandy(gameId: ID, from: ID, to: ID, amount: number): string[]
+  /** Người bị đòi trả lời: OK thì chuyển kẹo. */
+  answerRequest(requestId: ID, accept: boolean): string[]
+  cancelRequest(requestId: ID): void
   /** Xì dách: cái ăn (eat) hoặc đền (pay) cả bàn theo hệ số. */
   dealerAll(gameId: ID, mode: 'eat' | 'pay', multiplier: number): void
   closeRound(gameId: ID): string[]
@@ -63,7 +70,9 @@ function validateOpen(game: Game, d: OpenDraft): string[] {
   if (findOpenIn(game)) errors.push('Game này đang có ván chưa chốt.')
   const isInt = (v: number | undefined, min: number) => Number.isInteger(v) && (v as number) >= min
 
-  if (mod.stakeMode === 'common' && !isInt(d.bet, 1)) errors.push('Mức cược phải là số nguyên lớn hơn 0.')
+  if (mod.stakeMode === 'common' && (!isInt(d.bet, 1) || !isInt(d.bet2, 1))) {
+    errors.push('Cược Nhất và cược Nhì phải là số nguyên lớn hơn 0.')
+  }
   if (mod.stakeMode === 'dealer') {
     if (!d.dealer || !d.participants.includes(d.dealer)) errors.push('Chưa chọn nhà cái.')
     else if (d.participants.some((p) => p !== d.dealer && !isInt(d.stakes[p], 1))) {
@@ -128,6 +137,7 @@ export function createAppStore(repo: SessionRepo) {
             .slice(0, MAX_PLAYERS)
             .map((p) => ({ id: newId(), name: p.name.trim(), emoji: p.emoji, active: true })),
           games: [],
+          requests: [],
         }
         repo.save(session)
         set({ session, error: null })
@@ -191,7 +201,11 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       removeGame(gameId) {
-        mutate((s) => ({ ...s, games: s.games.filter((g) => g.id !== gameId) }))
+        mutate((s) => ({
+          ...s,
+          games: s.games.filter((g) => g.id !== gameId),
+          requests: s.requests.filter((r) => r.gameId !== gameId),
+        }))
       },
 
       openRound(gameId, draft) {
@@ -212,6 +226,7 @@ export function createAppStore(repo: SessionRepo) {
           status: 'open',
           participants: draft.participants,
           bet: draft.bet,
+          bet2: mode === 'common' ? draft.bet2 : undefined,
           stakes,
           dealer: mode === 'dealer' ? draft.dealer : null,
           moves:
@@ -306,6 +321,29 @@ export function createAppStore(repo: SessionRepo) {
 
       deleteRound(gameId, roundId) {
         mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
+      },
+
+      requestCandy(gameId, from, to, amount) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        if (from === to || from === POT || to === POT) return ['Chỉ đòi kẹo giữa hai người chơi.']
+        if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
+        mutate((s) => ({ ...s, requests: [...s.requests, { id: newId(), gameId, from, to, amount, at: Date.now() }] }))
+        return []
+      },
+
+      answerRequest(requestId, accept) {
+        const req = get().session?.requests.find((r) => r.id === requestId)
+        if (!req) return ['Lời đòi kẹo này không còn nữa.']
+        if (accept) {
+          const errors = get().addMove(req.gameId, req.from, req.to, req.amount, 'Đòi kẹo')
+          if (errors.length) return errors
+        }
+        mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+        return []
+      },
+
+      cancelRequest(requestId) {
+        mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
       },
 
     }
