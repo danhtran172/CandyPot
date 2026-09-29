@@ -39,7 +39,7 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
   // Lô tô / Poker: không bỏ kẹo vào pot lúc mở ván (mua tờ / blind tự tính)
-  const stakes = game.type === 'loto' || game.type === 'poker' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
+  const stakes = game.type === 'loto' || game.type === 'poker' || game.type === 'free' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
   return { participants, bet, bet2, stakes, dealer }
 }
 

@@ -1,10 +1,11 @@
 import type { GameType } from '../../core/types'
+import free from '../../assets/games/free.webp'
 import loto from '../../assets/games/loto.webp'
 import poker from '../../assets/games/poker.webp'
 import tienlen from '../../assets/games/tienlen.webp'
 import xidach from '../../assets/games/xidach.webp'
 
-const ICONS: Record<GameType, string> = { tienlen, xidach, poker, loto }
+const ICONS: Record<GameType, string> = { tienlen, xidach, poker, loto, free }
 
 /** Biểu tượng game (ảnh) — cỡ mặc định bằng chữ đứng cạnh. */
 export function GameIcon({ type, className = 'size-[1.1em]' }: { type: GameType; className?: string }) {

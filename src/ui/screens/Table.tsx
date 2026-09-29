@@ -14,7 +14,7 @@ import {
   type PokerAction,
 } from '../../core/games/pokerHand'
 import { netOf } from '../../core/ledger'
-import { movesNet, openRound, potOf } from '../../core/round'
+import { contributions, movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
 import { suggestOptions, tienlenBets } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
@@ -94,6 +94,7 @@ export function Table() {
   }
 
   const isLoto = game?.type === 'loto'
+  const isFree = game?.type === 'free'
   const hostName = players[session.hostId ?? '']?.name ?? '?'
 
   /** Poker: tay bài đang chơi (luật đầy đủ). */
@@ -182,6 +183,12 @@ export function Table() {
   const onTransfer = (from: ID, to: ID) => {
     if (!game) return
     if (hand && (to === POT || from === POT)) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
+    if (isFree && (to === POT || from === POT)) {
+      // Tự do: cược vào Pot (chưa có ván thì tự mở), kéo Pot để trao thưởng
+      if (from === POT && (!round || potOf(round) === 0)) return flash('Pot đang trống — bấm 💰 Pot để cược trước.', true)
+      if (to === POT && !round && !openNext()) return
+      return setPending({ from, to })
+    }
     if (isLoto && (to === POT || from === POT)) {
       if (from === POT) return void awardPot(to)
       if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
@@ -252,7 +259,15 @@ export function Table() {
     } else {
       const errors = actions().addMove(game.id, pending.from, pending.to, o.amount, round ? o.label : 'Chuyển tay')
       if (errors.length) flash(errors[0], true)
-      else flyCandy(pending.from, pending.to, o.amount)
+      else {
+        flyCandy(pending.from, pending.to, o.amount)
+        // Tự do: trao hết pot thì ván tự xong
+        const now = isFree && pending.from === POT ? openRound(actions().session!, game.id) : undefined
+        if (now && potOf(now) === 0) {
+          actions().closeRound(game.id)
+          flash(`${players[pending.to]?.name} ăn ${o.amount} kẹo — xong ván, bấm 💰 Pot để cược ván mới.`)
+        }
+      }
     }
     setPending(null)
   }
@@ -335,8 +350,14 @@ export function Table() {
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
     badge: hand ? pokerBadge(p.id) : round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
-    stake: hand ? hand.streetBets[p.id] || undefined : game?.type === 'xidach' ? (round ?? lastPlay)?.stakes[p.id] : undefined,
-    stakeDim: !round,
+    stake: hand
+      ? hand.streetBets[p.id] || undefined
+      : isFree
+        ? round && (contributions(round)[p.id] ?? 0)
+        : game?.type === 'xidach'
+          ? (round ?? lastPlay)?.stakes[p.id]
+          : undefined,
+    stakeDim: !round || (isFree && !contributions(round)[p.id]),
     highlight: !!hand && hand.toAct === p.id,
     dim: !!hand?.folded.includes(p.id),
   }))
@@ -403,7 +424,7 @@ export function Table() {
 
           <Board
             seats={seats}
-            pot={game.type === 'loto' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
+            pot={game.type === 'loto' || game.type === 'free' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
             potAfterCenter={game.type === 'loto'}
             betBox={game.type === 'xidach'}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
@@ -452,7 +473,18 @@ export function Table() {
 
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {GAMES[game.type].soon ? null : game.type === 'poker' && (hand || !round) ? (
+            {GAMES[game.type].soon ? null : game.type === 'free' ? (
+              round ? (
+                <>
+                  <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                    Hủy ván
+                  </Button>
+                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
+                    Kéo 💰 Pot vào người thắng để trao
+                  </div>
+                </>
+              ) : null
+            ) : game.type === 'poker' && (hand || !round) ? (
               !hand ? (
                 <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                   Tay mới
@@ -704,7 +736,7 @@ export function Table() {
               : undefined
           }
           extra={
-            game.type === 'poker' && pending.to === POT && round && potOf(round) > 0 ? (
+            (game.type === 'poker' || isFree) && pending.to === POT && round && potOf(round) > 0 ? (
               <button
                 type="button"
                 onClick={() => {
@@ -854,7 +886,7 @@ function TableCenter({
         <span className="font-display text-lg leading-tight font-bold">
           <GameName type={game.type} />
         </span>
-        <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : 'Chưa mở ván'}</span>
+        <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm 💰 Pot để cược' : 'Chưa mở ván'}</span>
       </>
     )
   }

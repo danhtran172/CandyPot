@@ -378,3 +378,18 @@ describe('appStore — Lô tô', () => {
     expect(open().bet).toBe(3)
   })
 })
+
+describe('appStore — Tự do', () => {
+  it('cược vào Pot, gửi cho nhau, trao pot → hết pot thì chốt được', () => {
+    const g = s().addGame('free')
+    expect(s().quickOpen(g)).toEqual([])
+    expect(openRound(session(), g)!.moves).toEqual([])
+    s().addMove(g, a, POT, 3, '')
+    s().addMove(g, b, POT, 5, '')
+    s().addMove(g, c, a, 2, '')
+    expect(s().closeRound(g)).toEqual(['Pot còn 8 kẹo — kéo pot cho người thắng trước khi chốt.'])
+    s().addMove(g, POT, b, 8, 'Cả pot')
+    expect(s().closeRound(g)).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: -1, [b]: 3, [c]: -2 })
+  })
+})

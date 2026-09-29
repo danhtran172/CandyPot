@@ -1,6 +1,6 @@
 export type ID = string
 
-export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto'
+export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'free'
 
 /** Id đặc biệt cho pot giữa bàn (Poker). */
 export const POT = 'pot'
