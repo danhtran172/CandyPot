@@ -8,6 +8,7 @@ import { ask, tell } from '../dialog'
 import { hostVoteTally, hostVotesNeeded } from '../../core/hostVote'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 import { RoomCode } from '../components/RoomCode'
+import { MeIcon } from '../components/MeIcon'
 
 export function Players() {
   const session = useSession()
@@ -17,7 +18,8 @@ export function Players() {
   const nameTaken = (n: string, except?: string) =>
     session.players.some((p) => p.id !== except && p.name.toLowerCase() === n.trim().toLowerCase())
 
-  const [me, setMe] = useMe(session)
+  // "Bạn là ai" chọn lúc tạo / join bàn, không đổi ở đây — tránh máy này giả làm người khác
+  const [me] = useMe(session)
 
   const inRoom = session.players.filter((p) => !p.removed)
   const [swiped, setSwiped] = useState<string | null>(null)
@@ -75,7 +77,7 @@ export function Players() {
       {session.code && <RoomCode session={session} />}
       <ul className="mb-3 space-y-0.5 text-sm text-muted">
         <li>
-          <b className="text-cream">Chạm avatar</b> để chọn bạn (🙋) — chỗ của bạn luôn ở dưới cùng bàn · <b className="text-cream">giữ</b> để đổi biểu tượng.
+          <b className="text-cream">Chạm avatar</b> để đổi biểu tượng · dấu <MeIcon className="inline size-3.5 align-[-2px] text-lemon" /> là bạn (chọn lúc tạo / join bàn, không đổi được).
         </li>
         <li>
           🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
@@ -125,8 +127,7 @@ export function Players() {
                 isMe={me === p.id}
                 resting={!p.active}
                 name={p.name}
-                onTap={() => setMe(p.id)}
-                onHold={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
+                onTap={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
               />
               <input
                 aria-label={`Tên ${p.name}`}
@@ -288,46 +289,25 @@ function SwipeRow({
   )
 }
 
-/** Avatar người chơi: chạm = chọn là mình (gắn 🙋), giữ ~0,5 giây = đổi biểu tượng. */
+/** Avatar người chơi: chạm = đổi biểu tượng; dấu hình người = bạn (máy này). */
 function Avatar({
   emoji,
   isMe,
   resting,
   name,
   onTap,
-  onHold,
 }: {
   emoji: string
   isMe: boolean
   resting?: boolean
   name: string
   onTap: () => void
-  onHold: () => void
 }) {
-  const timer = useRef<number | undefined>(undefined)
-  const held = useRef(false)
-  const from = useRef({ x: 0, y: 0 })
-  const start = (e: ReactPointerEvent) => {
-    held.current = false
-    from.current = { x: e.clientX, y: e.clientY }
-    timer.current = window.setTimeout(() => {
-      held.current = true
-      onHold()
-    }, 500)
-  }
-  const stop = () => window.clearTimeout(timer.current)
   return (
     <button
       type="button"
-      aria-label={isMe ? `${name} là bạn — giữ để đổi biểu tượng` : `Chọn ${name} là bạn`}
-      aria-pressed={isMe}
-      onPointerDown={start}
-      onPointerUp={stop}
-      onPointerMove={(e) => Math.hypot(e.clientX - from.current.x, e.clientY - from.current.y) > 8 && stop()}
-      onPointerLeave={stop}
-      onPointerCancel={stop}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={() => !held.current && onTap()}
+      aria-label={isMe ? `${name} (bạn) — chạm để đổi biểu tượng` : `Đổi biểu tượng của ${name}`}
+      onClick={onTap}
       className={`relative grid size-11 shrink-0 touch-none place-items-center rounded-full border-2 bg-plum-2 text-2xl transition select-none active:scale-95 ${
         isMe ? 'border-lemon shadow-[0_0_14px_rgb(255_210_63/0.35)]' : 'border-line'
       }`}
@@ -339,8 +319,8 @@ function Avatar({
         </span>
       )}
       {isMe && (
-        <span aria-hidden className="absolute -right-1.5 -bottom-1 grid size-5 place-items-center rounded-full bg-lemon text-[11px] leading-none">
-          🙋
+        <span aria-hidden className="absolute -right-1.5 -bottom-1 grid size-5 place-items-center rounded-full bg-lemon text-night">
+          <MeIcon className="size-3" />
         </span>
       )}
     </button>
