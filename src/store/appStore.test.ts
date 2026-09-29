@@ -108,6 +108,7 @@ describe('appStore — ván Tiến lên', () => {
 describe('appStore — Xì dách', () => {
   it('đặt cược → chốt → trả kẹo → ván mới giữ cược cũ, gắn tag làm cái', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })
     expect(openRound(session(), g)!.phase).toBe('betting')
     expect(s().addMove(g, b, a, 10, '')).toEqual(['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.'])
@@ -122,6 +123,7 @@ describe('appStore — Xì dách', () => {
 
   it('bỏ chốt cược: được khi chưa trả kẹo, bị chặn khi đã có lượt', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: a })
     s().lockBets(g)
     expect(s().unlockBets(g)).toEqual([])
@@ -135,6 +137,7 @@ describe('appStore — Xì dách', () => {
 
   it('chốt ván Xì dách gắn tag làm cái', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })
     s().lockBets(g)
     s().addMove(g, b, a, 10, '')
@@ -145,6 +148,7 @@ describe('appStore — Xì dách', () => {
 
   it('đặt cược qua ô Bet: đổi cược của con, cái không đặt được, ván sau gợi ý lại mức cũ', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 5 }, dealer: a })
     expect(s().setStake(g, b, 20)).toEqual([])
     expect(s().setStake(g, a, 20)).toEqual(['Nhà cái không đặt cược.'])
@@ -156,6 +160,7 @@ describe('appStore — Xì dách', () => {
 
   it('mở nhanh lấy lại người chơi, cái và cược của ván trước; đổi cái chuyển cược', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 8 }, dealer: a })
     s().closeRound(g)
     expect(s().quickOpen(g)).toEqual([])
@@ -166,6 +171,7 @@ describe('appStore — Xì dách', () => {
 
   it('cần cái và cược của mọi con', () => {
     const g = s().addGame('xidach')
+    s().setXidachLimits(g, 1, 50)
     expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: null })).not.toEqual([])
     expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: a })).not.toEqual([])
   })
@@ -391,5 +397,36 @@ describe('appStore — Tự do', () => {
     s().addMove(g, POT, b, 8, 'Cả pot')
     expect(s().closeRound(g)).toEqual([])
     expect(netOf(session())).toEqual({ [a]: -1, [b]: 3, [c]: -2 })
+  })
+})
+
+describe('appStore — cài đặt từng mode', () => {
+  it('Xì dách: cược phải trong khoảng min–max (mặc định 1–5)', () => {
+    const g = s().addGame('xidach')
+    s().quickOpen(g)
+    const con = openRound(session(), g)!.participants.find((p) => p !== openRound(session(), g)!.dealer)!
+    expect(s().setStake(g, con, 6)).toEqual(['Cược từ 1 đến 5 kẹo.'])
+    expect(s().setXidachLimits(g, 2, 1)).toEqual(['Cược tối đa phải lớn hơn hoặc bằng cược tối thiểu.'])
+    expect(s().setXidachLimits(g, 2, 10)).toEqual([])
+    expect(s().setStake(g, con, 6)).toEqual([])
+    expect(s().setStake(g, con, 1)).toEqual(['Cược từ 2 đến 10 kẹo.'])
+  })
+
+  it('Lô tô: mỗi người mua tối đa N tờ một ván (mặc định 2)', () => {
+    const g = s().addGame('loto')
+    s().setLotoPrice(g, 3)
+    s().quickOpen(g)
+    expect(s().addMove(g, a, POT, 6, '2 tờ')).toEqual([])
+    expect(s().addMove(g, a, POT, 3, '1 tờ')).toEqual(['Mỗi người mua tối đa 2 tờ một ván (6 kẹo).'])
+    expect(s().setLotoSettings(g, 3, 3)).toEqual([])
+    expect(s().addMove(g, a, POT, 3, '1 tờ')).toEqual([])
+  })
+
+  it('Tiến lên: heo đỏ / heo đen mặc định theo Nhất / Nhì, đặt riêng được', () => {
+    const g = s().addGame('tienlen')
+    s().setTienlenBets(g, 4, 2)
+    expect(session().games[0].bets).toEqual({ bet: 4, bet2: 2, red: undefined, black: undefined })
+    s().setTienlenBets(g, 4, 2, { red: 10, black: 6 })
+    expect(session().games[0].bets).toMatchObject({ red: 10, black: 6 })
   })
 })

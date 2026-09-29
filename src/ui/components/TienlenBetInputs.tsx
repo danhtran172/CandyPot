@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Stepper } from './kit'
+import { RuleIcon } from './RuleIcons'
 
 type Field = 'bet' | 'bet2'
 
@@ -42,9 +43,12 @@ export function TienlenBetInputs({
 
   const row = (field: Field, title: string, hint: string) => (
     <div className="flex items-center justify-between gap-3">
-      <div>
-        <div className="font-display text-lg leading-tight font-bold">{title}</div>
-        <div className="text-xs text-muted">{hint}</div>
+      <div className="flex items-center gap-2">
+        <RuleIcon name={field === 'bet' ? 'first' : 'second'} className="size-7" />
+        <div>
+          <div className="font-display text-lg leading-tight font-bold">{title}</div>
+          <div className="text-xs text-muted">{hint}</div>
+        </div>
       </div>
       <Stepper value={field === 'bet' ? bet : bet2} min={1} onChange={(v) => edit(field, v)} label={`cược ${title}`} />
     </div>

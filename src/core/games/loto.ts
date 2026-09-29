@@ -15,6 +15,12 @@ export const loto: GameModule = {
 
 /** Giá mỗi tờ mặc định. */
 export const LOTO_PRICE = 5
+/** Mỗi người mua tối đa bao nhiêu tờ một ván (mặc định). */
+export const LOTO_MAX = 2
+
+export function lotoMax(game: Game): number {
+  return game.lotoMax ?? LOTO_MAX
+}
 
 /** Giá mỗi tờ đang dùng: ván đang mở → giá host đặt → ván gần nhất → mặc định. */
 export function lotoPrice(game: Game): number {

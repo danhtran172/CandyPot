@@ -1,6 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Option, Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
+import { RuleIcon, type RuleIconName } from './RuleIcons'
+
+/** Nhãn gợi ý (Nhất / Nhì / Heo…) → biểu tượng hiện dưới số. */
+const OPTION_ICON: Record<string, RuleIconName> = { Nhất: 'first', Nhì: 'second', 'Heo đỏ': 'pigRed', 'Heo đen': 'pigBlack' }
 
 const VERB = { pay: 'Đưa', request: 'Đòi', bet: 'Đặt', buy: 'Mua' } as const
 
@@ -102,7 +106,10 @@ export function AmountSheet({
                   <span className="candy num text-sm">{o.amount}</span>
                 </span>
               ) : (
-                <span className={`candy num px-2 ${options.length > 3 ? 'text-2xl' : 'text-3xl'}`}>{o.amount}</span>
+                <span className="flex flex-col items-center gap-1">
+                  <span className={`candy num px-2 ${options.length > 3 ? 'text-2xl' : 'text-3xl'}`}>{o.amount}</span>
+                  {OPTION_ICON[o.label] && <RuleIcon name={OPTION_ICON[o.label]} className="size-5" />}
+                </span>
               )}
             </button>
           ))}

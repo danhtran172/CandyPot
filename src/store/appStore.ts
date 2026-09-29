@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
-import { lotoPrice } from '../core/games/loto'
+import { lotoMax, lotoPrice } from '../core/games/loto'
+import { xidachLimits } from '../core/games/xidach'
 import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
@@ -39,7 +40,12 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
   // Lô tô / Poker: không bỏ kẹo vào pot lúc mở ván (mua tờ / blind tự tính)
-  const stakes = game.type === 'loto' || game.type === 'poker' || game.type === 'free' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
+  const limits = game.type === 'xidach' ? xidachLimits(game) : undefined
+  const clamp = (v: number) => (limits ? Math.min(limits.max, Math.max(limits.min, v)) : v)
+  const stakes =
+    game.type === 'loto' || game.type === 'poker' || game.type === 'free'
+      ? {}
+      : Object.fromEntries(active.map((id) => [id, clamp(prev?.stakes[id] ?? bet)]))
   return { participants, bet, bet2, stakes, dealer }
 }
 
@@ -81,7 +87,11 @@ export interface AppState {
   /** Lô tô: host đặt giá mỗi tờ (ván đang mở chưa ai mua + mặc định cho ván sau). */
   setLotoPrice(gameId: ID, price: number): string[]
   /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
-  setTienlenBets(gameId: ID, bet: number, bet2: number): string[]
+  setTienlenBets(gameId: ID, bet: number, bet2: number, pigs?: { red?: number; black?: number }): string[]
+  /** Lô tô: giá mỗi tờ + số tờ tối đa mỗi người một ván. */
+  setLotoSettings(gameId: ID, price: number, max: number): string[]
+  /** Xì dách: mức cược tối thiểu / tối đa. */
+  setXidachLimits(gameId: ID, min: number, max: number): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
@@ -342,15 +352,16 @@ export function createAppStore(repo: SessionRepo) {
         return []
       },
 
-      setTienlenBets(gameId, bet, bet2) {
+      setTienlenBets(gameId, bet, bet2, pigs = {}) {
         const g = game(gameId)
         if (!g) return ['Không tìm thấy game.']
-        if (![bet, bet2].every((v) => Number.isInteger(v) && v > 0)) return ['Mức cược phải là số nguyên lớn hơn 0.']
+        const values = [bet, bet2, pigs.red, pigs.black].filter((v) => v !== undefined)
+        if (!values.every((v) => Number.isInteger(v) && (v as number) > 0)) return ['Mức cược phải là số nguyên lớn hơn 0.']
         if (bet2 > bet) return ['Cược Nhì không được lớn hơn cược Nhất.']
         const open = findOpenIn(g)
         mapGame(gameId, (x) => ({
           ...x,
-          bets: { bet, bet2 },
+          bets: { bet, bet2, red: pigs.red, black: pigs.black },
           rounds: x.rounds.map((r) => (r.id === open?.id ? { ...r, bet, bet2 } : r)),
         }))
         return []
@@ -414,6 +425,26 @@ export function createAppStore(repo: SessionRepo) {
         return []
       },
 
+      setLotoSettings(gameId, price, max) {
+        if (!Number.isInteger(max) || max < 1) return ['Số tờ tối đa phải là số nguyên từ 1 trở lên.']
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (price !== lotoPrice(g)) {
+          const errors = get().setLotoPrice(gameId, price)
+          if (errors.length) return errors
+        }
+        mapGame(gameId, (x) => ({ ...x, lotoMax: max }))
+        return []
+      },
+
+      setXidachLimits(gameId, min, max) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        if (![min, max].every((v) => Number.isInteger(v) && v > 0)) return ['Mức cược phải là số nguyên lớn hơn 0.']
+        if (max < min) return ['Cược tối đa phải lớn hơn hoặc bằng cược tối thiểu.']
+        mapGame(gameId, (x) => ({ ...x, xidachLimits: { min, max } }))
+        return []
+      },
+
       quickOpen(gameId) {
         const g = game(gameId)
         const s = get().session
@@ -471,6 +502,11 @@ export function createAppStore(repo: SessionRepo) {
         if (g.type === 'loto' && open) {
           if (open.phase === 'betting' && to !== POT) return ['Đang mua tờ — bấm Chốt rồi host mới trao pot.']
           if (open.phase === 'playing' && to === POT) return ['Đã chốt — không mua thêm tờ được nữa.']
+          if (to === POT) {
+            const bought = open.moves.filter((m) => m.from === from && m.to === POT).reduce((s, m) => s + m.amount, 0)
+            const cap = lotoMax(g) * open.bet
+            if (bought + amount > cap) return [`Mỗi người mua tối đa ${lotoMax(g)} tờ một ván (${cap} kẹo).`]
+          }
         } else if (open?.phase === 'betting') return ['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.']
         if (open) {
           const inRound = (id: ID) => id === POT || open.participants.includes(id)
@@ -562,6 +598,9 @@ export function createAppStore(repo: SessionRepo) {
         if (open.phase === 'playing') return ['Đã chốt cược — bấm Kết thúc để sang ván mới rồi cược lại.']
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (!Number.isInteger(amount) || amount <= 0) return ['Tiền cược phải là số nguyên lớn hơn 0.']
+        const g = game(gameId)
+        const { min, max } = g ? xidachLimits(g) : { min: 1, max: Infinity }
+        if (amount < min || amount > max) return [`Cược từ ${min} đến ${max} kẹo.`]
         mapRound(gameId, open.id, (r) => ({ ...r, stakes: { ...r.stakes, [playerId]: amount } }))
         return []
       },

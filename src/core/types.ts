@@ -110,9 +110,13 @@ export interface Game {
   name: string
   rounds: Round[]
   /** Tiến lên: mức cược Nhất/Nhì host đặt ở ô Bet — gợi ý khi kéo kẹo, mặc định cho ván sau. */
-  bets?: { bet: number; bet2: number }
-  /** Lô tô: giá mỗi tờ host đặt ở ô Price. */
+  bets?: { bet: number; bet2: number; red?: number; black?: number }
+  /** Lô tô: giá mỗi tờ host đặt ở ô Giá. */
   price?: number
+  /** Lô tô: mỗi người mua tối đa bao nhiêu tờ một ván (mặc định 2). */
+  lotoMax?: number
+  /** Xì dách: mức cược tối thiểu / tối đa (mặc định 1 và 5 × min). */
+  xidachLimits?: { min: number; max: number }
   /** Poker: small blind và mức all-in (tổng tối đa mỗi người một tay). */
   pokerSettings?: { sb: number; cap: number }
 }

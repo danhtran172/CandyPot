@@ -1,57 +1,54 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { Game } from '../../core/types'
 import { tienlenBets } from '../../core/suggest'
 import { actions } from '../../store'
-import { Button } from './kit'
+import { LinkChip, SettingRow, SettingsModal } from './RuleSheets'
 import { TienlenBetInputs } from './TienlenBetInputs'
 
-/** Tiến lên: host đặt Rule (mức Nhất/Nhì) — là các số gợi ý khi kéo trả kẹo. */
+/**
+ * Tiến lên: host đặt Rule — tiền ăn Nhất/Nhì và giá heo đỏ/heo đen (mặc định bằng Nhất/Nhì).
+ * Đây là các số gợi ý khi trả kẹo.
+ */
 export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
   const init = tienlenBets(game)
   const [bet, setBet] = useState(init.bet)
   const [bet2, setBet2] = useState(init.bet2 ?? Math.max(1, Math.round(init.bet / 2)))
+  // Heo chưa đặt riêng thì đi theo Nhất / Nhì
+  const [red, setRed] = useState<number | undefined>(game.bets?.red)
+  const [black, setBlack] = useState<number | undefined>(game.bets?.black)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onDone(false)
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onDone])
-
   const save = () => {
-    const errors = actions().setTienlenBets(game.id, bet, bet2)
+    const errors = actions().setTienlenBets(game.id, bet, bet2, { red, black })
     if (errors.length) setError(errors[0])
     else onDone(true)
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Rule Tiến lên" className="fixed inset-0 z-50 flex items-center justify-center px-6">
-      <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/75 backdrop-blur-sm" onClick={() => onDone(false)} />
-      <div className="pop relative w-full max-w-sm rounded-3xl border-2 border-sky/70 bg-plum-2 p-5 shadow-2xl">
-        <h2 className="font-display text-center text-xl font-bold">
+    <SettingsModal
+      title={
+        <>
           <span className="text-sky">Rule</span> · Tiến lên
-        </h2>
-        <p className="mt-1 text-center text-xs text-muted">Số gợi ý khi trả kẹo: Nhì, Nhất, Nhất × 1,5, Nhất × 2.</p>
-        <div className="mt-4">
-          <TienlenBetInputs
-            bet={bet}
-            bet2={bet2}
-            onChange={(v) => {
-              setBet(v.bet)
-              setBet2(v.bet2)
-            }}
-          />
-        </div>
-        {error && <p className="mt-3 text-center text-sm text-berry">{error}</p>}
-        <div className="mt-4 flex gap-2">
-          <Button className="flex-1" onClick={() => onDone(false)}>
-            Thôi
-          </Button>
-          <Button variant="primary" className="flex-1" onClick={save}>
-            Lưu
-          </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+      hint="Các số gợi ý khi trả kẹo."
+      error={error}
+      onSave={save}
+      onClose={() => onDone(false)}
+    >
+      <TienlenBetInputs
+        bet={bet}
+        bet2={bet2}
+        onChange={(v) => {
+          setBet(v.bet)
+          setBet2(v.bet2)
+        }}
+      />
+      <div className="border-t border-line/60 pt-3" />
+      <SettingRow icon="pigRed" label="Heo đỏ" hint="chặt heo đỏ" value={red ?? bet} onChange={setRed} />
+      <LinkChip linked={red === undefined} text="Heo đỏ = Nhất" onRelink={() => setRed(undefined)} />
+      <SettingRow icon="pigBlack" label="Heo đen" hint="chặt heo đen" value={black ?? bet2} onChange={setBlack} />
+      <LinkChip linked={black === undefined} text="Heo đen = Nhì" onRelink={() => setBlack(undefined)} />
+    </SettingsModal>
   )
 }

@@ -88,3 +88,16 @@ describe('tienlenBets', () => {
     expect(amounts(suggestOptions({ game: g, round: null, from: 'a', to: 'b' }))).toEqual([3, 6, 9, 12])
   })
 })
+
+describe('Tiến lên có heo', () => {
+  it('gợi ý Nhì, Nhất, Heo đen, Heo đỏ khi heo đặt riêng', () => {
+    const g = { ...game('tienlen'), bets: { bet: 4, bet2: 2, red: 10, black: 6 } }
+    const o = suggestOptions({ game: g, round: null, from: 'a', to: 'b' })
+    expect(o.map((x) => [x.amount, x.label])).toEqual([
+      [2, 'Nhì'],
+      [4, 'Nhất'],
+      [6, 'Heo đen'],
+      [10, 'Heo đỏ'],
+    ])
+  })
+})
