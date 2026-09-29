@@ -107,7 +107,7 @@ export function HostTasks() {
           <SectionTitle>Bạn xin hoàn tác</SectionTitle>
           {mine.length === 0 ? (
             <p className="rounded-3xl border border-dashed border-line p-5 text-center text-sm text-muted">
-              Mở 📜 Trả/nhận trên bàn chơi, bấm ✕ ở một lượt để xin host hoàn tác.
+              Mở 📜 Trả/nhận trên bàn chơi, bấm <UndoIcon className="size-3.5 align-[-2px]" /> ở một lượt để xin host hoàn tác.
             </p>
           ) : (
             <ul className="space-y-2">

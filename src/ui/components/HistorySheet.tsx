@@ -57,7 +57,9 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
         <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-line" />
         <h2 className="font-display px-5 text-xl font-bold">📜 Trả/nhận của bạn · {game.name}</h2>
         <p className="px-5 text-xs text-muted">
-          {isHost ? 'Bạn là host: bấm ✕ để hoàn tác ngay.' : 'Bấm ✕ để xin hoàn tác — host sẽ xác nhận.'}
+          {isHost ? 'Bạn là host: bấm ' : 'Bấm '}
+          <UndoIcon className="size-3.5 align-[-2px]" />
+          {isHost ? ' để hoàn tác ngay.' : ' để xin hoàn tác — host sẽ xác nhận.'}
         </p>
         {note && <p className={`mx-5 mt-2 rounded-xl px-3 py-1.5 text-xs font-semibold ${note.bad ? 'bg-berry/20 text-berry' : 'bg-mint/15 text-mint'}`}>{note.text}</p>}
 
@@ -76,10 +78,10 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                       <button
                         type="button"
                         aria-label="Hủy lời đòi"
-                        className="px-1 text-muted hover:text-berry"
+                        className="shrink-0 rounded-full p-1 opacity-70 hover:opacity-100 active:scale-90"
                         onClick={() => actions().cancelRequest(r.id)}
                       >
-                        ✕
+                        <UndoIcon className="size-4" />
                       </button>
                     )}
                   </li>
@@ -118,10 +120,10 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                         <button
                           type="button"
                           aria-label={isHost ? 'Hoàn tác lượt này' : 'Xin hoàn tác lượt này'}
-                          className="px-1 text-muted hover:text-berry"
+                          className="shrink-0 rounded-full p-1 opacity-70 hover:opacity-100 active:scale-90"
                           onClick={() => undo(r, m)}
                         >
-                          ✕
+                          <UndoIcon className="size-4" />
                         </button>
                       )}
                     </li>

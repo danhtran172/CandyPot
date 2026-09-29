@@ -5,6 +5,7 @@ import { useMe } from '../me'
 import { answerTask, incomingAsks, outgoingAsks } from '../tasks'
 import { Button, SectionTitle, TopBar, Who } from '../components/kit'
 import { TaskCard } from '../components/TaskCard'
+import { UndoIcon } from '../components/UndoIcon'
 import { useSession } from '../components/useSession'
 
 /** Trung tâm yêu cầu: ai đòi mình (trả lời) và mình đang đòi ai (chờ họ). */
@@ -65,10 +66,10 @@ export function Requests() {
               <button
                 type="button"
                 aria-label="Hủy lời đòi"
-                className="px-1 text-muted hover:text-berry"
+                className="shrink-0 rounded-full p-1 opacity-70 hover:opacity-100 active:scale-90"
                 onClick={() => actions().cancelRequest(r.id)}
               >
-                ✕
+                <UndoIcon className="size-4" />
               </button>
             </li>
           ))}
