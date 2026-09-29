@@ -19,6 +19,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
   - Poker → pot: Theo · Tố gấp đôi · ½ pot · Cả pot. Pot → người: Cả pot · Phần được ăn (side pot) · ½ · ⅓. Chỉ chốt được khi pot = 0; khi chốt, các lượt qua pot được gộp thành ít lượt trả nhất.
   - Không có ván đang mở: kéo = chuyển tay (gợi ý ×1, ×2, ×5, ×10 cược gần nhất).
 - Bỏ form nhập thứ hạng/thối/chặt/thắng-thua. Bỏ danh hiệu Nuôi heo, Đồ tể, Vua renew.
+- **Cập nhật sau (bàn oval + hũ kẹo):** bàn oval tối đa 10 người, "Tôi" ngồi dưới cùng; mỗi người có **hũ kẹo** để kéo. Popup chỉ ghi **3 số = cược × 1 / × 1,5 / × 2** (làm tròn), không ghi tình huống hay hệ số. Cược gốc: Tiến lên = cược chung; Xì dách = cược của người con; Poker vào pot = số kẹo cần theo (chưa ai tố thì cược mở ván). Kéo pot cho người thắng: cả pot / phần được ăn / nửa pot. Bỏ hệ số luật và luật nhà (thay thế các gợi ý 4 mức ở trên).
 
 ## 1. Mục tiêu
 

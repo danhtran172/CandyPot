@@ -12,7 +12,7 @@ export function toneOf(n: number): string {
   return 'text-muted'
 }
 
-export const POT_PLAYER: Player = { id: POT, name: 'Pot', emoji: '🫙', active: true }
+export const POT_PLAYER: Player = { id: POT, name: 'Pot', emoji: '💰', active: true }
 
 /** Tra người chơi theo id (kèm pot). */
 export function playerMap(session: Session): Record<ID, Player> {

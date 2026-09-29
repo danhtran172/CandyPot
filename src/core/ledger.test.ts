@@ -18,7 +18,6 @@ function session(): Session {
         id: 'g1',
         type: 'tienlen',
         name: 'Tiến lên',
-        config: {},
         rounds: [
           {
             id: 'r',
@@ -42,7 +41,6 @@ function session(): Session {
         id: 'g2',
         type: 'xidach',
         name: 'Xì dách',
-        config: {},
         rounds: [
           {
             id: 'r2',

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Option, Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
 
-/** Popup chọn số kẹo sau khi kéo: 4 mức gợi ý + số khác. */
+/** Popup chọn số kẹo sau khi kéo hũ kẹo: các mức gợi ý (chỉ ghi số) + số khác. */
 export function AmountSheet({
   from,
   to,
@@ -35,16 +35,16 @@ export function AmountSheet({
           <Who player={to} />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {options.slice(0, 4).map((o) => (
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {options.slice(0, 3).map((o) => (
             <button
               key={o.amount}
               type="button"
+              aria-label={`Đưa ${o.amount} kẹo`}
               onClick={() => onPick(o)}
-              className="flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-3xl border border-line bg-night/50 px-2 py-3 active:scale-95 active:bg-plum-2"
+              className="grid min-h-24 place-items-center rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
             >
-              <span className="candy num text-2xl">{o.amount}</span>
-              <span className="text-center text-xs leading-snug text-muted">{o.label}</span>
+              <span className="candy num px-3 text-3xl">{o.amount}</span>
             </button>
           ))}
         </div>

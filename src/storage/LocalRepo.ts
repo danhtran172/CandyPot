@@ -1,10 +1,9 @@
 import type { ID, Session } from '../core/types'
-import type { Preset, SessionMeta, SessionRepo } from './SessionRepo'
+import type { SessionMeta, SessionRepo } from './SessionRepo'
 
 type KV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 const INDEX = 'candypot:sessions'
-const PRESETS = 'candypot:presets'
 const sessionKey = (id: ID) => `candypot:session:${id}`
 
 export class LocalRepo implements SessionRepo {
@@ -52,21 +51,6 @@ export class LocalRepo implements SessionRepo {
     this.write(
       INDEX,
       this.list().filter((m) => m.id !== id),
-    )
-  }
-
-  listPresets(): Preset[] {
-    return this.read<Preset[]>(PRESETS, [])
-  }
-
-  savePreset(preset: Preset): void {
-    this.write(PRESETS, [...this.listPresets().filter((p) => p.id !== preset.id), preset])
-  }
-
-  removePreset(id: ID): void {
-    this.write(
-      PRESETS,
-      this.listPresets().filter((p) => p.id !== id),
     )
   }
 }

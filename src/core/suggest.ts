@@ -1,7 +1,5 @@
-import { genericOptions } from './games/options'
+import { scaledOptions } from './games/options'
 import { pokerBetOptions, pokerWinOptions } from './games/poker'
-import { tienlenOptions, type TienLenConfig } from './games/tienlen'
-import { xidachOptions, type XiDachConfig } from './games/xidach'
 import { POT, type Game, type ID, type Option, type Round } from './types'
 
 export interface DragContext {
@@ -18,20 +16,20 @@ export function lastBet(game: Game): number {
   return last?.bet || 1
 }
 
-/** 4 mức kẹo gợi ý khi kéo từ `from` sang `to`. */
+/** Các mức kẹo gợi ý khi kéo hũ kẹo từ `from` sang `to`: cược × 1 / 1,5 / 2. */
 export function suggestOptions({ game, round, from, to }: DragContext): Option[] {
-  if (!round) return genericOptions(lastBet(game))
+  if (!round) return scaledOptions(lastBet(game))
 
   switch (game.type) {
     case 'tienlen':
-      return tienlenOptions(game.config as TienLenConfig, round.bet)
+      return scaledOptions(round.bet)
     case 'xidach': {
       const con = from === round.dealer ? to : from
-      return xidachOptions(game.config as XiDachConfig, round.stakes[con] ?? round.bet)
+      return scaledOptions(round.stakes[con] ?? round.bet)
     }
     case 'poker':
       if (to === POT) return pokerBetOptions(round, from)
       if (from === POT) return pokerWinOptions(round, to)
-      return genericOptions(round.bet)
+      return scaledOptions(round.bet)
   }
 }

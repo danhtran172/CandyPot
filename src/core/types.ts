@@ -61,7 +61,6 @@ export interface Game {
   id: ID
   type: GameType
   name: string
-  config: unknown
   rounds: Round[]
 }
 
@@ -82,12 +81,11 @@ export interface Option {
   label: string
 }
 
-export interface GameModule<Cfg> {
+export interface GameModule {
   type: GameType
   label: string
   minPlayers: number
   maxPlayers: number
   /** Cách đặt cược lúc mở ván. */
   stakeMode: 'common' | 'dealer' | 'pot'
-  defaultConfig: Cfg
 }

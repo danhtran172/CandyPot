@@ -132,9 +132,3 @@ describe('appStore — kéo khi không có ván', () => {
   })
 })
 
-describe('appStore — preset', () => {
-  it('lưu luật nhà', () => {
-    s().savePreset('Nhà An', 'tienlen', { pay4Bet: 5 })
-    expect(s().presets()).toMatchObject([{ name: 'Nhà An', gameType: 'tienlen', config: { pay4Bet: 5 } }])
-  })
-})

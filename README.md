@@ -3,7 +3,7 @@
 Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗi ván, app tính lời/lỗ và cách trả kẹo ít lượt nhất.
 
 - Game: **Tiến lên miền Nam**, **Xì dách** (có nhà cái), **Poker** (có pot, tính side pot)
-- Bàn oval tối đa 10 người, bạn ngồi dưới cùng: mở ván đặt cược → **kéo túi kẹo** 🍬 thả vào người nhận (popup 4 mức gợi ý) → chốt ván
+- Bàn oval tối đa 10 người, bạn ngồi dưới cùng: mở ván đặt cược → **kéo hũ kẹo** thả vào người nhận (popup 3 số: cược × 1 / × 1,5 / × 2) → chốt ván
 - Lời/lỗ cộng dồn từ 0, lịch sử theo ván / theo người, danh hiệu, luật nhà
 - Web app (PWA) — thêm vào màn hình chính, chạy offline, dữ liệu lưu trên máy
 

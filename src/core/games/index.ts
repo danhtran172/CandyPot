@@ -3,7 +3,7 @@ import { poker } from './poker'
 import { tienlen } from './tienlen'
 import { xidach } from './xidach'
 
-export const GAMES: Record<GameType, GameModule<unknown>> = { tienlen, xidach, poker }
+export const GAMES: Record<GameType, GameModule> = { tienlen, xidach, poker }
 
 export const GAME_ORDER: GameType[] = ['tienlen', 'xidach', 'poker']
 

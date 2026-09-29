@@ -100,7 +100,7 @@ export function OpenRound() {
             <div className="font-semibold">{mod.stakeMode === 'common' ? 'Mức cược chung' : 'Cược mặc định'}</div>
             <div className="text-xs text-muted">
               {mod.stakeMode === 'common'
-                ? 'Gợi ý khi kéo kẹo = hệ số luật × mức này'
+                ? 'Kéo hũ kẹo sẽ gợi ý mức này × 1, × 1,5, × 2'
                 : 'Đổi ở đây sẽ đặt lại cược của mọi người bên dưới'}
             </div>
           </div>

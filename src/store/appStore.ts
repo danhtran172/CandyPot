@@ -3,7 +3,7 @@ import { GAMES } from '../core/games'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
-import type { Preset, SessionRepo } from '../storage/SessionRepo'
+import type { SessionRepo } from '../storage/SessionRepo'
 
 export const EMOJIS = ['🐱', '🐶', '🐸', '🐼', '🦊', '🐯', '🐵', '🐰', '🐨', '🐷', '🐮', '🐙', '🦄', '🐔', '🐧', '🐢']
 
@@ -35,7 +35,6 @@ export interface AppState {
   addGame(type: GameType): ID
   renameGame(gameId: ID, name: string): void
   removeGame(gameId: ID): void
-  updateGameConfig(gameId: ID, config: unknown): void
 
   /** Mở ván mới. Trả về danh sách lỗi; rỗng = đã mở. */
   openRound(gameId: ID, draft: OpenDraft): string[]
@@ -48,9 +47,6 @@ export interface AppState {
   reopenRound(gameId: ID, roundId: ID): string[]
   deleteRound(gameId: ID, roundId: ID): void
 
-  presets(): Preset[]
-  savePreset(name: string, gameType: GameType, config: unknown): void
-  removePreset(id: ID): void
 }
 
 export function isPlayerUsed(session: Session, playerId: ID): boolean {
@@ -174,7 +170,6 @@ export function createAppStore(repo: SessionRepo) {
         mutate((s) => {
           const label = GAMES[type].label
           const same = s.games.filter((g) => g.type === type).length
-          const lastConfig = [...s.games].reverse().find((g) => g.type === type)?.config
           return {
             ...s,
             games: [
@@ -183,7 +178,6 @@ export function createAppStore(repo: SessionRepo) {
                 id,
                 type,
                 name: same ? `${label} ${same + 1}` : label,
-                config: structuredClone(lastConfig ?? GAMES[type].defaultConfig),
                 rounds: [],
               },
             ],
@@ -198,10 +192,6 @@ export function createAppStore(repo: SessionRepo) {
 
       removeGame(gameId) {
         mutate((s) => ({ ...s, games: s.games.filter((g) => g.id !== gameId) }))
-      },
-
-      updateGameConfig(gameId, config) {
-        mapGame(gameId, (g) => ({ ...g, config }))
       },
 
       openRound(gameId, draft) {
@@ -318,17 +308,6 @@ export function createAppStore(repo: SessionRepo) {
         mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
       },
 
-      presets() {
-        return repo.listPresets()
-      },
-
-      savePreset(name, gameType, config) {
-        repo.savePreset({ id: newId(), name: name.trim() || 'Luật nhà', gameType, config: structuredClone(config) })
-      },
-
-      removePreset(id) {
-        repo.removePreset(id)
-      },
     }
   })
 }

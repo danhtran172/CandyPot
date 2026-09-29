@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
+import { CandyJar } from './CandyJar'
 
 export interface Seat {
   player: Player
@@ -33,7 +34,7 @@ function sizeFor(n: number) {
 
 /**
  * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
- * Kéo túi kẹo của một người thả vào người khác (hoặc pot) để trả;
+ * Kéo hũ kẹo của một người thả vào người khác (hoặc pot) để trả;
  * bấm người trả rồi bấm người nhận cũng được.
  */
 export function Board({
@@ -134,7 +135,7 @@ export function Board({
               className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
             >
               <span aria-hidden className="text-3xl leading-none">
-                🫙
+                💰
               </span>
               <span className="candy num mt-1 text-lg">{pot}</span>
               <span className="text-[11px] text-muted">Pot</span>
@@ -165,12 +166,9 @@ export function Board({
                 <span aria-hidden className="leading-none">
                   {s.player.emoji}
                 </span>
-                <span
-                  aria-hidden
-                  className={`absolute -right-1.5 -bottom-1 text-base transition ${dragFrom === s.player.id ? 'opacity-0' : ''}`}
-                >
-                  🍬
-                </span>
+                <CandyJar
+                  className={`absolute -right-2.5 -bottom-1.5 h-7 w-6 drop-shadow transition ${dragFrom === s.player.id ? 'opacity-0' : ''}`}
+                />
               </span>
               <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
                 {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
@@ -194,10 +192,10 @@ export function Board({
       {drag?.moved && (
         <div
           aria-hidden
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 text-4xl drop-shadow-lg"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] drop-shadow-[0_8px_12px_rgb(0_0_0/0.5)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          🍬
+          <CandyJar className="h-14 w-12" />
         </div>
       )}
     </>

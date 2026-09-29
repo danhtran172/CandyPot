@@ -147,7 +147,7 @@ export function Table() {
               <span className="text-muted">{playCount(game) ? `Đã chốt ${playCount(game)} ván` : 'Chưa có ván nào'}</span>
             )}
             <Link to={`${base}/g/${game.id}/settings`} className="font-semibold text-muted">
-              ⚙ Luật
+              ⚙ Game
             </Link>
           </div>
 
@@ -160,8 +160,8 @@ export function Table() {
 
           <p className="text-center text-xs text-muted">
             {round
-              ? 'Kéo túi kẹo 🍬 của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
-              : 'Chưa mở ván: kéo túi kẹo sang người khác sẽ được ghi là chuyển tay.'}
+              ? 'Kéo hũ kẹo của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
+              : 'Chưa mở ván: kéo hũ kẹo sang người khác sẽ được ghi là chuyển tay.'}
           </p>
 
           {round && game.type === 'xidach' && (
