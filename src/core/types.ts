@@ -2,6 +2,9 @@ export type ID = string
 
 export type GameType = 'tienlen' | 'xidach' | 'poker'
 
+/** Id đặc biệt cho pot giữa bàn (Poker). */
+export const POT = 'pot'
+
 export interface Player {
   id: ID
   name: string
@@ -9,13 +12,7 @@ export interface Player {
   active: boolean
 }
 
-export interface Renew {
-  id: ID
-  playerId: ID
-  at: number
-}
-
-/** "from đưa to amount kẹo" — đơn vị dữ liệu duy nhất để tính mọi con số. */
+/** "from đưa to amount kẹo" — đơn vị dữ liệu để tính lời/lỗ. */
 export interface Transfer {
   from: ID
   to: ID
@@ -23,7 +20,16 @@ export interface Transfer {
   reason: string
 }
 
-export type TagType = 'thoi' | 'chat' | 'lam-cai' | 'toi-trang' | 'chay'
+/** Một lần kéo kẹo trong ván. from/to có thể là POT. */
+export interface Move {
+  id: ID
+  from: ID
+  to: ID
+  amount: number
+  label: string
+}
+
+export type TagType = 'lam-cai'
 
 export interface Tag {
   type: TagType
@@ -33,10 +39,17 @@ export interface Tag {
 export interface Round {
   id: ID
   at: number
+  /** manual = kéo kẹo khi không có ván nào đang mở */
   kind: 'play' | 'manual'
+  status: 'open' | 'closed'
   participants: ID[]
+  /** Mức cược chung (Tiến lên); các game khác dùng làm cược mặc định. */
   bet: number
-  input: unknown
+  /** Cược riêng từng người: tiền cược của con (Xì dách), số kẹo bỏ vào pot lúc mở ván (Poker). */
+  stakes: Record<ID, number>
+  dealer: ID | null
+  moves: Move[]
+  /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]
 }
@@ -55,23 +68,23 @@ export interface Session {
   createdAt: number
   updatedAt: number
   players: Player[]
-  settings: { packSize: number }
-  renews: Renew[]
   games: Game[]
 }
 
-export interface Resolution {
-  transfers: Transfer[]
-  tags: Tag[]
+export type Net = Record<ID, number>
+
+/** Một nút gợi ý trong popup kéo kẹo. */
+export interface Option {
+  amount: number
+  label: string
 }
 
-export interface GameModule<Cfg, In> {
+export interface GameModule<Cfg> {
   type: GameType
   label: string
+  minPlayers: number
+  maxPlayers: number
+  /** Cách đặt cược lúc mở ván. */
+  stakeMode: 'common' | 'dealer' | 'pot'
   defaultConfig: Cfg
-  /** Trả về danh sách lỗi tiếng Việt; rỗng = hợp lệ. */
-  validate(input: In, cfg: Cfg): string[]
-  resolve(input: In, cfg: Cfg, bet: number): Resolution
 }
-
-export type Net = Record<ID, number>

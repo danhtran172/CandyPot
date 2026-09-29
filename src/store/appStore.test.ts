@@ -1,115 +1,140 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { handOf, netOf } from '../core/ledger'
-import type { TienLenInput } from '../core/games/tienlen'
+import { netOf } from '../core/ledger'
+import { openRound } from '../core/round'
+import { POT } from '../core/types'
 import { LocalRepo, MemoryKV } from '../storage/LocalRepo'
 import { createAppStore, type AppStore } from './appStore'
 
 let repo: LocalRepo
 let store: AppStore
-let ids: string[]
+let a: string, b: string, c: string
 
-function tl(ranking: string[]): TienLenInput {
-  return { players: ranking, ranking, chay: [], toiTrang: null, thoi: [], chops: [] }
-}
+const s = () => store.getState()
+const session = () => s().session!
 
 beforeEach(() => {
   repo = new LocalRepo(new MemoryKV())
   store = createAppStore(repo)
-  store.getState().createSession('Tối thứ 7', [
+  s().createSession('Tối thứ 7', [
     { name: 'An', emoji: '🐱' },
     { name: 'Bình', emoji: '🐶' },
-  ], 50)
-  ids = store.getState().session!.players.map((p) => p.id)
+    { name: 'Cường', emoji: '🐸' },
+  ])
+  ;[a, b, c] = session().players.map((p) => p.id)
 })
 
-describe('appStore', () => {
+describe('appStore — buổi & người chơi', () => {
   it('tạo buổi và lưu vào repo', () => {
-    const s = store.getState().session!
-    expect(repo.list()).toEqual([{ id: s.id, name: 'Tối thứ 7', updatedAt: s.updatedAt, playerCount: 2 }])
+    expect(repo.list()).toEqual([{ id: session().id, name: 'Tối thứ 7', updatedAt: session().updatedAt, playerCount: 3 }])
   })
 
-  it('thêm game đặt tên tự động và dùng config mặc định', () => {
-    const { addGame } = store.getState()
-    addGame('tienlen')
-    addGame('tienlen')
-    expect(store.getState().session!.games.map((g) => g.name)).toEqual(['Tiến lên', 'Tiến lên 2'])
+  it('thêm game đặt tên tự động', () => {
+    s().addGame('tienlen')
+    s().addGame('tienlen')
+    expect(session().games.map((g) => g.name)).toEqual(['Tiến lên', 'Tiến lên 2'])
   })
 
-  it('lưu ván hợp lệ sinh giao dịch và lưu lại', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('tienlen')
-    expect(store.getState().saveRound(g, { participants: [a, b], bet: 3, input: tl([a, b]) })).toEqual([])
-    const s = store.getState().session!
-    expect(netOf(s)).toEqual({ [a]: 3, [b]: -3 })
-    expect(repo.load(s.id)!.games[0].rounds).toHaveLength(1)
-  })
-
-  it('ván không hợp lệ trả lỗi và không lưu', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('tienlen')
-    expect(store.getState().saveRound(g, { participants: [a, b], bet: 3, input: tl([a]) })).not.toEqual([])
-    expect(store.getState().saveRound(g, { participants: [a, b], bet: 0, input: tl([a, b]) })).not.toEqual([])
-    expect(store.getState().session!.games[0].rounds).toHaveLength(0)
-  })
-
-  it('sửa ván tính lại, giữ id và thời gian', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('tienlen')
-    store.getState().saveRound(g, { participants: [a, b], bet: 1, input: tl([a, b]) })
-    const before = store.getState().session!.games[0].rounds[0]
-    store.getState().saveRound(g, { participants: [a, b], bet: 2, input: tl([b, a]) }, before.id)
-    const after = store.getState().session!.games[0].rounds
-    expect(after).toHaveLength(1)
-    expect(after[0]).toMatchObject({ id: before.id, at: before.at, bet: 2 })
-    expect(netOf(store.getState().session!)).toEqual({ [a]: -2, [b]: 2 })
-  })
-
-  it('xóa ván', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('tienlen')
-    store.getState().saveRound(g, { participants: [a, b], bet: 1, input: tl([a, b]) })
-    const r = store.getState().session!.games[0].rounds[0]
-    store.getState().deleteRound(g, r.id)
-    expect(netOf(store.getState().session!)).toEqual({ [a]: 0, [b]: 0 })
-  })
-
-  it('chuyển tay', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('xidach')
-    expect(store.getState().saveManual(g, { from: a, to: b, amount: 7, note: '' })).toEqual([])
-    expect(store.getState().saveManual(g, { from: a, to: a, amount: 7, note: '' })).not.toEqual([])
-    expect(netOf(store.getState().session!)).toEqual({ [a]: -7, [b]: 7 })
-  })
-
-  it('renew tăng kẹo trên tay, không đổi lời/lỗ', () => {
-    const [a] = ids
-    store.getState().renew(a)
-    const s = store.getState().session!
-    expect(handOf(s, a)).toBe(100)
-    expect(netOf(s)[a]).toBe(0)
-    store.getState().undoRenew(s.renews[0].id)
-    expect(handOf(store.getState().session!, a)).toBe(50)
-  })
-
-  it('không xóa được người đã chơi, chỉ tắt', () => {
-    const [a, b] = ids
-    const g = store.getState().addGame('tienlen')
-    store.getState().saveRound(g, { participants: [a, b], bet: 1, input: tl([a, b]) })
-    expect(store.getState().removePlayer(a)).toBe(false)
-    store.getState().addPlayer('Cường', '🐸')
-    const c = store.getState().session!.players[2].id
-    expect(store.getState().removePlayer(c)).toBe(true)
+  it('không xóa được người đã chơi', () => {
+    const g = s().addGame('tienlen')
+    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    expect(s().removePlayer(a)).toBe(false)
+    expect(s().removePlayer(c)).toBe(true)
   })
 
   it('mở lại buổi từ repo', () => {
-    const id = store.getState().session!.id
     const fresh = createAppStore(repo)
-    expect(fresh.getState().openSession(id)).toBe(true)
+    expect(fresh.getState().openSession(session().id)).toBe(true)
     expect(fresh.getState().session!.name).toBe('Tối thứ 7')
   })
+})
 
-  it('preset luật nhà', () => {
-    store.getState().savePreset('Nhà An', 'tienlen', { pay4Bet: 5 })
-    expect(store.getState().presets()).toMatchObject([{ name: 'Nhà An', gameType: 'tienlen', config: { pay4Bet: 5 } }])
+describe('appStore — ván Tiến lên', () => {
+  it('mở ván → kéo → chốt', () => {
+    const g = s().addGame('tienlen')
+    expect(s().openRound(g, { participants: [a, b, c], bet: 5, stakes: {}, dealer: null })).toEqual([])
+    expect(s().addMove(g, c, a, 10, 'Bét→Nhất')).toEqual([])
+    expect(netOf(session())[a]).toBe(0) // chưa chốt
+    expect(s().closeRound(g)).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 10, [b]: 0, [c]: -10 })
+    expect(openRound(session(), g)).toBeUndefined()
+  })
+
+  it('validate khi mở ván', () => {
+    const g = s().addGame('tienlen')
+    expect(s().openRound(g, { participants: [a], bet: 5, stakes: {}, dealer: null })).not.toEqual([])
+    expect(s().openRound(g, { participants: [a, b], bet: 0, stakes: {}, dealer: null })).not.toEqual([])
+    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })).toEqual([
+      'Game này đang có ván chưa chốt.',
+    ])
+  })
+
+  it('chỉ kéo giữa người trong ván, hoàn tác được', () => {
+    const g = s().addGame('tienlen')
+    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    expect(s().addMove(g, c, a, 1, '')).not.toEqual([])
+    s().addMove(g, b, a, 2, '')
+    const r = openRound(session(), g)!
+    s().removeMove(g, r.id, r.moves[0].id)
+    expect(openRound(session(), g)!.moves).toEqual([])
+  })
+
+  it('mở lại ván đã chốt để sửa', () => {
+    const g = s().addGame('tienlen')
+    s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: null })
+    s().addMove(g, b, a, 2, '')
+    s().closeRound(g)
+    const r = session().games[0].rounds[0]
+    expect(s().reopenRound(g, r.id)).toEqual([])
+    expect(netOf(session())[a]).toBe(0)
+    s().addMove(g, b, a, 1, '')
+    s().closeRound(g)
+    expect(netOf(session())[a]).toBe(3)
+  })
+})
+
+describe('appStore — Xì dách', () => {
+  it('cái ăn / đền cả bàn theo cược từng con, gắn tag làm cái', () => {
+    const g = s().addGame('xidach')
+    expect(s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })).toEqual([])
+    s().dealerAll(g, 'eat', 2)
+    s().closeRound(g)
+    expect(netOf(session())).toEqual({ [a]: 30, [b]: -10, [c]: -20 })
+    expect(session().games[0].rounds[0].tags).toEqual([{ type: 'lam-cai', playerId: a }])
+  })
+
+  it('cần cái và cược của mọi con', () => {
+    const g = s().addGame('xidach')
+    expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: null })).not.toEqual([])
+    expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: {}, dealer: a })).not.toEqual([])
+  })
+})
+
+describe('appStore — Poker', () => {
+  it('cược mở ván vào pot, chia pot rồi mới chốt được', () => {
+    const g = s().addGame('poker')
+    s().openRound(g, { participants: [a, b, c], bet: 2, stakes: { [a]: 2, [b]: 2, [c]: 0 }, dealer: null })
+    s().addMove(g, c, POT, 2, 'Theo')
+    expect(s().closeRound(g)).toEqual(['Pot còn 6 kẹo — kéo pot cho người thắng trước khi chốt.'])
+    s().addMove(g, POT, b, 6, 'Cả pot')
+    expect(s().closeRound(g)).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: -2, [b]: 4, [c]: -2 })
+  })
+})
+
+describe('appStore — kéo khi không có ván', () => {
+  it('ghi thành chuyển tay', () => {
+    const g = s().addGame('tienlen')
+    expect(s().addMove(g, a, b, 7, '')).toEqual([])
+    expect(s().addMove(g, a, POT, 7, '')).not.toEqual([])
+    expect(netOf(session())).toEqual({ [a]: -7, [b]: 7, [c]: 0 })
+    expect(session().games[0].rounds[0]).toMatchObject({ kind: 'manual', status: 'closed' })
+  })
+})
+
+describe('appStore — preset', () => {
+  it('lưu luật nhà', () => {
+    s().savePreset('Nhà An', 'tienlen', { pay4Bet: 5 })
+    expect(s().presets()).toMatchObject([{ name: 'Nhà An', gameType: 'tienlen', config: { pay4Bet: 5 } }])
   })
 })

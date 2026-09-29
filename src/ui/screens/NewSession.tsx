@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { actions } from '../../store'
 import { EMOJIS } from '../../store/appStore'
-import { Button, Card, Errors, SectionTitle, Stepper, TopBar } from '../components/kit'
+import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 
 interface Draft {
   name: string
@@ -13,7 +13,6 @@ export function NewSession() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [defaultName] = useState(() => `Buổi ${new Date().toLocaleDateString('vi-VN')}`)
-  const [pack, setPack] = useState(50)
   const [players, setPlayers] = useState<Draft[]>([
     { name: '', emoji: EMOJIS[0] },
     { name: '', emoji: EMOJIS[1] },
@@ -31,10 +30,9 @@ export function NewSession() {
     if (named.length < 2) errs.push('Cần ít nhất 2 người chơi có tên.')
     const names = named.map((p) => p.name.trim().toLowerCase())
     if (new Set(names).size !== names.length) errs.push('Hai người chơi đang trùng tên.')
-    if (pack <= 0) errs.push('Gói kẹo phải lớn hơn 0.')
     setErrors(errs)
     if (errs.length) return
-    const id = actions().createSession(name || defaultName, named, pack)
+    const id = actions().createSession(name || defaultName, named)
     navigate(`/s/${id}`, { replace: true })
   }
 
@@ -96,15 +94,6 @@ export function NewSession() {
         </Button>
       </Card>
 
-      <Card className="mt-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">Gói kẹo</div>
-            <div className="text-sm text-muted">Số kẹo mỗi người nhận lúc đầu và mỗi lần renew</div>
-          </div>
-          <Stepper value={pack} onChange={setPack} min={1} step={10} label="gói kẹo" />
-        </div>
-      </Card>
 
       <div className="mt-4">
         <Errors errors={errors} />

@@ -1,4 +1,4 @@
-import type { Game, ID, Player, Round, Session } from '../core/types'
+import { POT, type Game, type ID, type Player, type Round, type Session } from '../core/types'
 
 export function signed(n: number): string {
   if (n > 0) return `+${n}`
@@ -12,8 +12,11 @@ export function toneOf(n: number): string {
   return 'text-muted'
 }
 
+export const POT_PLAYER: Player = { id: POT, name: 'Pot', emoji: '🫙', active: true }
+
+/** Tra người chơi theo id (kèm pot). */
 export function playerMap(session: Session): Record<ID, Player> {
-  return Object.fromEntries(session.players.map((p) => [p.id, p]))
+  return Object.fromEntries([...session.players, POT_PLAYER].map((p) => [p.id, p]))
 }
 
 export function timeOf(at: number): string {
@@ -29,6 +32,7 @@ export function roundNumber(game: Game, round: Round): number {
   return game.rounds.filter((r) => r.kind === 'play' && r.at <= round.at).length
 }
 
+/** Số ván đã chốt. */
 export function playCount(game: Game): number {
-  return game.rounds.filter((r) => r.kind === 'play').length
+  return game.rounds.filter((r) => r.kind === 'play' && r.status === 'closed').length
 }

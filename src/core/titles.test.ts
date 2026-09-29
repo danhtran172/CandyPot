@@ -8,23 +8,24 @@ function round(transfers: [string, string, number][], participants: string[], ta
     id: `r${clock}`,
     at: clock++,
     kind: 'play',
+    status: 'closed',
     participants,
     bet: 1,
-    input: null,
+    stakes: {},
+    dealer: null,
+    moves: [],
     transfers: transfers.map(([from, to, amount]): Transfer => ({ from, to, amount, reason: '' })),
     tags,
   }
 }
 
-function session(rounds: Round[], renews: string[] = []): Session {
+function session(rounds: Round[]): Session {
   return {
     id: 's',
     name: '',
     createdAt: 0,
     updatedAt: 0,
     players: ['a', 'b', 'c'].map((id) => ({ id, name: id, emoji: '', active: true })),
-    settings: { packSize: 50 },
-    renews: renews.map((playerId, i) => ({ id: `n${i}`, playerId, at: i })),
     games: [{ id: 'g', type: 'tienlen', name: '', config: {}, rounds }],
   }
 }
@@ -53,15 +54,10 @@ describe('titles', () => {
     expect(byKey(session(rs.slice(0, 3)))['nong-tay']).toBeUndefined()
   })
 
-  it('Vua renew, Nuôi heo, Đồ tể', () => {
-    const rs = [
-      round([['b', 'a', 1]], ['a', 'b'], [{ type: 'thoi', playerId: 'b' }, { type: 'chat', playerId: 'a' }]),
-      round([['b', 'a', 1]], ['a', 'b'], [{ type: 'thoi', playerId: 'b' }]),
-    ]
-    const t = byKey(session(rs, ['c', 'c', 'b']))
-    expect(t['vua-renew']).toMatchObject({ playerIds: ['c'], value: 2 })
-    expect(t['nuoi-heo']).toMatchObject({ playerIds: ['b'], value: 2 })
-    expect(t['do-te']).toMatchObject({ playerIds: ['a'], value: 1 })
+  it('bỏ qua ván đang mở', () => {
+    const r = round([['c', 'a', 50]], ['a', 'c'])
+    r.status = 'open'
+    expect(titles(session([r]))).toEqual([])
   })
 
   it('Cái số đỏ / Cái số đen tính riêng các ván làm cái', () => {

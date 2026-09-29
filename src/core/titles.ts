@@ -1,5 +1,5 @@
-import { netOf, netOfTransfers, renewCount } from './ledger'
-import type { ID, Round, Session, TagType } from './types'
+import { netOf, netOfTransfers } from './ledger'
+import type { ID, Round, Session } from './types'
 
 export interface Title {
   key: string
@@ -10,22 +10,20 @@ export interface Title {
   value: number
 }
 
+/** Các ván đã chốt, theo thứ tự thời gian. */
 export function roundsInOrder(session: Session): Round[] {
-  return session.games.flatMap((g) => g.rounds).sort((a, b) => a.at - b.at)
+  return session.games
+    .flatMap((g) => g.rounds)
+    .filter((r) => r.status === 'closed')
+    .sort((a, b) => a.at - b.at)
 }
 
-/** Người có giá trị cao nhất (hoặc thấp nhất); rỗng nếu không ai đạt điều kiện. */
+/** Người có giá trị cao nhất (hoặc thấp nhất); null nếu không ai đạt điều kiện. */
 function pick(values: [ID, number][], mode: 'max' | 'min', accept: (v: number) => boolean) {
   const ok = values.filter(([, v]) => accept(v))
   if (!ok.length) return null
   const best = mode === 'max' ? Math.max(...ok.map(([, v]) => v)) : Math.min(...ok.map(([, v]) => v))
   return { playerIds: ok.filter(([, v]) => v === best).map(([id]) => id), value: best }
-}
-
-function countTags(rounds: Round[], type: TagType): Record<ID, number> {
-  const out: Record<ID, number> = {}
-  for (const r of rounds) for (const t of r.tags) if (t.type === type) out[t.playerId] = (out[t.playerId] ?? 0) + 1
-  return out
 }
 
 function longestWinStreak(rounds: Round[], playerId: ID): number {
@@ -59,12 +57,6 @@ export function titles(session: Session): Title[] {
     'Chuỗi ván thắng liên tiếp dài nhất',
     pick(per((id) => longestWinStreak(rounds, id)), 'max', (v) => v >= 3),
   )
-  add('vua-renew', '♻️', 'Vua renew', 'Renew nhiều lần nhất', pick(per((id) => renewCount(session, id)), 'max', (v) => v > 0))
-
-  const thoi = countTags(rounds, 'thoi')
-  add('nuoi-heo', '🐷', 'Nuôi heo', 'Bị thối nhiều nhất', pick(per((id) => thoi[id] ?? 0), 'max', (v) => v > 0))
-  const chat = countTags(rounds, 'chat')
-  add('do-te', '🔪', 'Đồ tể', 'Chặt nhiều nhất', pick(per((id) => chat[id] ?? 0), 'max', (v) => v > 0))
 
   const dealerNet: Record<ID, number> = {}
   for (const r of rounds) {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { actions } from '../../store'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { useSession } from '../components/useSession'
-import { Button, Card, Chip, Errors, SectionTitle, Stepper, TopBar } from '../components/kit'
+import { Button, Card, Chip, Errors, SectionTitle, TopBar } from '../components/kit'
 
 export function Players() {
   const session = useSession()
@@ -89,42 +89,7 @@ export function Players() {
         </div>
       </Card>
 
-      <Card className="mt-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">Gói kẹo</div>
-            <div className="text-sm text-muted">Số kẹo đầu buổi và mỗi lần renew</div>
-          </div>
-          <Stepper
-            value={session.settings.packSize}
-            min={1}
-            step={10}
-            label="gói kẹo"
-            onChange={(v) => v > 0 && actions().setPackSize(v)}
-          />
-        </div>
-      </Card>
 
-      {session.renews.length > 0 && (
-        <Card className="mt-3">
-          <SectionTitle>Lượt renew</SectionTitle>
-          <ul className="space-y-1">
-            {[...session.renews].reverse().map((r) => {
-              const p = session.players.find((x) => x.id === r.playerId)
-              return (
-                <li key={r.id} className="flex items-center justify-between text-sm">
-                  <span>
-                    ♻️ {p?.emoji} {p?.name} · {new Date(r.at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  <button type="button" className="text-muted hover:text-berry" onClick={() => actions().undoRenew(r.id)}>
-                    Hoàn tác
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </Card>
-      )}
     </main>
   )
 }

@@ -3,10 +3,9 @@ import { BrowserRouter, Route, Routes } from 'react-router'
 import { SessionLayout } from './ui/components/SessionLayout'
 import { GameSettings } from './ui/screens/GameSettings'
 import { Home } from './ui/screens/Home'
-import { ManualTransfer } from './ui/screens/ManualTransfer'
 import { NewSession } from './ui/screens/NewSession'
+import { OpenRound } from './ui/screens/OpenRound'
 import { Players } from './ui/screens/Players'
-import { RoundEditor } from './ui/screens/RoundEditor'
 import { Summary } from './ui/screens/Summary'
 import { Table } from './ui/screens/Table'
 import { Titles } from './ui/screens/Titles'
@@ -35,10 +34,7 @@ export default function App() {
             <Route path="titles" element={<Titles />} />
             <Route path="players" element={<Players />} />
             <Route path="g/:gid/settings" element={<GameSettings />} />
-            <Route path="g/:gid/round" element={<RoundEditor />} />
-            <Route path="g/:gid/round/:rid" element={<RoundEditor />} />
-            <Route path="g/:gid/manual" element={<ManualTransfer />} />
-            <Route path="g/:gid/manual/:rid" element={<ManualTransfer />} />
+            <Route path="g/:gid/open" element={<OpenRound />} />
           </Route>
           <Route path="*" element={<Home />} />
         </Routes>

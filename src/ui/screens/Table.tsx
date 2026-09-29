@@ -1,31 +1,81 @@
+import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
-import { handOf, netOf, renewCount } from '../../core/ledger'
-import type { GameType } from '../../core/types'
+import { netOf } from '../../core/ledger'
+import { movesNet, openRound, potOf } from '../../core/round'
+import { suggestOptions } from '../../core/suggest'
+import type { GameType, ID, Option } from '../../core/types'
 import { actions } from '../../store'
+import { AmountSheet } from '../components/AmountSheet'
+import { Board, flyCandy, type Seat } from '../components/Board'
+import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { useSession } from '../components/useSession'
-import { Button, Card, Chip, SectionTitle, TopBar } from '../components/kit'
-import { playCount, signed, toneOf } from '../format'
+import { playCount, playerMap, roundNumber } from '../format'
 
 export function Table() {
   const session = useSession()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
+  const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
+  const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
+
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
+  const round = game ? openRound(session, game.id) : undefined
+  const players = playerMap(session)
   const net = netOf(session)
   const base = `/s/${session.id}`
+
+  const flash = (text: string, bad = false) => {
+    setToast({ text, bad })
+    setTimeout(() => setToast(null), 2500)
+  }
 
   const addGame = (type: GameType) => {
     const id = actions().addGame(type)
     setParams({ g: id }, { replace: true })
   }
 
-  const renew = (playerId: string, name: string) => {
-    if (confirm(`${name} renew thêm ${session.settings.packSize} kẹo?`)) actions().renew(playerId)
+  const onTransfer = useCallback((from: ID, to: ID) => setPending({ from, to }), [])
+
+  const pick = (o: Option) => {
+    if (!game || !pending) return
+    const errors = actions().addMove(game.id, pending.from, pending.to, o.amount, round ? o.label : 'Chuyển tay')
+    if (errors.length) flash(errors[0], true)
+    else flyCandy(pending.from, pending.to, o.amount)
+    setPending(null)
   }
 
+  const closeRound = () => {
+    if (!game) return
+    const errors = actions().closeRound(game.id)
+    if (errors.length) flash(errors[0], true)
+    else flash('Đã chốt ván — lời/lỗ đã cập nhật.')
+  }
+
+  const cancelRound = () => {
+    if (!game || !round) return
+    if (confirm('Hủy ván này? Các lượt kéo kẹo trong ván sẽ bị bỏ, không tính gì.')) actions().deleteRound(game.id, round.id)
+  }
+
+  const roundDelta = round ? movesNet(round.moves) : {}
+  const visible = round
+    ? session.players.filter((p) => round.participants.includes(p.id))
+    : session.players.filter((p) => p.active)
+
+  const seats: Seat[] = visible.map((p) => ({
+    player: p,
+    total: net[p.id],
+    round: round ? (roundDelta[p.id] ?? 0) : undefined,
+    badge:
+      round?.dealer === p.id
+        ? '🎩 Nhà cái'
+        : game?.type === 'xidach' && round?.stakes[p.id] !== undefined
+          ? `cược ${round.stakes[p.id]}`
+          : undefined,
+  }))
+
   return (
-    <main className="pb-24">
+    <main className="pb-28">
       <TopBar
         title={session.name}
         back="/"
@@ -41,6 +91,7 @@ export function Table() {
           {session.games.map((g) => (
             <Chip key={g.id} active={g.id === game?.id} onClick={() => setParams({ g: g.id }, { replace: true })}>
               {GAME_ICONS[g.type]} {g.name}
+              {openRound(session, g.id) && <span className="ml-1 inline-block size-2 rounded-full bg-mint" />}
             </Chip>
           ))}
         </nav>
@@ -81,67 +132,118 @@ export function Table() {
           </div>
         </Card>
       ) : (
-        <div className="mt-2 flex items-center justify-between text-sm text-muted">
-          <span>
-            {playCount(game) ? `Đã chơi ${playCount(game)} ván` : 'Chưa có ván nào'}
-          </span>
-          <Link to={`${base}/g/${game.id}/settings`} className="font-semibold text-muted underline-offset-4 hover:underline">
-            ⚙ Luật & cài đặt
-          </Link>
+        <>
+          <div className="mt-2 mb-2 flex items-center justify-between gap-2 text-sm">
+            {round ? (
+              <span className="font-semibold">
+                <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
+                Ván {roundNumber(game, round)} đang chơi
+                {game.type === 'tienlen' && <span className="text-muted"> · cược {round.bet}</span>}
+              </span>
+            ) : (
+              <span className="text-muted">{playCount(game) ? `Đã chốt ${playCount(game)} ván` : 'Chưa có ván nào'}</span>
+            )}
+            <Link to={`${base}/g/${game.id}/settings`} className="font-semibold text-muted">
+              ⚙ Luật
+            </Link>
+          </div>
+
+          <Board seats={seats} pot={round && game.type === 'poker' ? potOf(round) : undefined} onTransfer={onTransfer} />
+
+          <p className="mt-2 text-center text-xs text-muted">
+            {round
+              ? 'Kéo túi kẹo của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
+              : 'Chưa mở ván: kéo kẹo giữa hai người sẽ được ghi là chuyển tay.'}
+          </p>
+
+          {round && game.type === 'xidach' && (
+            <Card className="mt-3">
+              <div className="grid grid-cols-2 gap-2">
+                {([1, 2] as const).map((m) => (
+                  <Button key={`eat${m}`} className="text-sm" onClick={() => actions().dealerAll(game.id, 'eat', m)}>
+                    Cái ăn cả bàn ×{m}
+                  </Button>
+                ))}
+                {([1, 2] as const).map((m) => (
+                  <Button key={`pay${m}`} className="text-sm" onClick={() => actions().dealerAll(game.id, 'pay', m)}>
+                    Cái đền cả bàn ×{m}
+                  </Button>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {round && round.moves.length > 0 && (
+            <Card className="mt-3 p-3">
+              <h2 className="font-display mb-1 px-1 font-bold">Ván này</h2>
+              <ul>
+                {[...round.moves].reverse().map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 border-b border-line/40 px-1 py-1.5 text-sm last:border-0">
+                    <Who player={players[m.from]} className="min-w-0 font-semibold" />
+                    <span className="text-muted">→</span>
+                    <Who player={players[m.to]} className="min-w-0 font-semibold" />
+                    <span className="candy num ml-auto text-sm">{m.amount}</span>
+                    <button
+                      type="button"
+                      aria-label="Hoàn tác lượt này"
+                      className="px-1.5 text-muted hover:text-berry"
+                      onClick={() => actions().removeMove(game.id, round.id, m.id)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
+            {round ? (
+              <>
+                <Button variant="danger" className="bg-night/90" onClick={cancelRound}>
+                  Hủy ván
+                </Button>
+                <Button variant="primary" className="font-display flex-1 py-3.5 text-xl" onClick={closeRound}>
+                  Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="primary"
+                className="font-display flex-1 py-3.5 text-xl"
+                onClick={() => navigate(`${base}/g/${game.id}/open`)}
+              >
+                + Mở ván
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          className={`pop fixed inset-x-4 top-4 z-50 mx-auto max-w-md rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-xl ${
+            toast.bad ? 'bg-berry text-night' : 'bg-mint text-night'
+          }`}
+        >
+          {toast.text}
         </div>
       )}
 
-      <Card className="mt-3 p-2">
-        <div className="px-2 pt-2">
-          <SectionTitle aside={<span className="text-xs text-muted">lời/lỗ cả buổi</span>}>Bàn</SectionTitle>
-        </div>
-        <ul>
-          {session.players
-            .filter((p) => p.active || net[p.id] !== 0)
-            .map((p) => {
-              const hand = handOf(session, p.id, net)
-              const renews = renewCount(session, p.id)
-              return (
-                <li key={p.id} className="flex items-center gap-3 rounded-2xl px-2 py-2.5 odd:bg-night/30">
-                  <span aria-hidden className="text-2xl">
-                    {p.emoji}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold">{p.name}</div>
-                    <div className="text-xs text-muted">
-                      🍬 <span className="num">{hand}</span> trên tay
-                      {renews > 0 && <span className="ml-1.5">· ♻️ {renews}</span>}
-                    </div>
-                  </div>
-                  <span className={`num font-display text-2xl font-extrabold ${toneOf(net[p.id])}`}>{signed(net[p.id])}</span>
-                  <button
-                    type="button"
-                    onClick={() => renew(p.id, p.name)}
-                    className={`rounded-xl px-2 py-1 text-xs font-bold ${
-                      hand <= 0 ? 'bg-lemon text-night' : 'border border-line text-muted'
-                    }`}
-                  >
-                    Renew
-                  </button>
-                </li>
-              )
-            })}
-        </ul>
-      </Card>
-
-      {game && (
-        <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-          <Button
-            variant="primary"
-            className="font-display flex-1 py-3.5 text-xl"
-            onClick={() => navigate(`${base}/g/${game.id}/round`)}
-          >
-            + Ván mới
-          </Button>
-          <Button className="px-4" onClick={() => navigate(`${base}/g/${game.id}/manual`)}>
-            ⇄ Chuyển tay
-          </Button>
-        </div>
+      {pending && game && (
+        <AmountSheet
+          from={players[pending.from]}
+          to={players[pending.to]}
+          options={suggestOptions({
+            game,
+            round: round ?? null,
+            from: pending.from,
+            to: pending.to,
+          })}
+          onPick={pick}
+          onClose={() => setPending(null)}
+        />
       )}
     </main>
   )

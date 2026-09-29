@@ -1,7 +1,8 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { assertZeroSum, netOf } from '../core/ledger'
-import type { GameType, ID, Player, Round, Session } from '../core/types'
+import { closeTransfers, normalizeSession } from '../core/round'
+import { POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { Preset, SessionRepo } from '../storage/SessionRepo'
 
 export const EMOJIS = ['🐱', '🐶', '🐸', '🐼', '🦊', '🐯', '🐵', '🐰', '🐨', '🐷', '🐮', '🐙', '🦄', '🐔', '🐧', '🐢']
@@ -10,16 +11,19 @@ export function newId(): ID {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
-export interface RoundDraft {
+export interface OpenDraft {
   participants: ID[]
+  /** Mức cược chung (Tiến lên) hoặc cược mặc định. */
   bet: number
-  input: unknown
+  /** Cược riêng: con Xì dách, kẹo bỏ vào pot lúc mở ván Poker. */
+  stakes: Record<ID, number>
+  dealer: ID | null
 }
 
 export interface AppState {
   session: Session | null
   error: string | null
-  createSession(name: string, players: { name: string; emoji: string }[], packSize: number): ID
+  createSession(name: string, players: { name: string; emoji: string }[]): ID
   openSession(id: ID): boolean
   closeSession(): void
   deleteSession(id: ID): void
@@ -27,20 +31,22 @@ export interface AppState {
   addPlayer(name: string, emoji: string): void
   updatePlayer(id: ID, patch: Partial<Pick<Player, 'name' | 'emoji' | 'active'>>): void
   removePlayer(id: ID): boolean
-  setPackSize(size: number): void
 
   addGame(type: GameType): ID
   renameGame(gameId: ID, name: string): void
   removeGame(gameId: ID): void
   updateGameConfig(gameId: ID, config: unknown): void
 
-  /** Lưu ván (thêm mới hoặc sửa nếu có roundId). Trả về danh sách lỗi; rỗng = đã lưu. */
-  saveRound(gameId: ID, draft: RoundDraft, roundId?: ID): string[]
-  saveManual(gameId: ID, t: { from: ID; to: ID; amount: number; note: string }, roundId?: ID): string[]
+  /** Mở ván mới. Trả về danh sách lỗi; rỗng = đã mở. */
+  openRound(gameId: ID, draft: OpenDraft): string[]
+  /** Kéo kẹo. Có ván đang mở thì ghi vào ván, không thì ghi thành chuyển tay. */
+  addMove(gameId: ID, from: ID, to: ID, amount: number, label: string): string[]
+  removeMove(gameId: ID, roundId: ID, moveId: ID): void
+  /** Xì dách: cái ăn (eat) hoặc đền (pay) cả bàn theo hệ số. */
+  dealerAll(gameId: ID, mode: 'eat' | 'pay', multiplier: number): void
+  closeRound(gameId: ID): string[]
+  reopenRound(gameId: ID, roundId: ID): string[]
   deleteRound(gameId: ID, roundId: ID): void
-
-  renew(playerId: ID): void
-  undoRenew(renewId: ID): void
 
   presets(): Preset[]
   savePreset(name: string, gameType: GameType, config: unknown): void
@@ -48,10 +54,38 @@ export interface AppState {
 }
 
 export function isPlayerUsed(session: Session, playerId: ID): boolean {
-  return (
-    session.renews.some((r) => r.playerId === playerId) ||
-    session.games.some((g) => g.rounds.some((r) => r.participants.includes(playerId)))
-  )
+  return session.games.some((g) => g.rounds.some((r) => r.participants.includes(playerId)))
+}
+
+function validateOpen(game: Game, d: OpenDraft): string[] {
+  const mod = GAMES[game.type]
+  const errors: string[] = []
+  const n = d.participants.length
+  if (n < mod.minPlayers || n > mod.maxPlayers) {
+    errors.push(
+      mod.maxPlayers < 99
+        ? `${mod.label} cần ${mod.minPlayers}–${mod.maxPlayers} người chơi.`
+        : `${mod.label} cần ít nhất ${mod.minPlayers} người chơi.`,
+    )
+  }
+  if (findOpenIn(game)) errors.push('Game này đang có ván chưa chốt.')
+  const isInt = (v: number | undefined, min: number) => Number.isInteger(v) && (v as number) >= min
+
+  if (mod.stakeMode === 'common' && !isInt(d.bet, 1)) errors.push('Mức cược phải là số nguyên lớn hơn 0.')
+  if (mod.stakeMode === 'dealer') {
+    if (!d.dealer || !d.participants.includes(d.dealer)) errors.push('Chưa chọn nhà cái.')
+    else if (d.participants.some((p) => p !== d.dealer && !isInt(d.stakes[p], 1))) {
+      errors.push('Mỗi người con phải cược ít nhất 1 kẹo.')
+    }
+  }
+  if (mod.stakeMode === 'pot' && d.participants.some((p) => !isInt(d.stakes[p] ?? 0, 0))) {
+    errors.push('Số kẹo bỏ vào pot phải là số nguyên ≥ 0.')
+  }
+  return errors
+}
+
+function findOpenIn(game: Game): Round | undefined {
+  return game.rounds.find((r) => r.status === 'open')
 }
 
 export function createAppStore(repo: SessionRepo) {
@@ -75,23 +109,23 @@ export function createAppStore(repo: SessionRepo) {
       set({ session: next, error })
     }
 
-    const mapGame = (s: Session, gameId: ID, fn: (rounds: Round[]) => Round[]): Session => ({
-      ...s,
-      games: s.games.map((g) => (g.id === gameId ? { ...g, rounds: fn(g.rounds) } : g)),
-    })
+    const mapGame = (gameId: ID, fn: (g: Game) => Game) =>
+      mutate((s) => ({ ...s, games: s.games.map((g) => (g.id === gameId ? fn(g) : g)) }))
 
-    const upsertRound = (gameId: ID, round: Round, roundId?: ID) =>
-      mutate((s) =>
-        mapGame(s, gameId, (rounds) =>
-          roundId ? rounds.map((r) => (r.id === roundId ? { ...round, id: roundId, at: r.at } : r)) : [...rounds, round],
-        ),
-      )
+    const mapRound = (gameId: ID, roundId: ID, fn: (r: Round) => Round) =>
+      mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.map((r) => (r.id === roundId ? fn(r) : r)) }))
+
+    const game = (gameId: ID) => get().session?.games.find((g) => g.id === gameId)
+    const openOf = (gameId: ID) => {
+      const g = game(gameId)
+      return g && findOpenIn(g)
+    }
 
     return {
       session: null,
       error: null,
 
-      createSession(name, players, packSize) {
+      createSession(name, players) {
         const now = Date.now()
         const session: Session = {
           id: newId(),
@@ -99,8 +133,6 @@ export function createAppStore(repo: SessionRepo) {
           createdAt: now,
           updatedAt: now,
           players: players.map((p) => ({ id: newId(), name: p.name.trim(), emoji: p.emoji, active: true })),
-          settings: { packSize },
-          renews: [],
           games: [],
         }
         repo.save(session)
@@ -109,9 +141,9 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       openSession(id) {
-        const session = repo.load(id)
-        set({ session, error: null })
-        return session !== null
+        const raw = repo.load(id)
+        set({ session: raw && normalizeSession(raw), error: null })
+        return raw !== null
       },
 
       closeSession() {
@@ -138,10 +170,6 @@ export function createAppStore(repo: SessionRepo) {
         return true
       },
 
-      setPackSize(size) {
-        mutate((s) => ({ ...s, settings: { ...s.settings, packSize: size } }))
-      },
-
       addGame(type) {
         const id = newId()
         mutate((s) => {
@@ -166,7 +194,7 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       renameGame(gameId, name) {
-        mutate((s) => ({ ...s, games: s.games.map((g) => (g.id === gameId ? { ...g, name } : g)) }))
+        mapGame(gameId, (g) => ({ ...g, name }))
       },
 
       removeGame(gameId) {
@@ -174,52 +202,121 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       updateGameConfig(gameId, config) {
-        mutate((s) => ({ ...s, games: s.games.map((g) => (g.id === gameId ? { ...g, config } : g)) }))
+        mapGame(gameId, (g) => ({ ...g, config }))
       },
 
-      saveRound(gameId, draft, roundId) {
-        const game = get().session?.games.find((g) => g.id === gameId)
-        if (!game) return ['Không tìm thấy game.']
-        const mod = GAMES[game.type]
-        if (!Number.isInteger(draft.bet) || draft.bet <= 0) return ['Mức cược phải là số nguyên lớn hơn 0.']
-        const errors = mod.validate(draft.input, game.config)
+      openRound(gameId, draft) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        const errors = validateOpen(g, draft)
         if (errors.length) return errors
-        const { transfers, tags } = mod.resolve(draft.input, game.config, draft.bet)
-        upsertRound(gameId, { id: newId(), at: Date.now(), kind: 'play', ...draft, transfers, tags }, roundId)
+        const mode = GAMES[g.type].stakeMode
+        const stakes = Object.fromEntries(
+          draft.participants
+            .filter((p) => (mode === 'dealer' ? p !== draft.dealer : mode === 'pot'))
+            .map((p) => [p, draft.stakes[p] ?? 0]),
+        )
+        const round: Round = {
+          id: newId(),
+          at: Date.now(),
+          kind: 'play',
+          status: 'open',
+          participants: draft.participants,
+          bet: draft.bet,
+          stakes,
+          dealer: mode === 'dealer' ? draft.dealer : null,
+          moves:
+            mode === 'pot'
+              ? Object.entries(stakes)
+                  .filter(([, v]) => v > 0)
+                  .map(([p, v]) => ({ id: newId(), from: p, to: POT, amount: v, label: 'Cược mở ván' }))
+              : [],
+          transfers: [],
+          tags: [],
+        }
+        mapGame(gameId, (g) => ({ ...g, rounds: [...g.rounds, round] }))
         return []
       },
 
-      saveManual(gameId, t, roundId) {
-        if (!t.from || !t.to) return ['Chọn người đưa và người nhận.']
-        if (t.from === t.to) return ['Người đưa và người nhận phải khác nhau.']
-        if (!Number.isInteger(t.amount) || t.amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
-        upsertRound(
-          gameId,
-          {
-            id: newId(),
-            at: Date.now(),
-            kind: 'manual',
-            participants: [t.from, t.to],
-            bet: 0,
-            input: t,
-            transfers: [{ from: t.from, to: t.to, amount: t.amount, reason: t.note.trim() || 'Chuyển tay' }],
-            tags: [],
-          },
-          roundId,
-        )
+      addMove(gameId, from, to, amount, label) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (from === to) return ['Người đưa và người nhận phải khác nhau.']
+        if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
+        const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
+        const open = findOpenIn(g)
+        if (open) {
+          const inRound = (id: ID) => id === POT || open.participants.includes(id)
+          if (!inRound(from) || !inRound(to)) return ['Chỉ kéo kẹo giữa những người trong ván.']
+          mapRound(gameId, open.id, (r) => ({ ...r, moves: [...r.moves, move] }))
+          return []
+        }
+        if (from === POT || to === POT) return ['Chưa có ván nào đang mở.']
+        mapGame(gameId, (g) => ({
+          ...g,
+          rounds: [
+            ...g.rounds,
+            {
+              id: newId(),
+              at: Date.now(),
+              kind: 'manual',
+              status: 'closed',
+              participants: [from, to],
+              bet: 0,
+              stakes: {},
+              dealer: null,
+              moves: [move],
+              transfers: [{ from, to, amount, reason: move.label }],
+              tags: [],
+            },
+          ],
+        }))
+        return []
+      },
+
+      removeMove(gameId, roundId, moveId) {
+        mapRound(gameId, roundId, (r) => ({ ...r, moves: r.moves.filter((m) => m.id !== moveId) }))
+      },
+
+      dealerAll(gameId, mode, multiplier) {
+        const open = openOf(gameId)
+        if (!open?.dealer) return
+        const dealer = open.dealer
+        const label = `${mode === 'eat' ? 'Cái ăn cả bàn' : 'Cái đền cả bàn'} ×${multiplier}`
+        const moves = Object.entries(open.stakes).map(([con, stake]) => ({
+          id: newId(),
+          from: mode === 'eat' ? con : dealer,
+          to: mode === 'eat' ? dealer : con,
+          amount: stake * multiplier,
+          label,
+        }))
+        mapRound(gameId, open.id, (r) => ({ ...r, moves: [...r.moves, ...moves] }))
+      },
+
+      closeRound(gameId) {
+        const open = openOf(gameId)
+        if (!open) return ['Không có ván nào đang mở.']
+        let transfers
+        try {
+          transfers = closeTransfers(open)
+        } catch (e) {
+          return [(e as Error).message]
+        }
+        const tags: Tag[] = open.dealer ? [{ type: 'lam-cai', playerId: open.dealer }] : []
+        mapRound(gameId, open.id, (r) => ({ ...r, status: 'closed', transfers, tags }))
+        return []
+      },
+
+      reopenRound(gameId, roundId) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (findOpenIn(g)) return ['Game này đang có ván chưa chốt. Chốt hoặc hủy ván đó trước.']
+        mapRound(gameId, roundId, (r) => ({ ...r, status: 'open', transfers: [], tags: [] }))
         return []
       },
 
       deleteRound(gameId, roundId) {
-        mutate((s) => mapGame(s, gameId, (rounds) => rounds.filter((r) => r.id !== roundId)))
-      },
-
-      renew(playerId) {
-        mutate((s) => ({ ...s, renews: [...s.renews, { id: newId(), playerId, at: Date.now() }] }))
-      },
-
-      undoRenew(renewId) {
-        mutate((s) => ({ ...s, renews: s.renews.filter((r) => r.id !== renewId) }))
+        mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
       },
 
       presets() {

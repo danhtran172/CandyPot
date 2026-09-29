@@ -6,7 +6,7 @@ import type { XiDachConfig } from '../../core/games/xidach'
 import type { GameType } from '../../core/types'
 import { actions } from '../../store'
 import { useSession } from '../components/useSession'
-import { Button, Card, Chip, SectionTitle, Stepper, TopBar } from '../components/kit'
+import { Button, Card, SectionTitle, Stepper, TopBar } from '../components/kit'
 
 interface Field {
   label: string
@@ -105,7 +105,7 @@ export function GameSettings() {
       </Card>
 
       <p className="mt-3 text-sm text-muted">
-        Đổi luật chỉ áp dụng cho ván mới và ván được sửa lại. Ván cũ giữ nguyên số kẹo đã tính.
+        Các hệ số này tạo ra 4 mức gợi ý trong popup khi kéo kẹo. Ván đã chốt không bị ảnh hưởng.
       </p>
 
       {FIELDS[game.type].map((group) => (
@@ -122,30 +122,8 @@ export function GameSettings() {
         </Card>
       ))}
 
-      {game.type === 'xidach' && (
-        <Card className="mt-3">
-          <SectionTitle>Cái quắc, con cũng quắc</SectionTitle>
-          <div className="flex gap-2">
-            {(
-              [
-                ['push', 'Hòa'],
-                ['lose', 'Con vẫn thua'],
-              ] as const
-            ).map(([v, text]) => (
-              <Chip
-                key={v}
-                active={(game.config as XiDachConfig).bothBust === v}
-                onClick={() => update({ ...(game.config as XiDachConfig), bothBust: v })}
-              >
-                {text}
-              </Chip>
-            ))}
-          </div>
-        </Card>
-      )}
-
       {game.type === 'poker' ? (
-        <Card className="mt-3 text-sm text-muted">Poker tính theo số kẹo thực bỏ vào pot, không có hệ số cần chỉnh.</Card>
+        <Card className="mt-3 text-sm text-muted">Poker gợi ý theo pot (theo, tố gấp đôi, ½ pot, all-in), không có hệ số cần chỉnh.</Card>
       ) : (
         <Card className="mt-3">
           <SectionTitle>Luật nhà</SectionTitle>

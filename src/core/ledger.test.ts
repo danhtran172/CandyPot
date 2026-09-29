@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assertZeroSum, handOf, netOf, netOfTransfers, renewCount } from './ledger'
+import { assertZeroSum, netOf, netOfTransfers } from './ledger'
 import type { Session } from './types'
 
 function session(): Session {
@@ -13,8 +13,6 @@ function session(): Session {
       { id: 'b', name: 'Bình', emoji: '🐶', active: true },
       { id: 'c', name: 'Cường', emoji: '🐸', active: true },
     ],
-    settings: { packSize: 50 },
-    renews: [{ id: 'r1', playerId: 'b', at: 1 }],
     games: [
       {
         id: 'g1',
@@ -26,9 +24,12 @@ function session(): Session {
             id: 'r',
             at: 1,
             kind: 'play',
+            status: 'closed',
             participants: ['a', 'b', 'c'],
             bet: 1,
-            input: null,
+            stakes: {},
+            dealer: null,
+            moves: [],
             transfers: [
               { from: 'b', to: 'a', amount: 4, reason: '' },
               { from: 'c', to: 'a', amount: 1, reason: '' },
@@ -47,9 +48,12 @@ function session(): Session {
             id: 'r2',
             at: 2,
             kind: 'manual',
+            status: 'closed',
             participants: ['a', 'c'],
             bet: 0,
-            input: null,
+            stakes: {},
+            dealer: null,
+            moves: [],
             transfers: [{ from: 'a', to: 'c', amount: 2, reason: '' }],
             tags: [],
           },
@@ -72,11 +76,22 @@ describe('ledger', () => {
     expect(netOf(session(), 'g2')).toEqual({ a: -2, b: 0, c: 2 })
   })
 
-  it('hand = pack × (1 + renews) + net', () => {
+  it('ván đang mở không tính vào lời/lỗ', () => {
     const s = session()
-    expect(renewCount(s, 'b')).toBe(1)
-    expect(handOf(s, 'b')).toBe(50 * 2 - 4)
-    expect(handOf(s, 'a')).toBe(53)
+    s.games[1].rounds.push({
+      id: 'open',
+      at: 3,
+      kind: 'play',
+      status: 'open',
+      participants: ['a', 'b'],
+      bet: 5,
+      stakes: {},
+      dealer: null,
+      moves: [{ id: 'm', from: 'a', to: 'pot', amount: 5, label: '' }],
+      transfers: [],
+      tags: [],
+    })
+    expect(netOf(s)).toEqual({ a: 3, b: -4, c: 1 })
   })
 
   it('assertZeroSum throws on imbalance', () => {

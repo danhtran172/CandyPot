@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { useNavigate } from 'react-router'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { GAME_ICONS } from '../../core/games'
 import { netOfTransfers } from '../../core/ledger'
+import { actions } from '../../store'
 import type { Game, ID, Round } from '../../core/types'
 import { useSession } from '../components/useSession'
 import { TransferList } from '../components/TransferList'
-import { Card, Chip, TopBar, Who } from '../components/kit'
+import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { playerMap, roundNumber, signed, timeOf, toneOf } from '../format'
 
 interface Entry {
@@ -20,15 +21,26 @@ export function History() {
   const [tab, setTab] = useState<'rounds' | 'people'>('rounds')
   const [open, setOpen] = useState<ID | null>(null)
   const [who, setWho] = useState<ID>(session.players[0]?.id ?? '')
+  const navigate = useNavigate()
   const players = playerMap(session)
 
   const entries: Entry[] = session.games
-    .flatMap((game) => game.rounds.map((round) => ({ game, round, no: roundNumber(game, round) })))
+    .flatMap((game) =>
+      game.rounds.filter((r) => r.status === 'closed').map((round) => ({ game, round, no: roundNumber(game, round) })),
+    )
     .sort((a, b) => a.round.at - b.round.at)
 
   const label = (e: Entry) => (e.round.kind === 'manual' ? 'Chuyển tay' : `Ván ${e.no}`)
-  const editPath = (e: Entry) =>
-    `/s/${session.id}/g/${e.game.id}/${e.round.kind === 'manual' ? 'manual' : 'round'}/${e.round.id}`
+
+  const reopen = (e: Entry) => {
+    const errors = actions().reopenRound(e.game.id, e.round.id)
+    if (errors.length) return alert(errors[0])
+    navigate(`/s/${session.id}?g=${e.game.id}`)
+  }
+
+  const remove = (e: Entry) => {
+    if (confirm(`Xóa ${e.game.name} · ${label(e)}? Lời/lỗ sẽ được tính lại.`)) actions().deleteRound(e.game.id, e.round.id)
+  }
 
   let running = 0
   const series = [{ x: 0, name: 'Đầu buổi', net: 0 }]
@@ -101,10 +113,21 @@ export function History() {
                   </button>
                   {isOpen && (
                     <div className="border-t border-line/60 p-4 pt-3">
-                      <TransferList transfers={e.round.transfers} players={players} showReason />
-                      <Link to={editPath(e)} className="mt-3 block text-center font-semibold text-lemon">
-                        Sửa / xóa ván này
-                      </Link>
+                      <TransferList
+                        transfers={e.round.moves.map((m) => ({ from: m.from, to: m.to, amount: m.amount, reason: m.label }))}
+                        players={players}
+                        showReason
+                      />
+                      <div className="mt-3 flex gap-2">
+                        {e.round.kind === 'play' && (
+                          <Button className="flex-1 text-sm" onClick={() => reopen(e)}>
+                            Mở lại để sửa
+                          </Button>
+                        )}
+                        <Button variant="danger" className="text-sm" onClick={() => remove(e)}>
+                          Xóa
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </Card>

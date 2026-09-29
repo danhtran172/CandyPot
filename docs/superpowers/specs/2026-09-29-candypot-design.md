@@ -4,6 +4,22 @@
 - **Trạng thái:** Chờ duyệt
 - **Repo:** https://github.com/danhtran172/CandyPot
 
+## 0. Thay đổi sau khi dùng thử (2026-09-29)
+
+Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5, §6:
+
+- **Không có số kẹo mặc định.** Bỏ gói kẹo, kẹo trên tay, renew. Mỗi người bắt đầu từ 0; lời/lỗ cộng dồn qua các ván.
+- **Ván có 2 bước:** *Mở ván* (chọn người, đặt cược) → *Chốt ván*. Ván đang mở được lưu, không tính vào lời/lỗ cho đến khi chốt. Mỗi game tối đa 1 ván đang mở. Ván đã chốt có thể mở lại để sửa.
+  - Tiến lên: **một mức cược chung** `u`.
+  - Xì dách: chọn nhà cái, **mỗi con cược riêng** `b`.
+  - Poker: mỗi người **bỏ vào pot** số kẹo riêng khi mở ván.
+- **Mọi giao dịch là kéo thả:** kéo ô người trả thả vào người nhận (hoặc pot), hoặc bấm người trả rồi bấm người nhận. Popup hiện **4 mức gợi ý** + "Số khác".
+  - Tiến lên: 4 hệ số nhỏ nhất trong luật × `u`, kèm tên tình huống (Bét→Nhất, Heo đỏ, Cháy…).
+  - Xì dách: ×1–×4 cược của con; nút nhanh "Cái ăn / đền cả bàn ×1 / ×2".
+  - Poker → pot: Theo · Tố gấp đôi · ½ pot · Cả pot. Pot → người: Cả pot · Phần được ăn (side pot) · ½ · ⅓. Chỉ chốt được khi pot = 0; khi chốt, các lượt qua pot được gộp thành ít lượt trả nhất.
+  - Không có ván đang mở: kéo = chuyển tay (gợi ý ×1, ×2, ×5, ×10 cược gần nhất).
+- Bỏ form nhập thứ hạng/thối/chặt/thắng-thua. Bỏ danh hiệu Nuôi heo, Đồ tể, Vua renew.
+
 ## 1. Mục tiêu
 
 CandyPot là **sổ ghi kẹo** cho một nhóm bạn chơi bài **ngoài đời thật** (bài thật, kẹo thật). App **không** chia bài, **không** xác định ai thắng — host nhập kết quả mỗi ván, app tự tính ai đưa ai bao nhiêu kẹo, lời/lỗ của từng người, và phương án trả kẹo **ít lượt chuyển nhất**.
