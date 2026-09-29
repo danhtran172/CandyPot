@@ -205,7 +205,7 @@ export function Table() {
           <div className="mt-4 grid grid-cols-2 gap-2">
             {GAME_ORDER.map((t) => (
               <Button key={t} className="flex flex-col items-center gap-1 py-3 text-lg" onClick={() => pickType(t)}>
-                <GameIcon type={t} className="size-12" />
+                <GameIcon type={t} className="size-8" />
                 {GAMES[t].label}
               </Button>
             ))}
@@ -412,7 +412,7 @@ function TableCenter({ game, round, onEditBets }: { game: Game; round?: Round; o
     const soon = GAMES[game.type].soon
     return (
       <>
-        <GameIcon type={game.type} className="size-14" />
+        <GameIcon type={game.type} className="size-9" />
         <span className="font-display text-lg leading-tight font-bold">{GAMES[game.type].label}</span>
         <span className="text-xs text-muted">{soon ? 'Sắp có · kéo kẹo để chuyển tay' : 'Chưa mở ván'}</span>
       </>

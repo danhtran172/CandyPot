@@ -26,7 +26,7 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
       >
         {value ? (
           <>
-            <GameIcon type={value} className="size-8" />
+            <GameIcon type={value} className="size-6" />
             <span className="flex-1 text-left">{GAMES[value].label}</span>
           </>
         ) : (
@@ -55,7 +55,7 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
                     t === value ? 'bg-lemon/15 text-lemon' : 'hover:bg-plum'
                   }`}
                 >
-                  <GameIcon type={t} className="size-9" />
+                  <GameIcon type={t} className="size-6" />
                   <span className="flex-1">{GAMES[t].label}</span>
                   {GAMES[t].soon && <span className="rounded-full bg-night/60 px-2 text-xs font-semibold text-muted">sắp có</span>}
                   {t === value && <span aria-hidden>✓</span>}
