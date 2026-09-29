@@ -38,8 +38,12 @@ export function Table() {
     setTimeout(() => setToast(null), 2500)
   }
 
-  const addGame = (type: GameType) => {
-    const id = actions().addGame(type)
+  /** Game đang dùng của mỗi loại (buổi cũ có thể có nhiều — lấy cái mới nhất). */
+  const gameOf = (type: GameType) => [...session.games].reverse().find((g) => g.type === type)
+
+  /** Chọn 1 trong 3 loại game: chưa có thì tạo. */
+  const pickType = (type: GameType) => {
+    const id = gameOf(type)?.id ?? actions().addGame(type)
     setParams({ g: id }, { replace: true })
   }
 
@@ -189,33 +193,20 @@ export function Table() {
         }
       />
 
-      {session.games.length > 0 && (
+      {game && (
         <div className="relative">
           <select
             aria-label="Chọn game"
-            value={game?.id}
-            onChange={(e) => {
-              const v = e.target.value
-              if (v.startsWith('add:')) addGame(v.slice(4) as GameType)
-              else setParams({ g: v }, { replace: true })
-            }}
-            className="font-display w-full cursor-pointer appearance-none rounded-2xl border border-line bg-plum-2 py-2 pr-10 pl-4 text-lg font-bold text-cream [&_optgroup]:bg-plum-2 [&_option]:bg-plum-2"
+            value={game.type}
+            onChange={(e) => pickType(e.target.value as GameType)}
+            className="font-display w-full cursor-pointer appearance-none rounded-2xl border border-line bg-plum-2 py-2 pr-10 pl-4 text-lg font-bold text-cream [&_option]:bg-plum-2"
           >
-            <optgroup label="Game trong buổi">
-              {session.games.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {GAME_ICONS[g.type]} {g.name}
-                  {openRound(session, g.id) ? ' · đang chơi' : ''}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Thêm game mới">
-              {GAME_ORDER.map((t) => (
-                <option key={t} value={`add:${t}`}>
-                  + {GAMES[t].label}
-                </option>
-              ))}
-            </optgroup>
+            {GAME_ORDER.map((t) => (
+              <option key={t} value={t}>
+                {GAME_ICONS[t]} {GAMES[t].label}
+                {gameOf(t) && openRound(session, gameOf(t)!.id) ? ' · đang chơi' : ''}
+              </option>
+            ))}
           </select>
           <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted">
             ▾
@@ -229,7 +220,7 @@ export function Table() {
           <p className="mt-1 text-sm text-muted">Một buổi có thể chơi nhiều game, thêm game khác lúc nào cũng được.</p>
           <div className="mt-4 grid gap-2">
             {GAME_ORDER.map((t) => (
-              <Button key={t} className="py-3 text-lg" onClick={() => addGame(t)}>
+              <Button key={t} className="py-3 text-lg" onClick={() => pickType(t)}>
                 {GAME_ICONS[t]} {GAMES[t].label}
               </Button>
             ))}

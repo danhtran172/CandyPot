@@ -5,6 +5,7 @@ import type { ID } from '../../core/types'
 import { actions } from '../../store'
 import { defaultDraft, type OpenDraft } from '../../store/appStore'
 import { Button, Card, Chip, Errors, SectionTitle, Stepper, TopBar, Who } from '../components/kit'
+import { TienlenBetInputs } from '../components/TienlenBetInputs'
 import { useSession } from '../components/useSession'
 import { playCount } from '../format'
 
@@ -86,20 +87,11 @@ export function OpenRound() {
       <Card className="mt-3">
         {mod.stakeMode === 'common' ? (
           <>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">Cược Nhất</div>
-                <div className="text-xs text-muted">Bét trả Nhất</div>
-              </div>
-              <Stepper value={draft.bet} min={1} onChange={(bet) => setDraft({ ...draft, bet })} label="cược Nhất" />
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-semibold">Cược Nhì</div>
-                <div className="text-xs text-muted">Ba trả Nhì</div>
-              </div>
-              <Stepper value={draft.bet2 ?? 1} min={1} onChange={(bet2) => setDraft({ ...draft, bet2 })} label="cược Nhì" />
-            </div>
+            <TienlenBetInputs
+              bet={draft.bet}
+              bet2={draft.bet2 ?? 1}
+              onChange={({ bet, bet2 }) => setDraft({ ...draft, bet, bet2 })}
+            />
             <p className="mt-3 border-t border-line/60 pt-3 text-xs text-muted">
               Kéo hũ kẹo sẽ gợi ý: cược Nhì, cược Nhất, Nhất × 1,5 và Nhất × 2.
             </p>

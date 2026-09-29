@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import type { Game } from '../../core/types'
 import { tienlenBets } from '../../core/suggest'
 import { actions } from '../../store'
-import { Button, Stepper } from './kit'
+import { Button } from './kit'
+import { TienlenBetInputs } from './TienlenBetInputs'
 
 /** Tiến lên: host đặt mức cược Nhất/Nhì — là các số gợi ý khi kéo trả kẹo. */
 export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
@@ -31,21 +32,15 @@ export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: 
           <span className="text-sky">Bet</span> · Tiến lên
         </h2>
         <p className="mt-1 text-center text-xs text-muted">Số gợi ý khi kéo trả kẹo: Nhì, Nhất, Nhất × 1,5, Nhất × 2.</p>
-        <div className="mt-4 space-y-3">
-          <label className="flex items-center justify-between gap-3">
-            <span>
-              <span className="font-display text-lg font-bold">Nhất</span>
-              <span className="block text-xs text-muted">Bét trả Nhất</span>
-            </span>
-            <Stepper value={bet} min={1} onChange={setBet} label="cược Nhất" />
-          </label>
-          <label className="flex items-center justify-between gap-3">
-            <span>
-              <span className="font-display text-lg font-bold">Nhì</span>
-              <span className="block text-xs text-muted">Ba trả Nhì</span>
-            </span>
-            <Stepper value={bet2} min={1} onChange={setBet2} label="cược Nhì" />
-          </label>
+        <div className="mt-4">
+          <TienlenBetInputs
+            bet={bet}
+            bet2={bet2}
+            onChange={(v) => {
+              setBet(v.bet)
+              setBet2(v.bet2)
+            }}
+          />
         </div>
         {error && <p className="mt-3 text-center text-sm text-berry">{error}</p>}
         <div className="mt-4 flex gap-2">

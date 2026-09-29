@@ -7,7 +7,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - **Lịch sử trả/nhận** của riêng bạn (nút 📜 góc bàn); hoàn tác cần **host** xác nhận
 - **Đòi kẹo:** kéo hũ kẹo của người khác về chỗ mình → người đó nhận thông báo, bấm OK mới chuyển
 - **Tab Host và Yêu cầu** (thanh dưới, ai cũng có, có số đếm): *Host* — host duyệt yêu cầu hoàn tác (từng cái hoặc OK tất cả) và theo dõi lời đòi giữa mọi người; người khác xem yêu cầu hoàn tác của mình đang chờ và rút lại được. *Yêu cầu* — ai đang đòi bạn (Không/OK, OK tất cả) và bạn đang đòi ai. Thông báo trên cùng có "Để sau" để không bị che bàn.
-- **Tiến lên:** host bấm ô Bet giữa bàn để đặt mức Nhất/Nhì — đó là các số gợi ý khi kéo trả kẹo. Chọn/thêm game bằng ô chọn ở đầu bàn chơi.
+- **Tiến lên:** host bấm ô Bet giữa bàn để đặt mức Nhất/Nhì — đó là các số gợi ý khi kéo trả kẹo; nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì), vẫn sửa riêng được. Chọn 1 trong 3 game bằng ô chọn ở đầu bàn chơi.
 - Tiến lên cược 2 mức Nhất / Nhì (vd 4/2); Xì dách: đặt cược bằng **ô Bet** giữa bàn → **Chốt cược** → chia bài, kéo trả kẹo → **Kết thúc** (một nút đổi chữ theo bước; ván sau tự giữ cược cũ)
 - Lời/lỗ cộng dồn từ 0, lịch sử theo ván / theo người, danh hiệu, luật nhà
 - Web app (PWA) — thêm vào màn hình chính, chạy offline, dữ liệu lưu trên máy
