@@ -5,6 +5,11 @@ import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS } from '../../store/appStore'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 
+const MODES = [
+  { value: 'solo', icon: '🙋', title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
+  { value: 'multi', icon: '📱', title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
+] as const
+
 interface Draft {
   name: string
   emoji: string
@@ -13,7 +18,8 @@ interface Draft {
 export function NewSession() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
-  const [defaultName] = useState(() => `Buổi ${new Date().toLocaleDateString('vi-VN')}`)
+  const [defaultName] = useState(() => `Bàn ${new Date().toLocaleDateString('vi-VN')}`)
+  const [mode, setMode] = useState<'solo' | 'multi'>('solo')
   const [players, setPlayers] = useState<Draft[]>([
     { name: '', emoji: EMOJIS[0] },
     { name: '', emoji: EMOJIS[1] },
@@ -33,17 +39,42 @@ export function NewSession() {
     if (new Set(names).size !== names.length) errs.push('Hai người chơi đang trùng tên.')
     setErrors(errs)
     if (errs.length) return
-    const id = actions().createSession(name || defaultName, named)
+    const id = actions().createSession(name || defaultName, named, mode)
     navigate(`/s/${id}`, { replace: true })
   }
 
   return (
     <main>
-      <TopBar title="Buổi mới" back="/" />
+      <TopBar title="Tạo bàn" back="/" />
+
+      <div className="mb-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Kiểu bàn">
+        {MODES.map((m) => (
+          <button
+            key={m.value}
+            type="button"
+            role="radio"
+            aria-checked={mode === m.value}
+            onClick={() => setMode(m.value)}
+            className={`flex flex-col items-start gap-1 rounded-3xl border-2 p-3 text-left transition ${
+              mode === m.value ? 'border-lemon bg-lemon/10' : 'border-line bg-plum'
+            }`}
+          >
+            <span className="text-2xl leading-none">{m.icon}</span>
+            <span className="font-display leading-tight font-bold">{m.title}</span>
+            <span className="text-xs text-muted">{m.hint}</span>
+          </button>
+        ))}
+      </div>
+      {mode === 'multi' && (
+        <p className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-xs">
+          Bàn sẽ có <b>mã 5 số</b> để mọi người join từ máy mình. Kết nối nhiều máy sẽ có ở <b>giai đoạn 2</b> — hiện tại vẫn ghi
+          trên máy này.
+        </p>
+      )}
 
       <Card>
         <label className="block text-sm text-muted" htmlFor="session-name">
-          Tên buổi
+          Tên bàn
         </label>
         <input
           id="session-name"
@@ -101,7 +132,7 @@ export function NewSession() {
         <Errors errors={errors} />
       </div>
       <Button variant="primary" className="font-display mt-4 w-full py-3.5 text-xl" onClick={start}>
-        Bắt đầu chơi
+        Tạo bàn
       </Button>
     </main>
   )

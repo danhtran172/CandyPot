@@ -8,9 +8,9 @@ export function Home() {
   const [sessions, setSessions] = useState(() => repo.list())
 
   const remove = async (id: string, name: string) => {
-    const ok = await ask(`Xóa buổi "${name}"?`, {
+    const ok = await ask(`Xóa bàn "${name}"?`, {
       icon: '🗑️',
-      message: 'Toàn bộ lịch sử của buổi này sẽ mất.',
+      message: 'Toàn bộ lịch sử của bàn này sẽ mất.',
       okLabel: 'Xóa',
       danger: true,
     })
@@ -26,17 +26,25 @@ export function Home() {
       </h1>
       <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
 
-      <Link
-        to="/new"
-        className="font-display mt-8 flex items-center justify-center rounded-3xl bg-lemon py-4 text-2xl font-extrabold text-night shadow-[inset_0_-5px_0_rgb(0_0_0/0.18)]"
-      >
-        + Tạo buổi mới
-      </Link>
+      <div className="mt-8 grid grid-cols-[1fr_auto] gap-2">
+        <Link
+          to="/new"
+          className="font-display flex items-center justify-center rounded-3xl bg-lemon py-4 text-2xl font-extrabold text-night shadow-[inset_0_-5px_0_rgb(0_0_0/0.18)]"
+        >
+          + Tạo bàn
+        </Link>
+        <Link
+          to="/join"
+          className="font-display flex items-center justify-center rounded-3xl border-2 border-sky/60 px-5 text-lg font-bold text-sky"
+        >
+          Join bàn
+        </Link>
+      </div>
 
-      <h2 className="font-display mt-10 mb-3 text-lg font-bold">Buổi đã chơi</h2>
+      <h2 className="font-display mt-10 mb-3 text-lg font-bold">Bàn đã chơi</h2>
       {sessions.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-line p-6 text-center text-muted">
-          Chưa có buổi nào. Tạo buổi mới để bắt đầu ghi kẹo.
+          Chưa có bàn nào. Tạo bàn để bắt đầu ghi kẹo.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -46,11 +54,12 @@ export function Home() {
                 <div className="truncate font-semibold">{s.name}</div>
                 <div className="text-sm text-muted">
                   {s.playerCount} người · {dateOf(s.updatedAt)}
+                  {s.code && <span className="num ml-1.5 rounded-full bg-sky/15 px-1.5 text-xs font-bold text-sky">#{s.code}</span>}
                 </div>
               </Link>
               <button
                 type="button"
-                aria-label={`Xóa buổi ${s.name}`}
+                aria-label={`Xóa bàn ${s.name}`}
                 className="rounded-full px-3 py-2 text-muted hover:text-berry"
                 onClick={() => remove(s.id, s.name)}
               >

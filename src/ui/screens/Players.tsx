@@ -22,11 +22,11 @@ export function Players() {
   const [swiped, setSwiped] = useState<string | null>(null)
 
   const add = () => {
-    if (inRoom.length >= MAX_PLAYERS) return setErrors([`Tối đa ${MAX_PLAYERS} người một buổi.`])
+    if (inRoom.length >= MAX_PLAYERS) return setErrors([`Tối đa ${MAX_PLAYERS} người một bàn.`])
     if (!name.trim()) return setErrors(['Nhập tên người chơi.'])
     // Tên của người đã xóa khỏi phòng → thêm lại chính người đó (giữ lời/lỗ cũ)
     const back = session.players.find((p) => p.removed && p.name.toLowerCase() === name.trim().toLowerCase())
-    if (!back && nameTaken(name)) return setErrors(['Tên này đã có trong buổi.'])
+    if (!back && nameTaken(name)) return setErrors(['Tên này đã có trong bàn.'])
     actions().addPlayer(name, EMOJIS[session.players.length % EMOJIS.length])
     if (back) void tell(`${back.name} đã trở lại phòng`, { icon: '👋', message: 'Lời/lỗ cũ vẫn giữ nguyên.' })
     setName('')
@@ -71,6 +71,18 @@ export function Players() {
   return (
     <main>
       <TopBar title="Người chơi" back={`/s/${session.id}`} />
+      {session.code && (
+        <div className="mb-3 flex items-center gap-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2">
+          <span className="text-2xl" aria-hidden>
+            📱
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs text-muted">Mã bàn — mọi người nhập ở "Join bàn"</div>
+            <div className="num font-display text-2xl leading-tight font-extrabold tracking-[0.3em] text-sky">{session.code}</div>
+          </div>
+          <span className="rounded-full bg-night/60 px-2 py-0.5 text-[10px] font-semibold text-muted">giai đoạn 2</span>
+        </div>
+      )}
       <ul className="mb-3 space-y-0.5 text-sm text-muted">
         <li>
           <b className="text-cream">Chạm avatar</b> để chọn bạn (🙋) — chỗ của bạn luôn ở dưới cùng bàn · <b className="text-cream">giữ</b> để đổi biểu tượng.

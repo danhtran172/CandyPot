@@ -463,3 +463,13 @@ describe('appStore — Tiến lên: 4 người được tick chơi', () => {
     expect(s().toggleSeat(g, c)).toEqual(['Cường đang tạm nghỉ.'])
   })
 })
+
+describe('appStore — tạo bàn', () => {
+  it('bàn một máy không có mã; bàn nhiều người có mã 5 số, hiện ở danh sách', () => {
+    expect(session().mode).toBe('solo')
+    expect(session().code).toBeUndefined()
+    const id = s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
+    expect(session().code).toMatch(/^\d{5}$/)
+    expect(repo.list().find((m) => m.id === id)?.code).toBe(session().code)
+  })
+})

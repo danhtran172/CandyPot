@@ -50,7 +50,7 @@ export function History() {
   }
 
   let running = 0
-  const series = [{ x: 0, name: 'Đầu buổi', net: 0 }]
+  const series = [{ x: 0, name: 'Đầu bàn', net: 0 }]
   const personal: { e: Entry; delta: number }[] = []
   for (const e of entries) {
     const delta = netOfTransfers(e.round.transfers)[who] ?? 0

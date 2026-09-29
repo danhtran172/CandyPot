@@ -36,7 +36,7 @@ export function SessionLayout() {
   if (!loaded || !session) {
     return (
       <div className="pt-24 text-center text-muted">
-        <p>Không tìm thấy buổi chơi này trên máy.</p>
+        <p>Không tìm thấy bàn chơi này trên máy.</p>
         <Link to="/" className="mt-4 inline-block text-lemon underline">
           Về trang chủ
         </Link>

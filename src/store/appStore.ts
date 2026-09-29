@@ -56,7 +56,8 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
 export interface AppState {
   session: Session | null
   error: string | null
-  createSession(name: string, players: { name: string; emoji: string }[]): ID
+  /** Tạo bàn: solo = một máy host ghi hết; multi = có mã 5 số để người khác join (giai đoạn 2). */
+  createSession(name: string, players: { name: string; emoji: string }[], mode?: 'solo' | 'multi'): ID
   openSession(id: ID): boolean
   closeSession(): void
   deleteSession(id: ID): void
@@ -161,6 +162,11 @@ export function pokerSettingsOf(game: Game): { sb: number; cap: number } {
   return game.pokerSettings ?? { sb: DEFAULT_SB, cap: DEFAULT_SB * ALL_IN_MULTIPLIER }
 }
 
+/** Mã bàn 5 số ngẫu nhiên (10000–99999). */
+function tableCode(): string {
+  return String(10000 + Math.floor(Math.random() * 90000))
+}
+
 function findOpenIn(game: Game): Round | undefined {
   return game.rounds.find((r) => r.status === 'open')
 }
@@ -202,11 +208,13 @@ export function createAppStore(repo: SessionRepo) {
       session: null,
       error: null,
 
-      createSession(name, players) {
+      createSession(name, players, mode = 'solo') {
         const now = Date.now()
         const session: Session = {
           id: newId(),
-          name: name.trim() || 'Buổi chơi',
+          name: name.trim() || 'Bàn chơi',
+          mode,
+          code: mode === 'multi' ? tableCode() : undefined,
           createdAt: now,
           updatedAt: now,
           hostId: null,

@@ -154,6 +154,10 @@ export interface Session {
   games: Game[]
   requests: CandyRequest[]
   undos: UndoRequest[]
+  /** solo = một máy, host ghi hết; multi = nhiều người join bằng mã 5 số (kết nối nhiều máy: giai đoạn 2). */
+  mode?: 'solo' | 'multi'
+  /** Mã bàn 5 số (bàn nhiều người) để người khác join. */
+  code?: string
   /** Bầu host mới (khi host vắng): người bầu → người được bầu. */
   hostVotes: Record<ID, ID>
 }

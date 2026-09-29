@@ -6,6 +6,7 @@ import { Demo } from './ui/screens/Demo'
 import { GameSettings } from './ui/screens/GameSettings'
 import { HostTasks } from './ui/screens/HostTasks'
 import { Home } from './ui/screens/Home'
+import { JoinTable } from './ui/screens/JoinTable'
 import { NewSession } from './ui/screens/NewSession'
 import { OpenRound } from './ui/screens/OpenRound'
 import { Players } from './ui/screens/Players'
@@ -24,6 +25,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new" element={<NewSession />} />
+          <Route path="/join" element={<JoinTable />} />
           <Route path="/demo" element={<Demo />} />
           <Route path="/s/:sid" element={<SessionLayout />}>
             <Route index element={<Table />} />

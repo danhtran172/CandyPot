@@ -361,7 +361,7 @@ export function Board({
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
-                <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">
+                <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả bàn">
                   {signed(s.total)}
                 </span>
                 {s.round !== undefined && s.round !== 0 && (

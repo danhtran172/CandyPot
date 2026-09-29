@@ -18,7 +18,7 @@ export function Summary() {
   const net = netOf(session, gameId)
   const ranked = session.players.filter((p) => net[p.id] !== 0 || p.active).sort((a, b) => net[b.id] - net[a.id])
   const transfers = settle(net)
-  const scope = gameId ? session.games.find((g) => g.id === gameId)?.name : 'Cả buổi'
+  const scope = gameId ? session.games.find((g) => g.id === gameId)?.name : 'Cả bàn'
 
   const flash = (msg: string) => {
     setStatus(msg)
@@ -69,7 +69,7 @@ export function Summary() {
       {session.games.length > 1 && (
         <nav aria-label="Phạm vi" className="-mx-4 mb-3 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">
           <Chip active={!gameId} onClick={() => setGameId(undefined)}>
-            Cả buổi
+            Cả bàn
           </Chip>
           {session.games.map((g) => (
             <Chip key={g.id} active={gameId === g.id} onClick={() => setGameId(g.id)}>

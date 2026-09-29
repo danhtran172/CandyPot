@@ -42,6 +42,7 @@ export class LocalRepo implements SessionRepo {
       name: session.name,
       updatedAt: session.updatedAt,
       playerCount: session.players.filter((p) => !p.removed).length,
+      code: session.code,
     }
     this.write(INDEX, [meta, ...this.list().filter((m) => m.id !== session.id)])
   }
