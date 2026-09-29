@@ -408,20 +408,12 @@ export function Table() {
   }
 
   const roundDelta = round ? movesNet(round.moves) : {}
-  // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không
-  // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); Tiến lên hiện cả người tạm vắng (bỏ tick)
+  // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
+  // Tiến lên: chỉ người chơi ngồi ở 4 góc bàn — ai không chơi thì cho nghỉ ở tab Người chơi
+  const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
   const visible = session.players.filter(
-    (p) => !p.removed && (!round || game?.type === 'tienlen' || round.participants.includes(p.id) || !p.active),
+    (p) => !p.removed && (seated ? seated.includes(p.id) : !round || round.participants.includes(p.id) || !p.active),
   )
-  const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session, game)) : undefined
-
-  /** Tiến lên: host tick / bỏ tick người chơi (chỉ khi chưa mở ván). */
-  const toggleSeat = (id: ID) => {
-    if (!game) return
-    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới chọn người chơi được.`, true)
-    const errors = actions().toggleSeat(game.id, id)
-    if (errors.length) flash(errors[0], true)
-  }
 
   const seats: Seat[] = visible.map((p) => ({
     player: p,
@@ -439,7 +431,6 @@ export function Table() {
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
     highlight: !!hand && hand.toAct === p.id,
-    tick: seated && !round && p.active ? { on: seated.includes(p.id), onToggle: () => toggleSeat(p.id) } : undefined,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
       hand && p.id === me ? (
@@ -456,7 +447,6 @@ export function Table() {
         </button>
       ) : undefined,
     dim: !!hand?.folded.includes(p.id),
-    away: !!seated && p.active && !seated.includes(p.id),
   }))
 
   return (
@@ -524,6 +514,10 @@ export function Table() {
                   </span>
                 )}
               </span>
+            ) : seated && seated.length > GAMES.tienlen.maxPlayers ? (
+              <Link to={`${base}/players`} className="font-semibold text-berry">
+                Quá {GAMES.tienlen.maxPlayers} người — cho người không chơi nghỉ 💤 ›
+              </Link>
             ) : GAMES[game.type].soon ? (
               <span className="text-muted">Chưa có luật tính — bấm vào người để chuyển kẹo</span>
             ) : (

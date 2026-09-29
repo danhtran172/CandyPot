@@ -36,7 +36,7 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const fromPrev = prev?.participants.filter((id) => active.includes(id))
   const participants =
     game.type === 'tienlen'
-      ? seatedOf(session, game)
+      ? seatedOf(session)
       : (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
   const tl = game.type === 'tienlen' ? tienlenBets(game) : undefined
   const price = game.type === 'loto' ? lotoPrice(game) : undefined
@@ -93,8 +93,6 @@ export interface AppState {
   setLotoPrice(gameId: ID, price: number): string[]
   /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
   setTienlenBets(gameId: ID, bet: number, bet2: number, pigs?: { red?: number; black?: number }): string[]
-  /** Tiến lên: tick / bỏ tick người đang chơi (tối đa 4, còn lại tạm vắng). */
-  toggleSeat(gameId: ID, playerId: ID): string[]
   /** Lô tô: giá mỗi tờ + số tờ tối đa mỗi người một ván. */
   setLotoSettings(gameId: ID, price: number, max: number): string[]
   /** Xì dách: mức cược tối thiểu / tối đa. */
@@ -138,7 +136,9 @@ function validateOpen(game: Game, d: OpenDraft): string[] {
   if (mod.soon) return [`${mod.label} chưa có luật tính — tạm thời chỉ kéo kẹo chuyển tay.`]
   const errors: string[] = []
   const n = d.participants.length
-  if (n < mod.minPlayers || n > mod.maxPlayers) {
+  if (game.type === 'tienlen' && n > mod.maxPlayers) {
+    errors.push(`${mod.label} tối đa ${mod.maxPlayers} người — cho người không chơi nghỉ 💤 ở tab Người chơi.`)
+  } else if (n < mod.minPlayers || n > mod.maxPlayers) {
     errors.push(`${mod.label} cần ${mod.minPlayers}–${mod.maxPlayers} người chơi.`)
   }
   if (findOpenIn(game)) errors.push('Game này đang có ván chưa chốt.')
@@ -443,26 +443,6 @@ export function createAppStore(repo: SessionRepo) {
         if (![sb, cap].every((v) => Number.isInteger(v) && v > 0)) return ['Small blind và mức all-in phải là số nguyên lớn hơn 0.']
         if (cap < 2 * sb) return [`Mức all-in phải ít nhất bằng big blind (${2 * sb}).`]
         mapGame(gameId, (g) => ({ ...g, pokerSettings: { sb, cap } }))
-        return []
-      },
-
-      toggleSeat(gameId, playerId) {
-        const s = get().session
-        const g = game(gameId)
-        if (!s || !g) return ['Không tìm thấy game.']
-        if (findOpenIn(g)) return ['Đang có ván — kết thúc ván rồi mới đổi người chơi.']
-        const p = s.players.find((x) => x.id === playerId)
-        const seated = seatedOf(s, g)
-        if (seated.includes(playerId)) {
-          if (seated.length <= GAMES[g.type].minPlayers) return [`Cần ít nhất ${GAMES[g.type].minPlayers} người chơi.`]
-          mapGame(gameId, (x) => ({ ...x, seated: seated.filter((id) => id !== playerId) }))
-          return []
-        }
-        if (!p?.active) return [`${p?.name ?? 'Người này'} đang tạm nghỉ.`]
-        if (seated.length >= GAMES[g.type].maxPlayers)
-          return [`${GAMES[g.type].label} tối đa ${GAMES[g.type].maxPlayers} người — bỏ tick 1 người đang chơi trước.`]
-        const order = s.players.map((x) => x.id)
-        mapGame(gameId, (x) => ({ ...x, seated: [...seated, playerId].sort((a, b) => order.indexOf(a) - order.indexOf(b)) }))
         return []
       },
 

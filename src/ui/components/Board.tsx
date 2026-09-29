@@ -23,10 +23,6 @@ export interface Seat {
   highlight?: boolean
   /** Đã bỏ bài (Poker) — mờ đi. */
   dim?: boolean
-  /** Tiến lên: ô tick "đang chơi" ở góc trên bên trái avatar (bỏ tick = tạm vắng). */
-  tick?: { on: boolean; onToggle: () => void }
-  /** Tạm vắng (Tiến lên, không được tick) — avatar và tên mờ, ô tick vẫn rõ. */
-  away?: boolean
   /** Nhà cái (Xì dách) — gắn nơ ở góc dưới bên phải avatar. */
   dealer?: boolean
   /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
@@ -276,11 +272,13 @@ export function Board({
           </div>
 
           {ordered.map((s, i) => {
-            const angle = Math.PI / 2 + (2 * Math.PI * i) / n
-            // Bàn vuông: chiếu hướng ngồi lên cạnh hình vuông (4 người = giữa 4 cạnh)
-            const edge = square ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
-            const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
-            const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
+            // Bàn vuông ≤ 4 người: ngồi ở 4 góc (tôi góc dưới trái, theo chiều kim đồng hồ; 2 người thì ngồi chéo nhau)
+            const corners = square && n <= 4
+            const angle = corners ? (3 * Math.PI) / 4 + (Math.PI / 2) * (n === 2 ? i * 2 : i) : Math.PI / 2 + (2 * Math.PI * i) / n
+            // Bàn vuông đông hơn: chiếu hướng ngồi lên cạnh hình vuông
+            const edge = square && !corners ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
+            const left = corners ? 50 + 50 * Math.cos(angle) : square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
+            const top = corners ? 50 + 54 * Math.sin(angle) : square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
             const stake = s.stake !== undefined && (
@@ -318,28 +316,9 @@ export function Board({
                         : 'border-line'
                   } ${ring(s.player.id)}`}
                 >
-                  <span aria-hidden className={`leading-none ${s.player.active && !s.away ? '' : 'opacity-40'}`}>
+                  <span aria-hidden className={`leading-none ${s.player.active ? '' : 'opacity-40'}`}>
                     {s.player.emoji}
                   </span>
-                  {s.tick && (
-                    <button
-                      type="button"
-                      role="checkbox"
-                      data-guide={s.isMe ? 'tick' : undefined}
-                      aria-checked={s.tick.on}
-                      aria-label={s.tick.on ? `${s.player.name} đang chơi — bấm để cho tạm vắng` : `${s.player.name} tạm vắng — bấm để cho chơi`}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        s.tick?.onToggle()
-                      }}
-                      className={`absolute -top-1.5 -left-1.5 z-10 grid size-5.5 place-items-center rounded-md border-2 text-[11px] leading-none font-black ${
-                        s.tick.on ? 'border-mint bg-mint text-night' : 'border-muted bg-night text-transparent'
-                      }`}
-                    >
-                      ✓
-                    </button>
-                  )}
                   {s.dealer && (
                     <img
                       src={bowtie}
@@ -357,7 +336,7 @@ export function Board({
                   {side !== 'below' && stake}
                 </span>
                 <span
-                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active && !s.away ? '' : 'opacity-50'}`}
+                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active ? '' : 'opacity-50'}`}
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
