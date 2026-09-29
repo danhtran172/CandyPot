@@ -6,7 +6,7 @@ import { pileUnit } from '../../core/pile'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
 import { suggestOptions } from '../../core/suggest'
-import { BET, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
+import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { CandyPile } from '../components/CandyPile'
@@ -42,13 +42,43 @@ export function Table() {
     setParams({ g: id }, { replace: true })
   }
 
-  const onTransfer = useCallback(
-    (from: ID, to: ID) => {
-      if (to === BET && (from === POT || from === round?.dealer)) return flash('Nhà cái không đặt cược.', true)
-      setPending({ from, to })
-    },
-    [round?.dealer],
-  )
+  /** Ván trước (đã chốt) — dùng để hiện lại cược/cái khi chưa mở ván mới. */
+  const lastPlay = game && [...game.rounds].reverse().find((r) => r.kind === 'play' && r.status === 'closed')
+  const dealerNow = round ? round.dealer : (lastPlay?.dealer ?? null)
+  const hasPrev = !!game?.rounds.some((r) => r.kind === 'play')
+
+  /**
+   * Mở ván mới: có ván trước thì lấy lại y hệt cài đặt; chưa có thì vào màn Mở ván
+   * (riêng Xì dách mở luôn — đặt cược bằng ô Bet, đổi cái bằng cách kéo 🎩).
+   */
+  const openNext = () => {
+    if (!game) return false
+    if (!hasPrev && game.type !== 'xidach') {
+      navigate(`${base}/g/${game.id}/open`)
+      return false
+    }
+    const errors = actions().quickOpen(game.id)
+    if (errors.length) {
+      flash(errors[0], true)
+      return false
+    }
+    return true
+  }
+
+  const onTransfer = (from: ID, to: ID) => {
+    if (!game) return
+    if (from === DEALER) {
+      const errors = actions().setDealer(game.id, to)
+      if (errors.length) flash(errors[0], true)
+      else flash(`${players[to]?.name} làm nhà cái.`)
+      return
+    }
+    if (to === BET) {
+      if (from === POT || from === dealerNow) return flash('Nhà cái không đặt cược.', true)
+      if (!round && !openNext()) return
+    }
+    setPending({ from, to })
+  }
   const onTap = useCallback((id: ID) => (id !== me && id !== POT ? setPeek(id) : undefined), [me])
 
   /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
@@ -101,7 +131,8 @@ export function Table() {
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
     badge: round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
-    stake: game?.type === 'xidach' ? round?.stakes[p.id] : undefined,
+    stake: game?.type === 'xidach' ? (round ?? lastPlay)?.stakes[p.id] : undefined,
+    stakeDim: !round,
   }))
 
   return (
@@ -190,9 +221,10 @@ export function Table() {
             onTap={onTap}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             betBox={
-              round && game.type === 'xidach' ? Object.values(round.stakes).reduce((a, b) => a + b, 0) : undefined
+              game.type === 'xidach' ? Object.values((round ?? lastPlay)?.stakes ?? {}).reduce((a, b) => a + b, 0) : undefined
             }
-            center={<TableCenter game={game} round={round} dealerName={round?.dealer ? players[round.dealer]?.name : undefined} />}
+            hat={round?.dealer ? players[round.dealer]?.name : undefined}
+            center={<TableCenter game={game} round={round} />}
             onTransfer={onTransfer}
           />
 
@@ -276,13 +308,16 @@ export function Table() {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="primary"
-                className="font-display flex-1 py-3.5 text-xl"
-                onClick={() => navigate(`${base}/g/${game.id}/open`)}
-              >
-                + Mở ván
-              </Button>
+              <>
+                {(hasPrev || game.type === 'xidach') && (
+                  <Button className="bg-night/90 px-3 text-sm" onClick={() => navigate(`${base}/g/${game.id}/open`)}>
+                    ⚙ Tùy chỉnh
+                  </Button>
+                )}
+                <Button variant="primary" className="font-display flex-1 py-3.5 text-xl" onClick={openNext}>
+                  + Mở ván
+                </Button>
+              </>
             )}
           </div>
         </>
@@ -328,7 +363,7 @@ export function Table() {
 }
 
 /** Giữa bàn: thông tin riêng của từng game. */
-function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; dealerName?: string }) {
+function TableCenter({ game, round }: { game: Game; round?: Round }) {
   if (!round) {
     return (
       <>
@@ -364,9 +399,7 @@ function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; d
   if (game.type === 'xidach') {
     return (
       <>
-        <span className="mt-1 max-w-full truncate text-xs text-muted">
-          Ván {roundNumber(game, round)} · 🎩 <b className="text-cream">{dealerName}</b>
-        </span>
+        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · kéo 🎩 để đổi cái</span>
       </>
     )
   }

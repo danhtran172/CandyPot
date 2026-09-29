@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { BET, POT, type ID, type Player } from '../../core/types'
+import { BET, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
 import { candyFor } from './CandyPile'
@@ -14,6 +14,8 @@ export interface Seat {
   badge?: string
   /** Tiền cược trong ván (Xì dách), hiện trước chỗ ngồi dạng [kẹo] × N. */
   stake?: number
+  /** Cược lấy từ ván trước (chưa mở ván) — hiện mờ. */
+  stakeDim?: boolean
   isMe?: boolean
 }
 
@@ -54,6 +56,7 @@ export function Board({
   corner,
   pot,
   betBox,
+  hat,
   onTransfer,
   onTap,
 }: {
@@ -66,6 +69,8 @@ export function Board({
   pot?: number
   /** Ô Bet giữa bàn (Xì dách): thả vào để đặt cược; giá trị = tổng cược đang đặt. */
   betBox?: number
+  /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
+  hat?: string
   onTransfer: (from: ID, to: ID) => void
   onTap?: (id: ID) => void
 }) {
@@ -161,6 +166,21 @@ export function Board({
               <span className="text-[10px] text-muted">thả vào để đặt cược</span>
             </div>
           )}
+          {hat && (
+            <button
+              type="button"
+              onPointerDown={start(DEALER)}
+              className={`flex touch-none items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs select-none ${
+                drag?.moved && drag.from === DEALER ? 'ring-2 ring-lemon' : ''
+              }`}
+              aria-label={`Nhà cái: ${hat}. Kéo mũ sang người khác để đổi cái`}
+            >
+              <span aria-hidden className="text-base leading-none">
+                🎩
+              </span>
+              <b className="max-w-24 truncate">{hat}</b>
+            </button>
+          )}
           {center}
         </div>
 
@@ -174,7 +194,9 @@ export function Board({
           const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
           const stake = s.stake !== undefined && (
             <span
-              className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]}`}
+              className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
+                s.stakeDim ? 'opacity-45' : ''
+              }`}
             >
               <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
               <span className="num">× {s.stake}</span>
@@ -226,7 +248,7 @@ export function Board({
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] drop-shadow-[0_8px_12px_rgb(0_0_0/0.5)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          <CandyJar className="h-14 w-12" />
+          {drag.from === DEALER ? <span className="text-5xl">🎩</span> : <CandyJar className="h-14 w-12" />}
         </div>
       )}
     </>

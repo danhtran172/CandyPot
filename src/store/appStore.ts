@@ -22,6 +22,20 @@ export interface OpenDraft {
   dealer: ID | null
 }
 
+/** Cài đặt mở ván mặc định: lấy lại người chơi, nhà cái và mức cược của ván trước. */
+export function defaultDraft(session: Session, game: Game): OpenDraft {
+  const mod = GAMES[game.type]
+  const prev = [...game.rounds].reverse().find((r) => r.kind === 'play')
+  const active = session.players.filter((p) => p.active).map((p) => p.id)
+  const fromPrev = prev?.participants.filter((id) => active.includes(id))
+  const participants = (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
+  const bet = prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
+  const bet2 = prev?.bet2 || Math.max(1, Math.round(bet / 2))
+  const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
+  const stakes = Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
+  return { participants, bet, bet2, stakes, dealer }
+}
+
 export interface AppState {
   session: Session | null
   error: string | null
@@ -40,6 +54,10 @@ export interface AppState {
 
   /** Mở ván mới. Trả về danh sách lỗi; rỗng = đã mở. */
   openRound(gameId: ID, draft: OpenDraft): string[]
+  /** Mở ván ngay với cài đặt của ván trước (người chơi, nhà cái, mức cược). */
+  quickOpen(gameId: ID): string[]
+  /** Xì dách: đổi nhà cái của ván đang mở. */
+  setDealer(gameId: ID, playerId: ID): string[]
   /** Kéo kẹo. Có ván đang mở thì ghi vào ván, không thì ghi thành chuyển tay. */
   addMove(gameId: ID, from: ID, to: ID, amount: number, label: string): string[]
   removeMove(gameId: ID, roundId: ID, moveId: ID): void
@@ -241,6 +259,29 @@ export function createAppStore(repo: SessionRepo) {
           tags: [],
         }
         mapGame(gameId, (g) => ({ ...g, rounds: [...g.rounds, round] }))
+        return []
+      },
+
+      quickOpen(gameId) {
+        const g = game(gameId)
+        const s = get().session
+        if (!g || !s) return ['Không tìm thấy game.']
+        return get().openRound(gameId, defaultDraft(s, g))
+      },
+
+      setDealer(gameId, playerId) {
+        const open = openOf(gameId)
+        if (!open) return ['Chưa có ván nào đang mở.']
+        if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
+        if (open.dealer === playerId) return []
+        const old = open.dealer
+        mapRound(gameId, open.id, (r) => {
+          const stakes = { ...r.stakes }
+          const moved = stakes[playerId]
+          delete stakes[playerId]
+          if (old) stakes[old] = moved ?? r.bet
+          return { ...r, dealer: playerId, stakes }
+        })
         return []
       },
 

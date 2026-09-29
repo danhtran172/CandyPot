@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router'
 import { GAME_ICONS, GAMES } from '../../core/games'
 import type { ID } from '../../core/types'
 import { actions } from '../../store'
-import type { OpenDraft } from '../../store/appStore'
+import { defaultDraft, type OpenDraft } from '../../store/appStore'
 import { Button, Card, Chip, Errors, SectionTitle, Stepper, TopBar, Who } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount } from '../format'
@@ -16,19 +16,7 @@ export function OpenRound() {
   const back = `/s/${session.id}?g=${gid}`
   const [errors, setErrors] = useState<string[]>([])
 
-  const [draft, setDraft] = useState<OpenDraft | null>(() => {
-    if (!game) return null
-    const mod = GAMES[game.type]
-    const prev = [...game.rounds].reverse().find((r) => r.kind === 'play')
-    const active = session.players.filter((p) => p.active).map((p) => p.id)
-    const fromPrev = prev?.participants.filter((id) => active.includes(id))
-    const participants = (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
-    const bet = prev?.bet || (mod.stakeMode === 'common' ? 4 : 1)
-    const bet2 = prev?.bet2 || Math.max(1, Math.round(bet / 2))
-    const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
-    const stakes = Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
-    return { participants, bet, bet2, stakes, dealer }
-  })
+  const [draft, setDraft] = useState<OpenDraft | null>(() => (game ? defaultDraft(session, game) : null))
 
   if (!game || !draft) return <p className="pt-24 text-center text-muted">Không tìm thấy game.</p>
 

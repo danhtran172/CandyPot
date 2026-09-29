@@ -8,6 +8,9 @@ export const POT = 'pot'
 /** Id đặc biệt cho ô Bet giữa bàn Xì dách (chỉ để đặt cược, không giữ kẹo). */
 export const BET = 'bet'
 
+/** Id đặc biệt cho mũ nhà cái (kéo sang người khác để đổi cái). */
+export const DEALER = 'dealer'
+
 /** Số người tối đa hiển thị quanh bàn. */
 export const MAX_PLAYERS = 10
 

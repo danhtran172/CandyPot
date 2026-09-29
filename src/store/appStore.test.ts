@@ -115,6 +115,16 @@ describe('appStore — Xì dách', () => {
     expect(s().setStake(g, b, 5)).toEqual(['Chưa có ván nào đang mở.'])
   })
 
+  it('mở nhanh lấy lại người chơi, cái và cược của ván trước; đổi cái chuyển cược', () => {
+    const g = s().addGame('xidach')
+    s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 8 }, dealer: a })
+    s().closeRound(g)
+    expect(s().quickOpen(g)).toEqual([])
+    expect(openRound(session(), g)).toMatchObject({ dealer: a, participants: [a, b, c], stakes: { [b]: 5, [c]: 8 } })
+    expect(s().setDealer(g, b)).toEqual([])
+    expect(openRound(session(), g)).toMatchObject({ dealer: b, stakes: { [a]: 5, [c]: 8 } })
+  })
+
   it('cần cái và cược của mọi con', () => {
     const g = s().addGame('xidach')
     expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: null })).not.toEqual([])
