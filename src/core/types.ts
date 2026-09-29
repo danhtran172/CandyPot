@@ -5,6 +5,9 @@ export type GameType = 'tienlen' | 'xidach' | 'poker'
 /** Id đặc biệt cho pot giữa bàn (Poker). */
 export const POT = 'pot'
 
+/** Id đặc biệt cho ô Bet giữa bàn Xì dách (chỉ để đặt cược, không giữ kẹo). */
+export const BET = 'bet'
+
 /** Số người tối đa hiển thị quanh bàn. */
 export const MAX_PLAYERS = 10
 

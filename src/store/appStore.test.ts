@@ -104,6 +104,17 @@ describe('appStore — Xì dách', () => {
     expect(session().games[0].rounds[0].tags).toEqual([{ type: 'lam-cai', playerId: a }])
   })
 
+  it('đặt cược qua ô Bet: đổi cược của con, cái không đặt được, ván sau gợi ý lại mức cũ', () => {
+    const g = s().addGame('xidach')
+    s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 5 }, dealer: a })
+    expect(s().setStake(g, b, 20)).toEqual([])
+    expect(s().setStake(g, a, 20)).toEqual(['Nhà cái không đặt cược.'])
+    expect(s().setStake(g, b, 0)).not.toEqual([])
+    expect(openRound(session(), g)!.stakes).toEqual({ [b]: 20, [c]: 5 })
+    s().closeRound(g)
+    expect(s().setStake(g, b, 5)).toEqual(['Chưa có ván nào đang mở.'])
+  })
+
   it('cần cái và cược của mọi con', () => {
     const g = s().addGame('xidach')
     expect(s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: null })).not.toEqual([])

@@ -4,8 +4,9 @@ import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { pileUnit } from '../../core/pile'
 import { movesNet, openRound, potOf } from '../../core/round'
+import { scaledOptions } from '../../core/games/options'
 import { suggestOptions } from '../../core/suggest'
-import { POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
+import { BET, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { CandyPile } from '../components/CandyPile'
@@ -41,7 +42,13 @@ export function Table() {
     setParams({ g: id }, { replace: true })
   }
 
-  const onTransfer = useCallback((from: ID, to: ID) => setPending({ from, to }), [])
+  const onTransfer = useCallback(
+    (from: ID, to: ID) => {
+      if (to === BET && (from === POT || from === round?.dealer)) return flash('Nhà cái không đặt cược.', true)
+      setPending({ from, to })
+    },
+    [round?.dealer],
+  )
   const onTap = useCallback((id: ID) => (id !== me && id !== POT ? setPeek(id) : undefined), [me])
 
   /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
@@ -49,7 +56,11 @@ export function Table() {
 
   const pick = (o: Option) => {
     if (!game || !pending) return
-    if (isRequest(pending)) {
+    if (pending.to === BET) {
+      const errors = actions().setStake(game.id, pending.from, o.amount)
+      if (errors.length) flash(errors[0], true)
+      else flyCandy(pending.from, BET, o.amount)
+    } else if (isRequest(pending)) {
       const errors = actions().requestCandy(game.id, pending.from, pending.to, o.amount)
       if (errors.length) flash(errors[0], true)
       else flash(`Đã đòi ${players[pending.from]?.name} ${o.amount} kẹo — chờ xác nhận.`)
@@ -89,12 +100,8 @@ export function Table() {
     isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
-    badge:
-      round?.dealer === p.id
-        ? '🎩 Nhà cái'
-        : game?.type === 'xidach' && round?.stakes[p.id] !== undefined
-          ? `cược ${round.stakes[p.id]}`
-          : undefined,
+    badge: round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
+    stake: game?.type === 'xidach' ? round?.stakes[p.id] : undefined,
   }))
 
   return (
@@ -182,6 +189,9 @@ export function Table() {
             corner={me && <MyPile amount={pileOf(me)} unit={unit} seed={me} />}
             onTap={onTap}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
+            betBox={
+              round && game.type === 'xidach' ? Object.values(round.stakes).reduce((a, b) => a + b, 0) : undefined
+            }
             center={<TableCenter game={game} round={round} dealerName={round?.dealer ? players[round.dealer]?.name : undefined} />}
             onTransfer={onTransfer}
           />
@@ -303,13 +313,12 @@ export function Table() {
         <AmountSheet
           from={players[pending.from]}
           to={players[pending.to]}
-          options={suggestOptions({
-            game,
-            round: round ?? null,
-            from: pending.from,
-            to: pending.to,
-          })}
-          mode={isRequest(pending) ? 'request' : 'pay'}
+          options={
+            pending.to === BET
+              ? scaledOptions(round?.stakes[pending.from] ?? round?.bet ?? 1)
+              : suggestOptions({ game, round: round ?? null, from: pending.from, to: pending.to })
+          }
+          mode={pending.to === BET ? 'bet' : isRequest(pending) ? 'request' : 'pay'}
           onPick={pick}
           onClose={() => setPending(null)}
         />
@@ -355,11 +364,9 @@ function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; d
   if (game.type === 'xidach') {
     return (
       <>
-        <span aria-hidden className="text-3xl leading-none">
-          🎩
+        <span className="mt-1 max-w-full truncate text-xs text-muted">
+          Ván {roundNumber(game, round)} · 🎩 <b className="text-cream">{dealerName}</b>
         </span>
-        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · nhà cái</span>
-        <span className="font-display max-w-full truncate text-lg leading-tight font-bold">{dealerName}</span>
       </>
     )
   }

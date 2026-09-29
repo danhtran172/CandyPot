@@ -48,6 +48,8 @@ export interface AppState {
   /** Người bị đòi trả lời: OK thì chuyển kẹo. */
   answerRequest(requestId: ID, accept: boolean): string[]
   cancelRequest(requestId: ID): void
+  /** Xì dách: người con đặt cược (ghi đè mức cược của ván đang mở). */
+  setStake(gameId: ID, playerId: ID, amount: number): string[]
   /** Xì dách: cái ăn (eat) hoặc đền (pay) cả bàn theo hệ số. */
   dealerAll(gameId: ID, mode: 'eat' | 'pay', multiplier: number): void
   closeRound(gameId: ID): string[]
@@ -339,6 +341,16 @@ export function createAppStore(repo: SessionRepo) {
           if (errors.length) return errors
         }
         mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+        return []
+      },
+
+      setStake(gameId, playerId, amount) {
+        const open = openOf(gameId)
+        if (!open) return ['Chưa có ván nào đang mở.']
+        if (open.dealer === playerId) return ['Nhà cái không đặt cược.']
+        if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
+        if (!Number.isInteger(amount) || amount <= 0) return ['Tiền cược phải là số nguyên lớn hơn 0.']
+        mapRound(gameId, open.id, (r) => ({ ...r, stakes: { ...r.stakes, [playerId]: amount } }))
         return []
       },
 

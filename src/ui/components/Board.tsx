@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { POT, type ID, type Player } from '../../core/types'
+import { BET, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
+import { candyFor } from './CandyPile'
 
 export interface Seat {
   player: Player
@@ -9,8 +10,10 @@ export interface Seat {
   total: number
   /** Được/mất trong ván đang mở; undefined = không có ván. */
   round?: number
-  /** Dòng phụ: "cược 5", "Nhà cái"… */
+  /** Dòng phụ: "Nhà cái"… */
   badge?: string
+  /** Tiền cược trong ván (Xì dách), hiện trước chỗ ngồi dạng [kẹo] × N. */
+  stake?: number
   isMe?: boolean
 }
 
@@ -24,6 +27,14 @@ interface Drag {
 }
 
 const THRESHOLD = 8
+
+/** Vị trí chip cược so với avatar — luôn về phía giữa bàn. */
+const STAKE_POS = {
+  right: 'left-[calc(100%+6px)] top-1/2 -translate-y-1/2',
+  left: 'right-[calc(100%+6px)] top-1/2 -translate-y-1/2',
+  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2',
+  below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2',
+} as const
 
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
 function sizeFor(n: number) {
@@ -42,6 +53,7 @@ export function Board({
   center,
   corner,
   pot,
+  betBox,
   onTransfer,
   onTap,
 }: {
@@ -52,6 +64,8 @@ export function Board({
   corner?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
+  /** Ô Bet giữa bàn (Xì dách): thả vào để đặt cược; giá trị = tổng cược đang đặt. */
+  betBox?: number
   onTransfer: (from: ID, to: ID) => void
   onTap?: (id: ID) => void
 }) {
@@ -137,6 +151,16 @@ export function Board({
               <span className="text-[11px] text-muted">Pot</span>
             </div>
           )}
+          {betBox !== undefined && (
+            <div
+              data-drop={BET}
+              className={`flex flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-4 py-2 transition select-none ${ring(BET)}`}
+            >
+              <span className="font-display text-lg leading-none font-bold text-sky">Bet</span>
+              <span className="candy num mt-1 text-lg">{betBox}</span>
+              <span className="text-[10px] text-muted">thả vào để đặt cược</span>
+            </div>
+          )}
           {center}
         </div>
 
@@ -146,6 +170,16 @@ export function Board({
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n
           const left = 50 + 40 * Math.cos(angle)
           const top = 47 + 37 * Math.sin(angle)
+          // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
+          const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
+          const stake = s.stake !== undefined && (
+            <span
+              className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]}`}
+            >
+              <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
+              <span className="num">× {s.stake}</span>
+            </span>
+          )
           return (
             <div
               key={s.player.id}
@@ -156,6 +190,7 @@ export function Board({
                 s.player.active ? '' : 'opacity-60'
               }`}
             >
+              {side === 'below' && stake}
               <span
                 className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
                   s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
@@ -164,6 +199,7 @@ export function Board({
                 <span aria-hidden className="leading-none">
                   {s.player.emoji}
                 </span>
+                {side !== 'below' && stake}
               </span>
               <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
                 {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}

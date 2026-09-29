@@ -15,6 +15,11 @@ function hash(text: string): number {
   return h >>> 0
 }
 
+/** Một icon kẹo "ngẫu nhiên" nhưng cố định theo seed. */
+export function candyFor(seed: string): string {
+  return CANDIES[hash(`${seed}:one`) % CANDIES.length]
+}
+
 /**
  * Đống kẹo biểu diễn lời/lỗ: mỗi icon = `unit` kẹo, xếp chồng như một đống.
  * Âm thì là đống 💩.
