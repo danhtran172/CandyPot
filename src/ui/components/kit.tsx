@@ -121,7 +121,8 @@ export function SectionTitle({ children, aside }: { children: ReactNode; aside?:
 
 export function TopBar({ title, back, right }: { title: ReactNode; back?: string; right?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-10 -mx-4 mb-3 flex items-center gap-2 bg-night/85 px-4 py-3 backdrop-blur">
+    // Trên mọi thứ cuộn qua (ô chọn game z-20, chỗ ngồi / nút góc bàn z-10); dưới thông báo (z-30) và popup
+    <header className="sticky top-0 z-[25] -mx-4 mb-3 flex items-center gap-2 bg-night/85 px-4 py-3 backdrop-blur">
       {back && (
         <Link to={back} aria-label="Quay lại" className="-ml-2 rounded-full px-2 py-1 text-xl text-muted">
           ‹
