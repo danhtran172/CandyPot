@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
-import { CandyPile } from './CandyPile'
 
 export interface Seat {
   player: Player
@@ -10,8 +9,6 @@ export interface Seat {
   total: number
   /** Được/mất trong ván đang mở; undefined = không có ván. */
   round?: number
-  /** Số kẹo vẽ thành đống trước chỗ ngồi (âm = đống 💩). */
-  pile: number
   /** Dòng phụ: "cược 5", "Nhà cái"… */
   badge?: string
   isMe?: boolean
@@ -28,45 +25,38 @@ interface Drag {
 
 const THRESHOLD = 8
 
-/** Vị trí đống kẹo so với avatar (hoặc cả ô, với người ngồi trên cùng). */
-const PILE_POS = {
-  right: 'left-[calc(100%+6px)] bottom-0',
-  left: 'right-[calc(100%+6px)] bottom-0',
-  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2',
-  below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2',
-} as const
-
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
 function sizeFor(n: number) {
-  if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl', icon: 19 }
-  if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl', icon: 16 }
-  return { seat: 'w-[60px]', avatar: 'size-10 text-2xl', icon: 14 }
+  if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
+  if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl' }
+  return { seat: 'w-[60px]', avatar: 'size-10 text-2xl' }
 }
 
 /**
  * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
- * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo;
- * bấm người trả rồi bấm người nhận cũng được.
+ * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo.
+ * Bấm (không kéo) vào một người thì gọi onTap (xem đống kẹo của họ).
  */
 export function Board({
   seats,
-  unit,
   center,
+  corner,
   pot,
   onTransfer,
+  onTap,
 }: {
   seats: Seat[]
-  /** Bao nhiêu kẹo thì vẽ 1 icon trong đống. */
-  unit: number
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
+  /** Nội dung góc dưới bên trái (đống kẹo của mình). */
+  corner?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   onTransfer: (from: ID, to: ID) => void
+  onTap?: (id: ID) => void
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [hover, setHover] = useState<ID | null>(null)
-  const [selected, setSelected] = useState<ID | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const dragging = drag !== null
 
@@ -94,16 +84,9 @@ export function Board({
       if (d.moved) {
         const to = targetAt(e.clientX, e.clientY)
         if (to && to !== d.from) onTransfer(d.from, to)
-        setSelected(null)
         return
       }
-      // Bấm (không kéo): chọn người trả, bấm tiếp người nhận
-      if (selected && selected !== d.from) {
-        onTransfer(selected, d.from)
-        setSelected(null)
-      } else {
-        setSelected(selected === d.from ? null : d.from)
-      }
+      onTap?.(d.from)
     }
 
     window.addEventListener('pointermove', move)
@@ -114,7 +97,7 @@ export function Board({
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [dragging, selected, onTransfer])
+  }, [dragging, onTransfer, onTap])
 
   const start = (id: ID) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
@@ -126,7 +109,7 @@ export function Board({
   const ring = (id: ID) =>
     hover === id && drag?.from !== id
       ? 'ring-4 ring-mint scale-110'
-      : selected === id || (drag?.moved && drag.from === id)
+      : drag?.moved && drag.from === id
         ? 'ring-4 ring-lemon'
         : ''
 
@@ -157,17 +140,12 @@ export function Board({
           {center}
         </div>
 
+        {corner && <div className="absolute bottom-3 left-0">{corner}</div>}
+
         {ordered.map((s, i) => {
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n
           const left = 50 + 40 * Math.cos(angle)
           const top = 47 + 37 * Math.sin(angle)
-          // Đống kẹo đặt sát chỗ ngồi, về phía giữa bàn
-          const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
-          const pile = (
-            <div className={`pointer-events-none absolute ${PILE_POS[side]}`}>
-              <CandyPile amount={s.pile} unit={unit} seed={s.player.id} size={size.icon} />
-            </div>
-          )
           return (
             <div
               key={s.player.id}
@@ -178,7 +156,6 @@ export function Board({
                 s.player.active ? '' : 'opacity-60'
               }`}
             >
-              {side === 'below' && pile}
               <span
                 className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
                   s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
@@ -187,7 +164,6 @@ export function Board({
                 <span aria-hidden className="leading-none">
                   {s.player.emoji}
                 </span>
-                {side !== 'below' && pile}
               </span>
               <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
                 {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}

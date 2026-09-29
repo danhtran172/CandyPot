@@ -8,10 +8,12 @@ import { suggestOptions } from '../../core/suggest'
 import { POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
+import { CandyPile } from '../components/CandyPile'
+import { PileSheet } from '../components/PileSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { useSession } from '../components/useSession'
-import { playCount, playerMap, roundNumber } from '../format'
+import { playCount, playerMap, roundNumber, signed, toneOf } from '../format'
 import { useMe } from '../me'
 
 export function Table() {
@@ -19,6 +21,7 @@ export function Table() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
+  const [peek, setPeek] = useState<ID | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -39,6 +42,7 @@ export function Table() {
   }
 
   const onTransfer = useCallback((from: ID, to: ID) => setPending({ from, to }), [])
+  const onTap = useCallback((id: ID) => (id !== me && id !== POT ? setPeek(id) : undefined), [me])
 
   /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
   const isRequest = (p: { from: ID; to: ID }) => p.to === me && p.from !== me && p.from !== POT
@@ -56,6 +60,10 @@ export function Table() {
     }
     setPending(null)
   }
+
+  const unit = pileUnit(game)
+  /** Kẹo của một người: cả buổi + ván đang mở. */
+  const pileOf = (id: ID) => (net[id] ?? 0) + (roundDelta[id] ?? 0)
 
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
 
@@ -81,7 +89,6 @@ export function Table() {
     isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
-    pile: net[p.id] + (roundDelta[p.id] ?? 0),
     badge:
       round?.dealer === p.id
         ? '🎩 Nhà cái'
@@ -172,7 +179,8 @@ export function Table() {
 
           <Board
             seats={seats}
-            unit={pileUnit(game)}
+            corner={me && <MyPile amount={pileOf(me)} unit={unit} seed={me} />}
+            onTap={onTap}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             center={<TableCenter game={game} round={round} dealerName={round?.dealer ? players[round.dealer]?.name : undefined} />}
             onTransfer={onTransfer}
@@ -180,8 +188,8 @@ export function Table() {
 
           <p className="text-center text-xs text-muted">
             {round
-              ? 'Kéo từ chỗ bạn sang người khác để trả, kéo người khác về chỗ bạn để đòi.'
-              : 'Chưa mở ván: kéo từ người này sang người khác sẽ được ghi là chuyển tay.'}
+              ? 'Kéo từ chỗ bạn sang người khác để trả, kéo người khác về chỗ bạn để đòi. Bấm vào ai để xem kẹo của họ.'
+              : 'Chưa mở ván: kéo từ người này sang người khác sẽ được ghi là chuyển tay. Bấm vào ai để xem kẹo của họ.'}
           </p>
 
           {round && game.type === 'xidach' && (
@@ -281,6 +289,16 @@ export function Table() {
         </div>
       )}
 
+      {peek && players[peek] && (
+        <PileSheet
+          player={players[peek]}
+          amount={pileOf(peek)}
+          round={round ? (roundDelta[peek] ?? 0) : undefined}
+          unit={unit}
+          onClose={() => setPeek(null)}
+        />
+      )}
+
       {pending && game && (
         <AmountSheet
           from={players[pending.from]}
@@ -346,4 +364,16 @@ function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; d
     )
   }
   return <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
+}
+
+/** Đống kẹo của chính mình, luôn hiện ở góc trái bàn. */
+function MyPile({ amount, unit, seed }: { amount: number; unit: number; seed: string }) {
+  return (
+    <div className="flex flex-col items-start gap-1 rounded-2xl border border-line/60 bg-night/50 px-2.5 py-2">
+      <CandyPile amount={amount} unit={unit} seed={seed} size={18} />
+      <span className="text-[11px] leading-tight text-muted">
+        Kẹo của bạn <b className={`num ${toneOf(amount)}`}>{signed(amount)}</b>
+      </span>
+    </div>
+  )
 }
