@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
+import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
@@ -77,6 +78,8 @@ export interface AppState {
   answerRequest(requestId: ID, accept: boolean): string[]
   cancelRequest(requestId: ID): void
   setHost(playerId: ID): void
+  /** Người chơi bầu host mới (bấm lại để rút phiếu). Đủ phiếu thì người đó thành host. */
+  voteHost(voter: ID, candidate: ID): { errors: string[]; elected: boolean }
   /** Bỏ một lượt kéo (ván đang mở hoặc đã kết thúc — tính lại lời/lỗ). Chỉ host gọi trực tiếp. */
   undoMove(gameId: ID, roundId: ID, moveId: ID): string[]
   /** Người chơi xin hoàn tác một lượt — chờ host xác nhận. */
@@ -174,6 +177,7 @@ export function createAppStore(repo: SessionRepo) {
           games: [],
           requests: [],
           undos: [],
+          hostVotes: {},
         }
         session.hostId = session.players[0]?.id ?? null
         repo.save(session)
@@ -208,7 +212,11 @@ export function createAppStore(repo: SessionRepo) {
       removePlayer(id) {
         const s = get().session
         if (!s || isPlayerUsed(s, id)) return false
-        mutate((s) => ({ ...s, players: s.players.filter((p) => p.id !== id) }))
+        mutate((s) => ({
+          ...s,
+          players: s.players.filter((p) => p.id !== id),
+          hostVotes: Object.fromEntries(Object.entries(s.hostVotes).filter(([v, c]) => v !== id && c !== id)),
+        }))
         return true
       },
 
@@ -447,7 +455,26 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       setHost(playerId) {
-        mutate((s) => ({ ...s, hostId: playerId }))
+        mutate((s) => ({ ...s, hostId: playerId, hostVotes: {} }))
+      },
+
+      voteHost(voter, candidate) {
+        const s = get().session
+        if (!s) return { errors: ['Chưa mở buổi.'], elected: false }
+        const players = new Map(s.players.map((p) => [p.id, p]))
+        if (!players.get(voter)?.active) return { errors: ['Người đang nghỉ không bầu được.'], elected: false }
+        if (!players.has(candidate)) return { errors: ['Không tìm thấy người này.'], elected: false }
+        if (candidate === s.hostId) return { errors: [`${players.get(candidate)!.name} đang là host rồi.`], elected: false }
+        // Bấm lại đúng người mình đã bầu = rút phiếu
+        const { [voter]: mine, ...rest } = s.hostVotes
+        const hostVotes = mine === candidate ? rest : { ...rest, [voter]: candidate }
+        const next = { ...s, hostVotes }
+        if ((hostVoteTally(next)[candidate] ?? 0) >= hostVotesNeeded(next)) {
+          mutate((x) => ({ ...x, hostId: candidate, hostVotes: {} }))
+          return { errors: [], elected: true }
+        }
+        mutate((x) => ({ ...x, hostVotes }))
+        return { errors: [], elected: false }
       },
 
       undoMove(gameId, roundId, moveId) {

@@ -10,6 +10,7 @@ function session(): Session {
     updatedAt: 0,
     requests: [],
     undos: [],
+    hostVotes: {},
     hostId: null,
     players: [
       { id: 'a', name: 'An', emoji: '🐱', active: true },

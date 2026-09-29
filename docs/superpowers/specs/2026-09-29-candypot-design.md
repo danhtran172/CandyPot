@@ -36,6 +36,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Cược Tiến lên tự tính:** ở ô Rule và màn Mở ván, nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì, Nhì = Nhất ÷ 2 làm tròn); sửa tiếp ô vừa được tự tính là đặt riêng, bấm "Tự tính lại" để nối lại.
 - **Nút +/− nhảy theo hệ số:** mọi ô số (cược, "Số khác" khi trả/đòi/đặt kẹo…) có + nhảy ×1,5 → ×2 → ×3 của số gốc rồi lặp lại từ ×3 (4 → 6 → 8 → 12 → 18 → 24 → 36), − đi lùi đúng các bậc đó. Số gốc là số đang có hoặc số vừa gõ; muốn số khác thì gõ thẳng vào ô (số có gạch chân chấm).
 - **Màn Người chơi gọn lại:** bỏ nút "Tôi" — chạm avatar để chọn mình (avatar viền vàng + 🙋), giữ avatar để đổi biểu tượng; Host là icon 🛎️, Tạm nghỉ là icon 💤 (bật thì sáng màu, tắt thì mờ); người chưa chơi có ✕ để bỏ. Tên hiện đủ, không bị cắt.
+- **Bầu host (khi host vắng):** ở màn Người chơi, host bấm 🛎️ ở người khác là chuyển host ngay (có hỏi lại); người khác bấm 🛎️ là bỏ 1 phiếu bầu người đó (mỗi người 1 phiếu, bấm lại để rút, bấm người khác để đổi). Cần ≥ 30% số người đang chơi (làm tròn lên), tối thiểu 2 phiếu — app hiện "Cần N phiếu" và số phiếu từng người (vd Bình 1/2). Đủ phiếu thì người đó thành host ngay, mọi phiếu bị xóa; host đổi host trực tiếp cũng xóa phiếu. Người đang nghỉ không bầu được. Màn Host có lối tắt "Host vắng? Bầu host mới".
 
 ## 1. Mục tiêu
 

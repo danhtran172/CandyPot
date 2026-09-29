@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { actions } from '../../store'
 import { ask, tell } from '../dialog'
 import { playerMap, timeOf } from '../format'
@@ -34,6 +35,11 @@ export function HostTasks() {
       <p className="mb-4 flex items-center gap-1.5 text-sm text-muted">
         Host: <Who player={host} className="font-semibold text-cream" />
         {isHost && <span className="rounded-full bg-lemon px-2 text-xs font-bold text-night">bạn</span>}
+        {!isHost && (
+          <Link to={`/s/${session.id}/players`} className="ml-auto text-xs font-semibold text-sky">
+            🗳️ Host vắng? Bầu host mới ›
+          </Link>
+        )}
       </p>
 
       {isHost ? (

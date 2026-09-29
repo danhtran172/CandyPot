@@ -110,6 +110,8 @@ export interface Session {
   games: Game[]
   requests: CandyRequest[]
   undos: UndoRequest[]
+  /** Bầu host mới (khi host vắng): người bầu → người được bầu. */
+  hostVotes: Record<ID, ID>
 }
 
 export type Net = Record<ID, number>

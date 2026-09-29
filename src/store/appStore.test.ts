@@ -286,3 +286,36 @@ describe('appStore — Tiến lên: host đặt mức cược ở ô Bet', () =>
     expect(s().setTienlenBets(g, 2, 4)).toEqual(['Cược Nhì không được lớn hơn cược Nhất.'])
   })
 })
+
+describe('appStore — bầu host', () => {
+  it('đủ phiếu (≥ 30% số người, tối thiểu 2) thì thành host; phiếu bầu được xóa', () => {
+    s().addPlayer('Dũng', '🦊')
+    s().addPlayer('Em', '🐯')
+    const d = session().players[3].id
+    expect(session().hostId).toBe(a)
+    // 5 người → cần max(2, ceil(1,5)) = 2 phiếu
+    expect(s().voteHost(b, c)).toEqual({ errors: [], elected: false })
+    expect(session().hostVotes).toEqual({ [b]: c })
+    expect(s().voteHost(d, c)).toEqual({ errors: [], elected: true })
+    expect(session().hostId).toBe(c)
+    expect(session().hostVotes).toEqual({})
+  })
+
+  it('bấm lại để rút phiếu; đổi phiếu sang người khác; người nghỉ không tính', () => {
+    expect(s().voteHost(b, c).elected).toBe(false)
+    s().voteHost(b, c)
+    expect(session().hostVotes).toEqual({})
+    s().voteHost(b, c)
+    s().voteHost(b, b)
+    expect(session().hostVotes).toEqual({ [b]: b })
+    s().updatePlayer(c, { active: false })
+    expect(s().voteHost(c, b).errors).toEqual(['Người đang nghỉ không bầu được.'])
+    expect(s().voteHost(b, a).errors).toEqual(['An đang là host rồi.'])
+  })
+
+  it('host đổi host trực tiếp thì bỏ các phiếu đang có', () => {
+    s().voteHost(b, c)
+    s().setHost(b)
+    expect(session().hostVotes).toEqual({})
+  })
+})

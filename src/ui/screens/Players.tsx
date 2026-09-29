@@ -4,7 +4,8 @@ import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { useMe } from '../me'
 import { useSession } from '../components/useSession'
-import { ask } from '../dialog'
+import { ask, tell } from '../dialog'
+import { hostVoteTally, hostVotesNeeded } from '../../core/hostVote'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 
 export function Players() {
@@ -26,6 +27,25 @@ export function Players() {
     setErrors([])
   }
 
+  const isHost = !!me && me === session.hostId
+  const needed = hostVotesNeeded(session)
+  const tally = hostVoteTally(session)
+  const myVote = me ? session.hostVotes[me] : undefined
+  const activeCount = session.players.filter((p) => p.active).length
+  const hostName = session.players.find((p) => p.id === session.hostId)?.name ?? 'host'
+
+  /** 🛎️: host chuyển host ngay; người khác bỏ phiếu bầu (bấm lại để rút). */
+  const pickHost = async (id: string, playerName: string) => {
+    if (id === session.hostId) return
+    if (isHost || !me) {
+      if (await ask(`Chuyển host cho ${playerName}?`, { icon: '🛎️', okLabel: 'Chuyển' })) actions().setHost(id)
+      return
+    }
+    const { errors, elected } = actions().voteHost(me, id)
+    if (errors.length) await tell(errors[0], { icon: '⚠️' })
+    else if (elected) await tell(`${playerName} là host mới!`, { icon: '🛎️', message: `Đủ ${needed} phiếu bầu.` })
+  }
+
   const remove = async (id: string, playerName: string) => {
     if (await ask(`Bỏ ${playerName} khỏi buổi?`, { icon: '👋', okLabel: 'Bỏ', danger: true })) actions().removePlayer(id)
   }
@@ -41,6 +61,26 @@ export function Players() {
           🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — người đã chơi không xóa được, lời/lỗ vẫn giữ.
         </li>
       </ul>
+
+      <div className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-sm">
+        {isHost ? (
+          <>
+            Bạn là host — bấm 🛎️ ở người khác để chuyển host ngay.
+          </>
+        ) : (
+          <>
+            🗳️ <b>{hostName}</b> vắng? Bấm 🛎️ ở người bạn muốn để <b>bầu host mới</b> (bấm lại để rút phiếu).
+          </>
+        )}
+        <div className="mt-0.5 text-xs text-muted">
+          Cần <b className="text-cream">{needed} phiếu</b> — 30% của {activeCount} người đang chơi, tối thiểu 2
+          {Object.keys(tally).length > 0 &&
+            ` · đang có: ${Object.entries(tally)
+              .sort((x, y) => y[1] - x[1])
+              .map(([id, n]) => `${session.players.find((p) => p.id === id)?.name} ${n}/${needed}`)
+              .join(', ')}`}
+        </div>
+      </div>
 
       <Card className="p-2">
         <ul>
@@ -68,9 +108,19 @@ export function Players() {
               <IconToggle
                 on={session.hostId === p.id}
                 icon="🛎️"
-                label={session.hostId === p.id ? `${p.name} là host` : `Cho ${p.name} làm host`}
-                onClick={() => actions().setHost(p.id)}
+                label={
+                  session.hostId === p.id
+                    ? `${p.name} là host`
+                    : isHost
+                      ? `Chuyển host cho ${p.name}`
+                      : myVote === p.id
+                        ? `Rút phiếu bầu ${p.name}`
+                        : `Bầu ${p.name} làm host`
+                }
+                onClick={() => pickHost(p.id, p.name)}
                 onClass="bg-mint/25 border-mint"
+                badge={tally[p.id] ? `${tally[p.id]}/${needed}` : undefined}
+                marked={myVote === p.id}
               />
               {isPlayerUsed(session, p.id) ? (
                 <IconToggle
@@ -169,25 +219,38 @@ function IconToggle({
   label,
   onClick,
   onClass,
+  badge,
+  marked,
 }: {
   on?: boolean
   icon: ReactNode
   label: string
   onClick: () => void
   onClass: string
+  /** Chữ nhỏ gắn góc (vd số phiếu 1/2). */
+  badge?: string
+  /** Viền xanh: lựa chọn của mình (vd phiếu mình đã bầu). */
+  marked?: boolean
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={on}
-      title={label}
-      onClick={onClick}
-      className={`grid size-10 shrink-0 place-items-center rounded-full border text-lg transition ${
-        on ? onClass : 'border-line/60 text-muted opacity-45 grayscale hover:opacity-80'
-      }`}
-    >
-      {icon}
-    </button>
+    <span className="relative shrink-0">
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={on || marked}
+        title={label}
+        onClick={onClick}
+        className={`grid size-10 place-items-center rounded-full border text-lg transition ${
+          on ? onClass : marked ? 'border-sky bg-sky/15 ring-2 ring-sky/40' : 'border-line/60 text-muted opacity-45 grayscale hover:opacity-80'
+        }`}
+      >
+        {icon}
+      </button>
+      {badge && (
+        <span className="num pointer-events-none absolute -top-1.5 -right-2 rounded-full bg-sky px-1 text-[10px] leading-4 font-bold text-night">
+          {badge}
+        </span>
+      )}
+    </span>
   )
 }
