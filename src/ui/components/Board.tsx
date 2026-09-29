@@ -346,7 +346,7 @@ export function Board({
                       alt="Nhà cái"
                       title="Nhà cái"
                       draggable={false}
-                      className="absolute -right-2.5 -bottom-1 size-7 max-w-none drop-shadow-[0_1px_2px_rgb(0_0_0/0.8)]"
+                      className="absolute -right-2.5 -bottom-1 size-7 max-w-none drop-shadow-[0_0_1.5px_#fff1e0]"
                     />
                   )}
                   {!s.player.active && (
