@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { eligibleShare } from './games/poker'
-import { suggestOptions } from './suggest'
+import { suggestOptions, tienlenBets } from './suggest'
 import { POT, type Game, type Move, type Round } from './types'
 
 let n = 0
@@ -70,5 +70,21 @@ describe('suggestOptions', () => {
   it('Không có ván đang mở: theo cược ván gần nhất', () => {
     const g = game('tienlen', [round({ status: 'closed', bet: 3 })])
     expect(amounts(suggestOptions({ game: g, round: null, from: 'a', to: 'b' }))).toEqual([3, 5, 6])
+  })
+})
+
+describe('tienlenBets', () => {
+  it('ván đang mở > mức host đặt > ván gần nhất > 4/2', () => {
+    expect(tienlenBets(game('tienlen'))).toEqual({ bet: 4, bet2: 2 })
+    const closed = round({ status: 'closed', bet: 6, bet2: 3 })
+    expect(tienlenBets(game('tienlen', [closed]))).toEqual({ bet: 6, bet2: 3 })
+    expect(tienlenBets({ ...game('tienlen', [closed]), bets: { bet: 10, bet2: 5 } })).toEqual({ bet: 10, bet2: 5 })
+    const open = round({ bet: 8, bet2: 4 })
+    expect(tienlenBets({ ...game('tienlen', [closed, open]), bets: { bet: 10, bet2: 5 } })).toEqual({ bet: 8, bet2: 4 })
+  })
+
+  it('không có ván mở: gợi ý theo mức host đặt', () => {
+    const g = { ...game('tienlen'), bets: { bet: 6, bet2: 3 } }
+    expect(amounts(suggestOptions({ game: g, round: null, from: 'a', to: 'b' }))).toEqual([3, 6, 9, 12])
   })
 })

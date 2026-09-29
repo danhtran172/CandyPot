@@ -31,6 +31,8 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Xác nhận bằng popup trong app:** mọi câu hỏi xác nhận (hủy ván, bỏ chốt, hoàn tác, xóa buổi/game/ván, bỏ người chơi) và báo lỗi đều là popup của CandyPot (`ask()`/`tell()` trong `src/ui/dialog.ts`, hiển thị bởi `DialogHost`), không dùng `confirm()`/`alert()` của trình duyệt. Hành động xóa có nút đỏ; Esc = Thôi, Enter = Đồng ý.
 - **Tiến lên là bàn vuông:** 4 người ngồi giữa 4 cạnh ("tôi" ở cạnh dưới); chưa mở ván mà có hơn 4 người thì xếp đều quanh các cạnh. Poker và Xì dách giữ bàn oval.
 - **Tab Host / Yêu cầu:** thanh dưới có thêm 2 tab cho mọi người, có số đếm việc cần trả lời. *Host*: host duyệt xin hoàn tác (từng cái / OK tất cả) + xem và hủy lời đòi giữa người khác; người thường thấy yêu cầu hoàn tác của mình "⏳ chờ host" và rút lại được. *Yêu cầu*: người khác đòi bạn (Không / OK / OK tất cả) và bạn đang đòi ai (hủy được). Thông báo trên cùng hiện việc cũ nhất, có "Để sau" (ẩn đến khi có việc mới) và "Xem cả N việc" (mở tab tương ứng).
+- **Tiến lên có ô Bet:** giữa bàn vuông là ô Bet hiện mức Nhất/Nhì (kể cả khi chưa mở ván). Host bấm vào để đặt 2 mức (Nhì ≤ Nhất); đổi luôn ván đang mở và làm mặc định cho ván sau. Kéo trả kẹo gợi ý Nhì, Nhất, Nhất × 1,5, Nhất × 2 theo 2 mức này. Người khác bấm thì báo "Chỉ host mới đổi mức cược được".
+- **Chọn game bằng ô chọn (dropdown):** thay hàng chip + nút "+ Game" bằng một ô chọn: các game trong buổi (ghi "· đang chơi" nếu có ván mở) và nhóm "Thêm game mới".
 
 ## 1. Mục tiêu
 

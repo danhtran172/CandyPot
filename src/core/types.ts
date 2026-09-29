@@ -75,6 +75,8 @@ export interface Game {
   type: GameType
   name: string
   rounds: Round[]
+  /** Tiến lên: mức cược Nhất/Nhì host đặt ở ô Bet — gợi ý khi kéo kẹo, mặc định cho ván sau. */
+  bets?: { bet: number; bet2: number }
 }
 
 /** Đòi kẹo: `to` đòi `from` trả `amount` kẹo, chờ `from` bấm OK. */

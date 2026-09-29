@@ -265,3 +265,24 @@ describe('appStore — hoàn tác cần host', () => {
     expect(s().undoMove(g, r.id, win.id)[0]).toMatch(/Không hoàn tác được/)
   })
 })
+
+describe('appStore — Tiến lên: host đặt mức cược ở ô Bet', () => {
+  it('chưa mở ván: lưu cho ván sau; đang mở: đổi luôn ván đó', () => {
+    const g = s().addGame('tienlen')
+    expect(s().setTienlenBets(g, 6, 3)).toEqual([])
+    expect(s().quickOpen(g)).toEqual([])
+    const open = () => openRound(session(), g)!
+    expect([open().bet, open().bet2]).toEqual([6, 3])
+    expect(s().setTienlenBets(g, 10, 4)).toEqual([])
+    expect([open().bet, open().bet2]).toEqual([10, 4])
+    s().closeRound(g)
+    s().quickOpen(g)
+    expect([open().bet, open().bet2]).toEqual([10, 4])
+  })
+
+  it('từ chối số không hợp lệ và Nhì lớn hơn Nhất', () => {
+    const g = s().addGame('tienlen')
+    expect(s().setTienlenBets(g, 0, 1)).toEqual(['Mức cược phải là số nguyên lớn hơn 0.'])
+    expect(s().setTienlenBets(g, 2, 4)).toEqual(['Cược Nhì không được lớn hơn cược Nhất.'])
+  })
+})

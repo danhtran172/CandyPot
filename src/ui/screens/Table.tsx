@@ -4,14 +4,15 @@ import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
-import { suggestOptions } from '../../core/suggest'
+import { suggestOptions, tienlenBets } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
+import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { ask } from '../dialog'
-import { Button, Card, Chip, TopBar } from '../components/kit'
+import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { useMe } from '../me'
@@ -22,6 +23,7 @@ export function Table() {
   const [params, setParams] = useSearchParams()
   const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
   const [showLog, setShowLog] = useState(false)
+  const [editBets, setEditBets] = useState(false)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -106,6 +108,12 @@ export function Table() {
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
   const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
+  /** Tiến lên: host bấm ô Bet để đặt mức Nhất/Nhì. */
+  const openBets = () => {
+    if (me !== session.hostId) return flash(`Chỉ host (${players[session.hostId ?? '']?.name ?? '?'}) mới đổi mức cược được.`, true)
+    setEditBets(true)
+  }
+
   /** Xì dách: khóa cược để chia bài và trả kẹo. */
   const lockBets = () => {
     if (!game) return
@@ -181,38 +189,39 @@ export function Table() {
         }
       />
 
-      <div className="flex items-center gap-2">
-        <nav aria-label="Game" className="no-scrollbar -ml-4 flex min-w-0 flex-1 gap-2 overflow-x-auto pl-4">
-          {session.games.map((g) => (
-            <Chip key={g.id} active={g.id === game?.id} onClick={() => setParams({ g: g.id }, { replace: true })}>
-              {GAME_ICONS[g.type]} {g.name}
-              {openRound(session, g.id) && <span className="ml-1 inline-block size-2 rounded-full bg-mint" />}
-            </Chip>
-          ))}
-        </nav>
-        {session.games.length > 0 && (
-          <details className="relative shrink-0">
-            <summary className="cursor-pointer list-none rounded-full border border-dashed border-line px-3 py-1.5 text-sm font-semibold whitespace-nowrap text-muted">
-              + Game
-            </summary>
-            <div className="absolute right-0 z-10 mt-2 w-44 space-y-1 rounded-2xl border border-line bg-plum-2 p-2 shadow-xl">
-              {GAME_ORDER.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  className="block w-full rounded-xl px-3 py-2 text-left hover:bg-plum"
-                  onClick={(e) => {
-                    ;(e.currentTarget.closest('details') as HTMLDetailsElement).open = false
-                    addGame(t)
-                  }}
-                >
-                  {GAME_ICONS[t]} {GAMES[t].label}
-                </button>
+      {session.games.length > 0 && (
+        <div className="relative">
+          <select
+            aria-label="Chọn game"
+            value={game?.id}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v.startsWith('add:')) addGame(v.slice(4) as GameType)
+              else setParams({ g: v }, { replace: true })
+            }}
+            className="font-display w-full cursor-pointer appearance-none rounded-2xl border border-line bg-plum-2 py-2 pr-10 pl-4 text-lg font-bold text-cream [&_optgroup]:bg-plum-2 [&_option]:bg-plum-2"
+          >
+            <optgroup label="Game trong buổi">
+              {session.games.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {GAME_ICONS[g.type]} {g.name}
+                  {openRound(session, g.id) ? ' · đang chơi' : ''}
+                </option>
               ))}
-            </div>
-          </details>
-        )}
-      </div>
+            </optgroup>
+            <optgroup label="Thêm game mới">
+              {GAME_ORDER.map((t) => (
+                <option key={t} value={`add:${t}`}>
+                  + {GAMES[t].label}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+          <span aria-hidden className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-muted">
+            ▾
+          </span>
+        </div>
+      )}
 
       {!game ? (
         <Card className="mt-4 text-center">
@@ -258,7 +267,7 @@ export function Table() {
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
-            center={<TableCenter game={game} round={round} />}
+            center={<TableCenter game={game} round={round} onEditBets={openBets} />}
             corner={
               <button
                 type="button"
@@ -337,6 +346,16 @@ export function Table() {
         </div>
       )}
 
+      {editBets && game && (
+        <TienlenBetSheet
+          game={game}
+          onDone={(saved) => {
+            setEditBets(false)
+            if (saved) flash('Đã đổi mức cược.')
+          }}
+        />
+      )}
+
       {showLog && game && <HistorySheet session={session} game={game} me={me} onClose={() => setShowLog(false)} />}
 
       {pending && game && (
@@ -358,7 +377,36 @@ export function Table() {
 }
 
 /** Giữa bàn: thông tin riêng của từng game. */
-function TableCenter({ game, round }: { game: Game; round?: Round }) {
+function TableCenter({ game, round, onEditBets }: { game: Game; round?: Round; onEditBets: () => void }) {
+  if (game.type === 'tienlen') {
+    const { bet, bet2 } = round ?? tienlenBets(game)
+    return (
+      <>
+        <span className="text-xs text-muted">{round ? `Ván ${roundNumber(game, round)}` : 'Chưa mở ván'}</span>
+        <button
+          type="button"
+          onClick={onEditBets}
+          aria-label={`Mức cược Nhất ${bet}${bet2 ? `, Nhì ${bet2}` : ''} — host bấm để đổi`}
+          className="flex max-w-full flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-3 py-1.5 transition active:scale-95"
+        >
+          <span className="font-display text-2xl leading-none font-bold text-sky">Bet</span>
+          <span className="mt-1.5 flex gap-2">
+            <span className="flex flex-col items-center">
+              <span className="candy num text-lg">{bet}</span>
+              <span className="text-[11px] text-muted">Nhất</span>
+            </span>
+            {bet2 !== undefined && (
+              <span className="flex flex-col items-center">
+                <span className="candy num text-lg">{bet2}</span>
+                <span className="text-[11px] text-muted">Nhì</span>
+              </span>
+            )}
+          </span>
+          <span className="mt-1 text-[10px] text-muted">host bấm để đổi</span>
+        </button>
+      </>
+    )
+  }
   if (!round) {
     return (
       <>
@@ -367,27 +415,6 @@ function TableCenter({ game, round }: { game: Game; round?: Round }) {
         </span>
         <span className="font-display text-lg leading-tight font-bold">{game.name}</span>
         <span className="text-xs text-muted">Chưa mở ván</span>
-      </>
-    )
-  }
-  if (game.type === 'tienlen') {
-    return (
-      <>
-        <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
-        {round.bet2 ? (
-          <div className="flex gap-3">
-            <span className="flex flex-col items-center">
-              <span className="candy num text-xl">{round.bet}</span>
-              <span className="text-[11px] text-muted">Nhất</span>
-            </span>
-            <span className="flex flex-col items-center">
-              <span className="candy num text-xl">{round.bet2}</span>
-              <span className="text-[11px] text-muted">Nhì</span>
-            </span>
-          </div>
-        ) : (
-          <span className="candy num text-2xl">{round.bet}</span>
-        )}
       </>
     )
   }

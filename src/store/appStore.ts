@@ -2,6 +2,7 @@ import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
+import { tienlenBets } from '../core/suggest'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
 
@@ -29,8 +30,9 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const active = session.players.filter((p) => p.active).map((p) => p.id)
   const fromPrev = prev?.participants.filter((id) => active.includes(id))
   const participants = (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
-  const bet = prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
-  const bet2 = prev?.bet2 || Math.max(1, Math.round(bet / 2))
+  const tl = game.type === 'tienlen' ? tienlenBets(game) : undefined
+  const bet = tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
+  const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
   const stakes = Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
   return { participants, bet, bet2, stakes, dealer }
@@ -60,6 +62,8 @@ export interface AppState {
   setDealer(gameId: ID, playerId: ID): string[]
   /** Xì dách: chốt cược để chia bài và trả kẹo. */
   lockBets(gameId: ID): string[]
+  /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
+  setTienlenBets(gameId: ID, bet: number, bet2: number): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
@@ -273,7 +277,25 @@ export function createAppStore(repo: SessionRepo) {
           transfers: [],
           tags: [],
         }
-        mapGame(gameId, (g) => ({ ...g, rounds: [...g.rounds, round] }))
+        mapGame(gameId, (g) => ({
+          ...g,
+          rounds: [...g.rounds, round],
+          bets: g.type === 'tienlen' ? { bet: round.bet, bet2: round.bet2 ?? round.bet } : g.bets,
+        }))
+        return []
+      },
+
+      setTienlenBets(gameId, bet, bet2) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (![bet, bet2].every((v) => Number.isInteger(v) && v > 0)) return ['Mức cược phải là số nguyên lớn hơn 0.']
+        if (bet2 > bet) return ['Cược Nhì không được lớn hơn cược Nhất.']
+        const open = findOpenIn(g)
+        mapGame(gameId, (x) => ({
+          ...x,
+          bets: { bet, bet2 },
+          rounds: x.rounds.map((r) => (r.id === open?.id ? { ...r, bet, bet2 } : r)),
+        }))
         return []
       },
 
