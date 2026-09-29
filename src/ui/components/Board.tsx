@@ -307,7 +307,7 @@ export function Board({
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] drop-shadow-[0_8px_12px_rgb(0_0_0/0.5)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          {drag.from === DEALER ? <span className="text-5xl">🎩</span> : <img src={dragCandy} alt="" className="size-16" />}
+          {drag.from === DEALER ? <span className="text-5xl">🎩</span> : <img src={dragCandy} alt="" className="size-16 opacity-80" />}
         </div>
       )}
     </>
