@@ -40,7 +40,8 @@ export function normalizeSession(session: Session): Session {
     id,
     name,
     createdAt,
-    updatedAt,
+    // Thiếu mốc sửa (dữ liệu lỗi) → lấy giờ tạo, để danh sách bàn không hiện "Invalid Date"
+    updatedAt: updatedAt ?? createdAt ?? Date.now(),
     players,
     hostId: session.hostId ?? players?.[0]?.id ?? null,
     requests: session.requests ?? [],

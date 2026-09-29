@@ -1,31 +1,20 @@
-import { useEffect, useState } from 'react'
-import QRCode from 'qrcode'
+import { useState } from 'react'
 import type { Session } from '../../core/types'
 import { useApp } from '../../store'
 import { tell } from '../dialog'
+import { QrModal } from './QrModal'
+import { appUrl } from '../appUrl'
 
 /** Link join bàn (mã QR chứa link này). */
 function joinLink(code: string): string {
-  return `${location.origin}/join?code=${code}`
+  return `${appUrl()}/join?code=${code}`
 }
 
 /** Ô mã bàn 5 số + nút QR / chia sẻ link để người khác join từ máy mình. */
 export function RoomCode({ session }: { session: Session }) {
   const kind = useApp((s) => s.roomKind)
-  const [qr, setQr] = useState<string | null>(null)
   const [show, setShow] = useState(false)
   const code = session.code!
-
-  useEffect(() => {
-    if (!show) return
-    let alive = true
-    QRCode.toDataURL(joinLink(code), { margin: 1, width: 480, color: { dark: '#1c0e22', light: '#fff1e0' } })
-      .then((url) => alive && setQr(url))
-      .catch(() => alive && setQr(null))
-    return () => {
-      alive = false
-    }
-  }, [show, code])
 
   const share = async () => {
     const link = joinLink(code)
@@ -62,20 +51,13 @@ export function RoomCode({ session }: { session: Session }) {
       </div>
 
       {show && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-6" role="dialog" aria-modal="true" aria-label="Mã QR join bàn">
-          <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/80 backdrop-blur-sm" onClick={() => setShow(false)} />
-          <div className="pop relative w-full max-w-xs rounded-[2rem] border border-line bg-plum p-5 text-center shadow-2xl">
-            <p className="font-display text-xl font-bold">Quét để vào bàn</p>
-            <p className="text-xs text-muted">{session.name}</p>
-            <div className="mx-auto mt-3 aspect-square w-full overflow-hidden rounded-2xl bg-cream">
-              {qr && <img src={qr} alt={`Mã QR vào bàn ${code}`} className="size-full" />}
-            </div>
-            <div className="num font-display mt-3 text-3xl font-extrabold tracking-[0.3em] text-sky">{code}</div>
-            <button type="button" onClick={() => setShow(false)} className="mt-3 w-full rounded-2xl bg-plum-2 py-2.5 font-semibold">
-              Đóng
-            </button>
-          </div>
-        </div>
+        <QrModal
+          title="Quét để vào bàn"
+          subtitle={session.name}
+          url={joinLink(code)}
+          onClose={() => setShow(false)}
+          footer={<div className="num font-display mt-3 text-3xl font-extrabold tracking-[0.3em] text-sky">{code}</div>}
+        />
       )}
     </>
   )

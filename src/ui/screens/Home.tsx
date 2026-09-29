@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { appStore, repo } from '../../store'
 import { ask } from '../dialog'
 import { dateOf } from '../format'
+import { QrModal } from '../components/QrModal'
+import { appUrl } from '../appUrl'
 
 /** 3 lý do dùng app thay cho tiền mặt / ghi giấy — hiện ngay dưới tên app. */
 const BENEFITS = [
@@ -13,6 +15,7 @@ const BENEFITS = [
 
 export function Home() {
   const [sessions, setSessions] = useState(() => repo.list())
+  const [showQr, setShowQr] = useState(false)
 
   const remove = async (id: string, name: string) => {
     const ok = await ask(`Xóa bàn "${name}"?`, {
@@ -28,9 +31,19 @@ export function Home() {
 
   return (
     <main className="pt-12">
-      <h1 className="font-display text-6xl leading-none font-extrabold tracking-tight">
-        Candy<span className="text-lemon">Pot</span>
-      </h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="font-display text-6xl leading-none font-extrabold tracking-tight">
+          Candy<span className="text-lemon">Pot</span>
+        </h1>
+        <button
+          type="button"
+          aria-label="Mã QR mở app cho người khác"
+          onClick={() => setShowQr(true)}
+          className="mt-1 grid size-11 shrink-0 place-items-center rounded-2xl border border-line bg-plum-2 text-muted active:scale-95"
+        >
+          <QrIcon />
+        </button>
+      </div>
       <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
 
       <ul className="mt-5 space-y-3">
@@ -74,7 +87,7 @@ export function Home() {
               <Link to={`/s/${s.id}`} className="min-w-0 flex-1 py-2">
                 <div className="truncate font-semibold">{s.name}</div>
                 <div className="text-sm text-muted">
-                  {s.playerCount} người · {dateOf(s.updatedAt)}
+                  {s.playerCount} người{s.updatedAt ? ` · ${dateOf(s.updatedAt)}` : ''}
                   {s.code && <span className="num ml-1.5 rounded-full bg-sky/15 px-1.5 text-xs font-bold text-sky">#{s.code}</span>}
                 </div>
               </Link>
@@ -90,6 +103,27 @@ export function Home() {
           ))}
         </ul>
       )}
+      {showQr && (
+        <QrModal
+          title="Quét để mở CandyPot"
+          subtitle="Mở bằng camera điện thoại"
+          url={appUrl()}
+          onClose={() => setShowQr(false)}
+          footer={<p className="mt-2 text-sm font-semibold text-sky">{new URL(appUrl()).host}</p>}
+        />
+      )}
     </main>
+  )
+}
+
+/** Biểu tượng mã QR (3 ô vuông góc + chấm). */
+function QrIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className="size-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round">
+      <rect x="3.5" y="3.5" width="6" height="6" rx="1" />
+      <rect x="14.5" y="3.5" width="6" height="6" rx="1" />
+      <rect x="3.5" y="14.5" width="6" height="6" rx="1" />
+      <path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M14.5 20.5h.01M17.5 20.5h3v-3" strokeLinecap="round" />
+    </svg>
   )
 }
