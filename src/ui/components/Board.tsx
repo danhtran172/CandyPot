@@ -30,7 +30,7 @@ const THRESHOLD = 8
 
 /** Vị trí đống kẹo so với avatar (hoặc cả ô, với người ngồi trên cùng). */
 const PILE_POS = {
-  right: 'left-[calc(100%+12px)] bottom-0',
+  right: 'left-[calc(100%+6px)] bottom-0',
   left: 'right-[calc(100%+6px)] bottom-0',
   above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2',
   below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2',
@@ -45,7 +45,7 @@ function sizeFor(n: number) {
 
 /**
  * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
- * Kéo hũ kẹo của một người thả vào người khác (hoặc pot) để trả;
+ * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo;
  * bấm người trả rồi bấm người nhận cũng được.
  */
 export function Board({
@@ -134,7 +134,6 @@ export function Board({
   const ordered = [...seats.filter((s) => s.isMe), ...seats.filter((s) => !s.isMe)]
   const n = ordered.length
   const size = sizeFor(n)
-  const dragFrom = drag?.moved ? drag.from : null
 
   return (
     <>
@@ -188,9 +187,6 @@ export function Board({
                 <span aria-hidden className="leading-none">
                   {s.player.emoji}
                 </span>
-                <CandyJar
-                  className={`absolute -right-2.5 -bottom-1.5 h-7 w-6 drop-shadow transition ${dragFrom === s.player.id ? 'opacity-0' : ''}`}
-                />
                 {side !== 'below' && pile}
               </span>
               <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>

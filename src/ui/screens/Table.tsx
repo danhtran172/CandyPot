@@ -180,8 +180,8 @@ export function Table() {
 
           <p className="text-center text-xs text-muted">
             {round
-              ? 'Kéo hũ kẹo của bạn vào người khác để trả, kéo hũ của người khác về chỗ bạn để đòi.'
-              : 'Chưa mở ván: kéo hũ kẹo sang người khác sẽ được ghi là chuyển tay.'}
+              ? 'Kéo từ chỗ bạn sang người khác để trả, kéo người khác về chỗ bạn để đòi.'
+              : 'Chưa mở ván: kéo từ người này sang người khác sẽ được ghi là chuyển tay.'}
           </p>
 
           {round && game.type === 'xidach' && (
