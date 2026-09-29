@@ -6,9 +6,9 @@ import { dateOf } from '../format'
 
 /** 3 lý do nên dùng app — hiện ngay dưới tên app. */
 const BENEFITS = [
-  { icon: '🧮', title: 'Khỏi giấy bút, khỏi cãi nhau', text: 'app tự cộng lời/lỗ từng ván, cuối buổi chỉ ra cách trả kẹo ít lượt nhất.' },
-  { icon: '📱', title: 'Mỗi người một điện thoại', text: 'join bằng mã 5 số, tự trả, tự đòi kẹo — cả bàn thấy ngay.' },
-  { icon: '🃏', title: 'Luật có sẵn', text: 'Tiến lên, Xì dách, Poker, Lô tô: bấm vào người là trả, không cần nhớ ai cược bao nhiêu.' },
+  { icon: '🍬', text: 'Chơi cho đã — sổ sách để app lo.' },
+  { icon: '🤝', text: 'Tàn cuộc biết ngay ai trả ai.' },
+  { icon: '📱', text: 'Cả bàn cùng xem, khỏi cãi nhau.' },
 ]
 
 export function Home() {
@@ -33,15 +33,13 @@ export function Home() {
       </h1>
       <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
 
-      <ul className="mt-5 space-y-2.5 text-sm">
+      <ul className="mt-5 space-y-1.5">
         {BENEFITS.map((b) => (
-          <li key={b.title} className="flex gap-2.5">
-            <span aria-hidden className="text-xl leading-5">
+          <li key={b.icon} className="flex items-center gap-2.5 font-semibold">
+            <span aria-hidden className="text-xl">
               {b.icon}
             </span>
-            <span className="text-muted">
-              <b className="text-cream">{b.title}</b> — {b.text}
-            </span>
+            {b.text}
           </li>
         ))}
       </ul>
