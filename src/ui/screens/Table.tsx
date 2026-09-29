@@ -10,6 +10,7 @@ import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
+import { ask } from '../dialog'
 import { Button, Card, Chip, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
@@ -114,10 +115,10 @@ export function Table() {
   }
 
   /** Xì dách: host nhấn giữ ô Bet để bỏ chốt cược. */
-  const unlockBets = () => {
+  const unlockBets = async () => {
     if (!game) return
     if (me !== session.hostId) return flash('Chỉ host mới bỏ chốt được.', true)
-    if (!confirm('Bỏ chốt cược để mọi người đặt lại?')) return
+    if (!(await ask('Bỏ chốt cược?', { icon: '🔓', message: 'Mọi người sẽ đặt cược lại.', okLabel: 'Bỏ chốt' }))) return
     const errors = actions().unlockBets(game.id)
     if (errors.length) flash(errors[0], true)
     else flash('Đã bỏ chốt — đặt cược lại nào.')
@@ -142,9 +143,15 @@ export function Table() {
     else flash('Đã chốt ván — lời/lỗ đã cập nhật.')
   }
 
-  const cancelRound = () => {
+  const cancelRound = async () => {
     if (!game || !round) return
-    if (confirm('Hủy ván này? Các lượt kéo kẹo trong ván sẽ bị bỏ, không tính gì.')) actions().deleteRound(game.id, round.id)
+    const ok = await ask('Hủy ván này?', {
+      icon: '🗑️',
+      message: 'Các lượt kéo kẹo trong ván sẽ bị bỏ, không tính gì.',
+      okLabel: 'Hủy ván',
+      danger: true,
+    })
+    if (ok) actions().deleteRound(game.id, round.id)
   }
 
   const roundDelta = round ? movesNet(round.moves) : {}

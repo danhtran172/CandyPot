@@ -4,6 +4,7 @@ import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { useMe } from '../me'
 import { useSession } from '../components/useSession'
+import { ask } from '../dialog'
 import { Button, Card, Chip, Errors, SectionTitle, TopBar } from '../components/kit'
 
 export function Players() {
@@ -25,8 +26,8 @@ export function Players() {
     setErrors([])
   }
 
-  const remove = (id: string, playerName: string) => {
-    if (confirm(`Bỏ ${playerName} khỏi buổi?`)) actions().removePlayer(id)
+  const remove = async (id: string, playerName: string) => {
+    if (await ask(`Bỏ ${playerName} khỏi buổi?`, { icon: '👋', okLabel: 'Bỏ', danger: true })) actions().removePlayer(id)
   }
 
   return (

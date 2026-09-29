@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
+import { DialogHost } from './ui/components/Dialog'
 import { SessionLayout } from './ui/components/SessionLayout'
 import { Demo } from './ui/screens/Demo'
 import { GameSettings } from './ui/screens/GameSettings'
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="*" element={<Home />} />
         </Routes>
       </div>
+      <DialogHost />
     </BrowserRouter>
   )
 }

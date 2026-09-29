@@ -1,13 +1,20 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { appStore, repo } from '../../store'
+import { ask } from '../dialog'
 import { dateOf } from '../format'
 
 export function Home() {
   const [sessions, setSessions] = useState(() => repo.list())
 
-  const remove = (id: string, name: string) => {
-    if (!confirm(`Xóa buổi "${name}"? Toàn bộ lịch sử của buổi này sẽ mất.`)) return
+  const remove = async (id: string, name: string) => {
+    const ok = await ask(`Xóa buổi "${name}"?`, {
+      icon: '🗑️',
+      message: 'Toàn bộ lịch sử của buổi này sẽ mất.',
+      okLabel: 'Xóa',
+      danger: true,
+    })
+    if (!ok) return
     appStore.getState().deleteSession(id)
     setSessions(repo.list())
   }

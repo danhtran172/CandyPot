@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Game, ID, Move, Round, Session } from '../../core/types'
 import { actions } from '../../store'
 import { playerMap, roundNumber, signed, timeOf } from '../format'
+import { ask } from '../dialog'
 import { Who } from './kit'
 
 /**
@@ -27,10 +28,15 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
     .sort((a, b) => b.round.at - a.round.at)
   const pendingUndo = new Set(session.undos.map((u) => u.moveId))
 
-  const undo = (r: Round, m: Move) => {
+  const undo = async (r: Round, m: Move) => {
     if (!me) return
     if (isHost) {
-      if (!confirm(`Hoàn tác lượt ${players[m.from]?.name} → ${players[m.to]?.name} ${m.amount} kẹo?`)) return
+      const ok = await ask('Hoàn tác lượt này?', {
+        icon: '↩️',
+        message: `${players[m.from]?.name} → ${players[m.to]?.name} · ${m.amount} kẹo`,
+        okLabel: 'Hoàn tác',
+      })
+      if (!ok) return
       const errors = actions().undoMove(game.id, r.id, m.id)
       setNote(errors.length ? { text: errors[0], bad: true } : { text: 'Đã hoàn tác.' })
     } else {

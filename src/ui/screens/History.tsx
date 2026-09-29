@@ -7,6 +7,7 @@ import { actions } from '../../store'
 import type { Game, ID, Round } from '../../core/types'
 import { useSession } from '../components/useSession'
 import { TransferList } from '../components/TransferList'
+import { ask, tell } from '../dialog'
 import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { playerMap, roundNumber, signed, timeOf, toneOf } from '../format'
 
@@ -34,12 +35,18 @@ export function History() {
 
   const reopen = (e: Entry) => {
     const errors = actions().reopenRound(e.game.id, e.round.id)
-    if (errors.length) return alert(errors[0])
+    if (errors.length) return void tell(errors[0], { icon: '⚠️' })
     navigate(`/s/${session.id}?g=${e.game.id}`)
   }
 
-  const remove = (e: Entry) => {
-    if (confirm(`Xóa ${e.game.name} · ${label(e)}? Lời/lỗ sẽ được tính lại.`)) actions().deleteRound(e.game.id, e.round.id)
+  const remove = async (e: Entry) => {
+    const ok = await ask(`Xóa ${e.game.name} · ${label(e)}?`, {
+      icon: '🗑️',
+      message: 'Lời/lỗ sẽ được tính lại.',
+      okLabel: 'Xóa',
+      danger: true,
+    })
+    if (ok) actions().deleteRound(e.game.id, e.round.id)
   }
 
   let running = 0

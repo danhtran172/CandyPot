@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router'
 import { GAME_ICONS } from '../../core/games'
 import { actions } from '../../store'
+import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 
@@ -13,11 +14,9 @@ export function GameSettings() {
 
   const back = `/s/${session.id}?g=${game.id}`
 
-  const removeGame = () => {
-    const msg = game.rounds.length
-      ? `Xóa ${game.name} cùng ${game.rounds.length} ván đã chơi? Lời/lỗ sẽ được tính lại.`
-      : `Xóa ${game.name}?`
-    if (!confirm(msg)) return
+  const removeGame = async () => {
+    const msg = game.rounds.length ? `Cùng ${game.rounds.length} ván đã chơi — lời/lỗ sẽ được tính lại.` : undefined
+    if (!(await ask(`Xóa ${game.name}?`, { icon: '🗑️', message: msg, okLabel: 'Xóa', danger: true }))) return
     actions().removeGame(game.id)
     navigate(`/s/${session.id}`, { replace: true })
   }

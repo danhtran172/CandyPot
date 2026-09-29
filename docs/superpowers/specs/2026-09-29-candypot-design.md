@@ -28,6 +28,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Hoàn tác cần host:** mỗi buổi có một host (mặc định người đầu tiên, đổi ở màn Người chơi). Mọi lượt của mình (kể cả ván đã kết thúc) có nút ✕: host hoàn tác ngay (có hỏi lại); người khác gửi yêu cầu, host nhận thông báo "X muốn hoàn tác …" với Không / OK. Hoàn tác ở ván đã kết thúc thì tính lại giao dịch của ván; nếu làm lệch pot (Poker) thì báo lỗi.
 - **Mở ván nhanh:** "+ Mở ván" mở luôn với cài đặt của ván trước (Xì dách mở luôn cả ván đầu); "⚙ Tùy chỉnh" để vào màn Mở ván.
 - **Bỏ đống kẹo** (hiển thị lời/lỗ bằng icon), bỏ hàng nút "Cái ăn/đền cả bàn" và dòng hướng dẫn dưới bàn; bàn to hơn, nút Hủy/Chốt nhỏ lại.
+- **Xác nhận bằng popup trong app:** mọi câu hỏi xác nhận (hủy ván, bỏ chốt, hoàn tác, xóa buổi/game/ván, bỏ người chơi) và báo lỗi đều là popup của CandyPot (`ask()`/`tell()` trong `src/ui/dialog.ts`, hiển thị bởi `DialogHost`), không dùng `confirm()`/`alert()` của trình duyệt. Hành động xóa có nút đỏ; Esc = Thôi, Enter = Đồng ý.
 
 ## 1. Mục tiêu
 
