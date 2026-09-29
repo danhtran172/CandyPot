@@ -17,6 +17,14 @@ npm test         # test phần tính kẹo (src/core)
 npm run build    # bản production + service worker trong dist/
 ```
 
+### Shortcut khung điện thoại (Windows)
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/create-shortcut.ps1
+```
+
+Tạo shortcut **CandyPot** trên Desktop. Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu chưa chạy) và mở app bằng Edge ở chế độ app, khung 400×880. Sửa code là app tự cập nhật (hot reload). Dữ liệu của cửa sổ này nằm trong profile riêng `%LOCALAPPDATA%\CandyPotrowser-profile`.
+
 ## Cấu trúc
 
 | Thư mục | Nội dung |
