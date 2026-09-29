@@ -294,7 +294,7 @@ export function Board({
                 aria-label={s.isMe ? `${s.player.name} (bạn)` : `Đưa kẹo cho ${s.player.name}`}
                 style={{ left: `${left}%`, top: `${top}%` }}
                 className={`absolute flex -translate-x-1/2 cursor-pointer -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
-                  s.dim ? 'opacity-35' : s.player.active ? '' : 'opacity-60'
+                  s.dim ? 'opacity-35' : ''
                 }`}
               >
                 {side === 'below' && stake}
@@ -307,12 +307,19 @@ export function Board({
                         : 'border-line'
                   } ${ring(s.player.id)}`}
                 >
-                  <span aria-hidden className="leading-none">
+                  <span aria-hidden className={`leading-none ${s.player.active ? '' : 'opacity-40'}`}>
                     {s.player.emoji}
                   </span>
+                  {!s.player.active && (
+                    <span aria-label="Tạm nghỉ" className="absolute -top-1.5 -right-2 text-base leading-none">
+                      💤
+                    </span>
+                  )}
                   {side !== 'below' && stake}
                 </span>
-                <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
+                <span
+                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active ? '' : 'opacity-50'}`}
+                >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
                 <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">

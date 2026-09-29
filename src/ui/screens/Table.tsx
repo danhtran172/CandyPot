@@ -340,9 +340,8 @@ export function Table() {
   }
 
   const roundDelta = round ? movesNet(round.moves) : {}
-  const visible = round
-    ? session.players.filter((p) => round.participants.includes(p.id))
-    : session.players.filter((p) => p.active)
+  // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không
+  const visible = session.players.filter((p) => !p.removed && (!round || round.participants.includes(p.id) || !p.active))
 
   const seats: Seat[] = visible.map((p) => ({
     player: p,

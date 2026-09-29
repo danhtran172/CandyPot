@@ -51,7 +51,7 @@ export function Players() {
     else if (elected) await tell(`${playerName} là host mới!`, { icon: '🛎️', message: `Đủ ${needed} phiếu bầu.` })
   }
 
-  /** Vuốt phải → Xóa: chưa chơi thì xóa hẳn; đã chơi thì ẩn khỏi phòng, lời/lỗ vẫn giữ. */
+  /** Vuốt trái → Xóa: chưa chơi thì xóa hẳn; đã chơi thì ẩn khỏi phòng, lời/lỗ vẫn giữ. */
   const remove = async (id: string, playerName: string) => {
     setSwiped(null)
     const used = isPlayerUsed(session, id)
@@ -79,7 +79,7 @@ export function Players() {
           🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
         </li>
         <li>
-          👉 <b className="text-cream">Vuốt phải</b> một dòng để xóa người khỏi phòng.
+          👈 <b className="text-cream">Vuốt trái</b> một dòng để xóa người khỏi phòng.
         </li>
       </ul>
 
@@ -121,6 +121,7 @@ export function Players() {
               <Avatar
                 emoji={p.emoji}
                 isMe={me === p.id}
+                resting={!p.active}
                 name={p.name}
                 onTap={() => setMe(p.id)}
                 onHold={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
@@ -193,7 +194,7 @@ export function Players() {
 
 const DELETE_W = 84
 
-/** Dòng vuốt được: vuốt sang phải để lộ nút Xóa ở mép trái; chạm vào dòng đang mở thì đóng lại. */
+/** Dòng vuốt được: vuốt sang trái để lộ nút Xóa ở mép phải; chạm vào dòng đang mở thì đóng lại. */
 function SwipeRow({
   open,
   onOpen,
@@ -233,7 +234,8 @@ function SwipeRow({
       }
       if (!g.swiping) return
     }
-    g.at = Math.min(DELETE_W * 1.25, Math.max(0, g.base + dx))
+    // Vuốt sang trái (dx âm) để lộ nút Xóa bên phải
+    g.at = Math.min(DELETE_W * 1.25, Math.max(0, g.base - dx))
     setDrag(g.at)
   }
   const up = () => {
@@ -253,7 +255,7 @@ function SwipeRow({
         aria-label={deleteLabel}
         tabIndex={open ? 0 : -1}
         onClick={onDelete}
-        className="absolute inset-y-0 left-0 flex flex-col items-center justify-center gap-0.5 bg-berry text-sm font-bold text-night"
+        className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 bg-berry text-sm font-bold text-night"
         style={{ width: DELETE_W, visibility: offset > 0 ? 'visible' : 'hidden' }}
       >
         <span aria-hidden className="text-xl leading-none">
@@ -275,7 +277,7 @@ function SwipeRow({
             if (open) onClose()
           }
         }}
-        style={{ transform: `translateX(${offset}px)` }}
+        style={{ transform: `translateX(${-offset}px)` }}
         className={`relative flex touch-pan-y items-center gap-2 bg-plum px-2 py-2 ${drag === null ? 'transition-transform duration-200' : ''}`}
       >
         {children}
@@ -288,12 +290,14 @@ function SwipeRow({
 function Avatar({
   emoji,
   isMe,
+  resting,
   name,
   onTap,
   onHold,
 }: {
   emoji: string
   isMe: boolean
+  resting?: boolean
   name: string
   onTap: () => void
   onHold: () => void
@@ -326,7 +330,12 @@ function Avatar({
         isMe ? 'border-lemon shadow-[0_0_14px_rgb(255_210_63/0.35)]' : 'border-line'
       }`}
     >
-      {emoji}
+      <span className={resting ? 'opacity-40' : ''}>{emoji}</span>
+      {resting && (
+        <span aria-hidden className="absolute -top-1.5 -right-2 text-sm leading-none">
+          💤
+        </span>
+      )}
       {isMe && (
         <span aria-hidden className="absolute -right-1.5 -bottom-1 grid size-5 place-items-center rounded-full bg-lemon text-[11px] leading-none">
           🙋
