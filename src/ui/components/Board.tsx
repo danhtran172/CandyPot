@@ -77,7 +77,7 @@ export function Board({
   cornerRight?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
-  /** Đặt ô Pot bên dưới nội dung giữa bàn (Lô tô: Price ở trên, Pot ở dưới). */
+  /** Đặt ô Pot bên dưới nội dung giữa bàn (Lô tô: Giá ở trên, Pot ở dưới). */
   potAfterCenter?: boolean
   /** Hiện ô Bet giữa bàn (Xì dách): thả vào để đặt cược. Không giữ kẹo, không cộng tổng. */
   betBox?: boolean

@@ -155,7 +155,7 @@ export function Table() {
     setEditBets(true)
   }
 
-  /** Lô tô: host bấm ô Price để đặt giá mỗi tờ. */
+  /** Lô tô: host bấm ô Giá để đặt giá mỗi tờ. */
   const openPrice = () => {
     if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới đổi giá được.`, true)
     setEditPrice(true)
@@ -400,7 +400,7 @@ export function Table() {
 
       {editPrice && game && (
         <PriceSheet
-          title="Price · Lô tô"
+          title="Giá · Lô tô"
           hint="Giá mỗi tờ — mua N tờ thì bỏ N × giá kẹo vào Pot."
           unit="kẹo / tờ"
           initial={lotoPrice(game)}
@@ -431,7 +431,7 @@ export function Table() {
           to={players[pending.to]}
           options={
             isLoto && pending.to === POT
-              ? [1, 2, 3].map((n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
+              ? [1, 2].map((n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
               : pending.to === BET
                 ? scaledOptions(round?.stakes[pending.from] ?? round?.bet ?? 1)
                 : suggestOptions({ game, round: round ?? null, from: pending.from, to: pending.to })
@@ -486,10 +486,10 @@ function TableCenter({
         <button
           type="button"
           onClick={onEditPrice}
-          aria-label={`Price: ${price} kẹo mỗi tờ — host bấm để đổi`}
+          aria-label={`Giá: ${price} kẹo mỗi tờ — host bấm để đổi`}
           className="flex items-center gap-1.5 rounded-2xl border-2 border-dashed border-sky/70 bg-night/50 py-1 pr-3 pl-2.5 transition active:scale-95"
         >
-          <span className="font-display text-sm font-bold text-sky">Price</span>
+          <span className="font-display text-sm font-bold text-sky">Giá</span>
           <span className="candy num text-sm">{price}</span>
           <span className="text-xs text-muted">/ tờ</span>
         </button>
