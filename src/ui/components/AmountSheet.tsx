@@ -53,7 +53,7 @@ export function AmountSheet({
         {mode === 'buy' && unit ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              <Who player={from} className="text-sky" /> mua mấy {unit.name}?
+              <PersonChip player={from} /> mua mấy {unit.name}?
             </div>
             <div className="text-xs text-muted">
               Giá <span className="font-semibold text-lemon">{unit.price} kẹo</span> / {unit.name} — app tự tính số kẹo bỏ vào Pot.
@@ -62,22 +62,22 @@ export function AmountSheet({
         ) : mode === 'bet' ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              <Who player={from} className="text-sky" /> đặt cược
+              <PersonChip player={from} /> đặt cược
             </div>
             <div className="text-xs text-muted">Ván sau sẽ tự giữ mức cược này.</div>
           </div>
         ) : mode === 'request' ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              Đòi <Who player={from} className="text-sky" /> bao nhiêu?
+              Đòi <PersonChip player={from} /> bao nhiêu?
             </div>
             <div className="text-xs text-muted"><span className="font-semibold text-sky">{from.name}</span> sẽ nhận thông báo và bấm OK để chuyển kẹo cho bạn.</div>
           </div>
         ) : (
           <div className="font-display flex items-center justify-center gap-2 text-xl font-bold">
-            <Who player={from} className="text-sky" />
+            <PersonChip player={from} />
             <span className="text-lemon">→</span>
-            <Who player={to} className="text-sky" />
+            <PersonChip player={to} />
           </div>
         )}
 
@@ -134,5 +134,14 @@ export function AmountSheet({
         {extra}
       </div>
     </div>
+  )
+}
+
+/** Tên + avatar người trong câu hỏi (Đòi X bao nhiêu? / A → B) đặt trong khung mờ cho nổi bật. */
+function PersonChip({ player }: { player: Player }) {
+  return (
+    <span className="mx-0.5 inline-flex max-w-[60%] items-center rounded-full border border-sky/30 bg-sky/10 px-2.5 py-0.5 align-middle text-lg backdrop-blur-sm">
+      <Who player={player} className="min-w-0 text-sky" />
+    </span>
   )
 }
