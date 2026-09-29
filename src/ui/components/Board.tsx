@@ -45,8 +45,10 @@ function sizeFor(n: number) {
   return { seat: 'w-[60px]', avatar: 'size-10 text-2xl' }
 }
 
+const HEIGHT = 'clamp(420px, calc(100dvh - 270px), 640px)'
+
 /**
- * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
+ * Bàn oval (hoặc vuông với Tiến lên): mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
  * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo.
  */
 export function Board({
@@ -58,9 +60,12 @@ export function Board({
   betLocked,
   onBetHold,
   hat,
+  shape = 'oval',
   onTransfer,
 }: {
   seats: Seat[]
+  /** Hình bàn: oval (mặc định) hoặc vuông — 4 người ngồi 4 cạnh. */
+  shape?: 'oval' | 'square'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Nút ở góc dưới bên trái bàn. */
@@ -154,115 +159,134 @@ export function Board({
   const ordered = [...seats.filter((s) => s.isMe), ...seats.filter((s) => !s.isMe)]
   const n = ordered.length
   const size = sizeFor(n)
+  const square = shape === 'square'
 
   return (
     <>
-      <div className="relative -mx-3" style={{ height: 'clamp(420px, calc(100dvh - 270px), 640px)' }}>
-        {/* Mặt bàn */}
-        <div className="absolute inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] border-2 border-line bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)] shadow-[inset_0_0_40px_rgb(0_0_0/0.45)]" />
-        <div className="absolute inset-x-[22%] top-[23%] bottom-[29%] flex flex-col items-center justify-center gap-1 text-center">
-          {pot !== undefined && (
-            <div
-              data-drop={POT}
-              onPointerDown={start(POT)}
-              className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
-            >
-              <span aria-hidden className="text-3xl leading-none">
-                💰
+      <div className="relative -mx-3" style={{ height: HEIGHT }}>
+        {/* Bàn vuông: khung vuông giữa vùng bàn — mặt bàn và ghế đặt theo khung này */}
+        <div
+          className={square ? 'absolute top-[48%] left-1/2 aspect-square -translate-x-1/2 -translate-y-1/2' : 'absolute inset-0'}
+          style={square ? { width: `min(100%, ${HEIGHT})` } : undefined}
+        >
+          {/* Mặt bàn */}
+          <div
+            className={`absolute border-2 border-line shadow-[inset_0_0_40px_rgb(0_0_0/0.45)] ${
+              square
+                ? 'inset-[22%] rounded-[2rem] bg-[radial-gradient(circle_at_center,#3b2147_0%,#2b1734_75%)]'
+                : 'inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)]'
+            }`}
+          />
+          <div
+            className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
+              square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
+            }`}
+          >
+            {pot !== undefined && (
+              <div
+                data-drop={POT}
+                onPointerDown={start(POT)}
+                className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
+              >
+                <span aria-hidden className="text-3xl leading-none">
+                  💰
+                </span>
+                <span className="candy num mt-1 text-lg">{pot}</span>
+                <span className="text-[11px] text-muted">Pot</span>
+              </div>
+            )}
+            {betBox && (
+              <div
+                data-drop={BET}
+                onPointerDown={startHold}
+                onPointerUp={stopHold}
+                onPointerLeave={stopHold}
+                onPointerCancel={stopHold}
+                className={`flex touch-none flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
+                  betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
+                } ${holding ? 'scale-95 opacity-100 ring-4 ring-lemon/60' : ''} ${ring(BET)}`}
+              >
+                <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
+                <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'thả vào để đặt cược'}</span>
+              </div>
+            )}
+            {hat && (
+              <button
+                type="button"
+                onPointerDown={start(DEALER)}
+                className={`flex touch-none items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs select-none ${
+                  drag?.moved && drag.from === DEALER ? 'ring-2 ring-lemon' : ''
+                }`}
+                aria-label={`Nhà cái: ${hat}. Kéo mũ sang người khác để đổi cái`}
+              >
+                <span aria-hidden className="text-base leading-none">
+                  🎩
+                </span>
+                <b className="max-w-24 truncate">{hat}</b>
+              </button>
+            )}
+            {center}
+          </div>
+
+          {ordered.map((s, i) => {
+            const angle = Math.PI / 2 + (2 * Math.PI * i) / n
+            // Bàn vuông: chiếu hướng ngồi lên cạnh hình vuông (4 người = giữa 4 cạnh)
+            const edge = square ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
+            const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
+            const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
+            // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
+            const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
+            const stake = s.stake !== undefined && (
+              <span
+                className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
+                  s.stakeDim ? 'opacity-45' : ''
+                }`}
+              >
+                <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
+                <span className="num">× {s.stake}</span>
               </span>
-              <span className="candy num mt-1 text-lg">{pot}</span>
-              <span className="text-[11px] text-muted">Pot</span>
-            </div>
-          )}
-          {betBox && (
-            <div
-              data-drop={BET}
-              onPointerDown={startHold}
-              onPointerUp={stopHold}
-              onPointerLeave={stopHold}
-              onPointerCancel={stopHold}
-              className={`flex touch-none flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
-                betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
-              } ${holding ? 'scale-95 opacity-100 ring-4 ring-lemon/60' : ''} ${ring(BET)}`}
-            >
-              <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
-              <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'thả vào để đặt cược'}</span>
-            </div>
-          )}
-          {hat && (
-            <button
-              type="button"
-              onPointerDown={start(DEALER)}
-              className={`flex touch-none items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs select-none ${
-                drag?.moved && drag.from === DEALER ? 'ring-2 ring-lemon' : ''
-              }`}
-              aria-label={`Nhà cái: ${hat}. Kéo mũ sang người khác để đổi cái`}
-            >
-              <span aria-hidden className="text-base leading-none">
-                🎩
-              </span>
-              <b className="max-w-24 truncate">{hat}</b>
-            </button>
-          )}
-          {center}
+            )
+            return (
+              <div
+                key={s.player.id}
+                data-drop={s.player.id}
+                onPointerDown={start(s.player.id)}
+                style={{ left: `${left}%`, top: `${top}%` }}
+                className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
+                  s.player.active ? '' : 'opacity-60'
+                }`}
+              >
+                {side === 'below' && stake}
+                <span
+                  className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
+                    s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
+                  } ${ring(s.player.id)}`}
+                >
+                  <span aria-hidden className="leading-none">
+                    {s.player.emoji}
+                  </span>
+                  {side !== 'below' && stake}
+                </span>
+                <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
+                  {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
+                </span>
+                <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">
+                  {signed(s.total)}
+                </span>
+                {s.round !== undefined && s.round !== 0 && (
+                  <span className={`num text-[11px] leading-tight font-bold ${toneOf(s.round)}`}>ván {signed(s.round)}</span>
+                )}
+                {s.badge && (
+                  <span className="mt-0.5 rounded-full bg-night/70 px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-lemon">
+                    {s.badge}
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {corner && <div className="absolute bottom-1 left-3 z-10">{corner}</div>}
-
-        {ordered.map((s, i) => {
-          const angle = Math.PI / 2 + (2 * Math.PI * i) / n
-          const left = 50 + 40 * Math.cos(angle)
-          const top = 47 + 37 * Math.sin(angle)
-          // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
-          const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
-          const stake = s.stake !== undefined && (
-            <span
-              className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
-                s.stakeDim ? 'opacity-45' : ''
-              }`}
-            >
-              <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
-              <span className="num">× {s.stake}</span>
-            </span>
-          )
-          return (
-            <div
-              key={s.player.id}
-              data-drop={s.player.id}
-              onPointerDown={start(s.player.id)}
-              style={{ left: `${left}%`, top: `${top}%` }}
-              className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
-                s.player.active ? '' : 'opacity-60'
-              }`}
-            >
-              {side === 'below' && stake}
-              <span
-                className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
-                  s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
-                } ${ring(s.player.id)}`}
-              >
-                <span aria-hidden className="leading-none">
-                  {s.player.emoji}
-                </span>
-                {side !== 'below' && stake}
-              </span>
-              <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
-                {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
-              </span>
-              <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">
-                {signed(s.total)}
-              </span>
-              {s.round !== undefined && s.round !== 0 && (
-                <span className={`num text-[11px] leading-tight font-bold ${toneOf(s.round)}`}>ván {signed(s.round)}</span>
-              )}
-              {s.badge && (
-                <span className="mt-0.5 rounded-full bg-night/70 px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-lemon">
-                  {s.badge}
-                </span>
-              )}
-            </div>
-          )
-        })}
       </div>
 
       {drag?.moved && (

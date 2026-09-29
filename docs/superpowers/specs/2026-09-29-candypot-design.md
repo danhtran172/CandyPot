@@ -29,6 +29,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Mở ván nhanh:** "+ Mở ván" mở luôn với cài đặt của ván trước (Xì dách mở luôn cả ván đầu); "⚙ Tùy chỉnh" để vào màn Mở ván.
 - **Bỏ đống kẹo** (hiển thị lời/lỗ bằng icon), bỏ hàng nút "Cái ăn/đền cả bàn" và dòng hướng dẫn dưới bàn; bàn to hơn, nút Hủy/Chốt nhỏ lại.
 - **Xác nhận bằng popup trong app:** mọi câu hỏi xác nhận (hủy ván, bỏ chốt, hoàn tác, xóa buổi/game/ván, bỏ người chơi) và báo lỗi đều là popup của CandyPot (`ask()`/`tell()` trong `src/ui/dialog.ts`, hiển thị bởi `DialogHost`), không dùng `confirm()`/`alert()` của trình duyệt. Hành động xóa có nút đỏ; Esc = Thôi, Enter = Đồng ý.
+- **Tiến lên là bàn vuông:** 4 người ngồi giữa 4 cạnh ("tôi" ở cạnh dưới); chưa mở ván mà có hơn 4 người thì xếp đều quanh các cạnh. Poker và Xì dách giữ bàn oval.
 
 ## 1. Mục tiêu
 

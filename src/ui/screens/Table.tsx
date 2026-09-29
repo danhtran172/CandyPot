@@ -254,6 +254,7 @@ export function Table() {
             seats={seats}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             betBox={game.type === 'xidach'}
+            shape={game.type === 'tienlen' ? 'square' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
