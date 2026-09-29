@@ -246,13 +246,18 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       unwatch = null
       watching = key
       if (!rooms || !code) return
-      unwatch = rooms.watch(code, (remote) => {
-        const current = get().session
-        if (!current || current.id !== s.id || current.code !== code) return
-        if (remote?.id === s.id) receive(remote)
-        else if (!remote) void rooms.claim(code, current)
-        else void rehome(current)
-      })
+      const failed = () => set({ error: 'Không kết nối được phòng chơi nhiều máy — bàn vẫn ghi trên máy này, kiểm tra mạng rồi mở lại bàn.' })
+      unwatch = rooms.watch(
+        code,
+        (remote) => {
+          const current = get().session
+          if (!current || current.id !== s.id || current.code !== code) return
+          if (remote?.id === s.id) receive(remote)
+          else if (!remote) rooms.claim(code, current).catch(failed)
+          else rehome(current).catch(failed)
+        },
+        failed,
+      )
     }
 
     rooms?.onConnection((online) => set({ online }))

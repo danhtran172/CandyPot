@@ -11,8 +11,8 @@ export interface RoomBackend {
   claim(code: string, session: Session): Promise<boolean>
   /** Đọc bàn trong phòng (null = chưa có phòng). */
   fetch(code: string): Promise<Session | null>
-  /** Theo dõi phòng; gọi lại mỗi khi có thay đổi. Trả về hàm hủy theo dõi. */
-  watch(code: string, onChange: (session: Session | null) => void): () => void
+  /** Theo dõi phòng; gọi lại mỗi khi có thay đổi (`onError`: không đọc được, vd bị từ chối quyền). Trả về hàm hủy theo dõi. */
+  watch(code: string, onChange: (session: Session | null) => void, onError?: (error: unknown) => void): () => void
   /** Sửa bàn trong phòng theo dữ liệu mới nhất (chạy lại `fn` nếu máy khác vừa ghi). */
   update(code: string, fn: (session: Session) => Session): Promise<void>
   /** Trạng thái kết nối. Trả về hàm hủy theo dõi. */

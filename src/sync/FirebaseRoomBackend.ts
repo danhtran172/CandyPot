@@ -55,12 +55,16 @@ export class FirebaseRoomBackend implements RoomBackend {
     return fromRecord(snap.val() as RoomRecord | null)
   }
 
-  watch(code: string, onChange: (s: Session | null) => void) {
+  watch(code: string, onChange: (s: Session | null) => void, onError?: (error: unknown) => void) {
     let stop: (() => void) | null = null
     let cancelled = false
-    void this.connect().then(({ sdk, db }) => {
-      if (!cancelled) stop = sdk.onValue(sdk.ref(db, `rooms/${code}`), (snap) => onChange(fromRecord(snap.val() as RoomRecord | null)))
-    })
+    this.connect().then(
+      ({ sdk, db }) => {
+        if (!cancelled)
+          stop = sdk.onValue(sdk.ref(db, `rooms/${code}`), (snap) => onChange(fromRecord(snap.val() as RoomRecord | null)), onError)
+      },
+      (error) => onError?.(error),
+    )
     return () => {
       cancelled = true
       stop?.()
