@@ -48,7 +48,12 @@ export function cardValue(cards: CardCount, cfg: TienLenConfig): number {
 
 export function describeCards(cards: CardCount): string {
   return CARD_KEYS.filter((k) => (cards[k] ?? 0) > 0)
-    .map((k) => `${cards[k]} ${CARD_LABELS[k].toLowerCase()}`)
+    .map((k) => {
+      const n = cards[k] ?? 0
+      const label = CARD_LABELS[k].toLowerCase()
+      if (n === 1) return label
+      return /^\d/.test(label) ? `${n}× ${label}` : `${n} ${label}`
+    })
     .join(', ')
 }
 
@@ -101,7 +106,8 @@ export const tienlen: GameModule<TienLenConfig, TienLenInput> = {
     if (ranking.length === 0) errors.push('Phải có người về Nhất.')
 
     for (const t of thoi) {
-      if (!inGame(t.playerId)) errors.push('Người bị thối không có trong ván.')
+      if (!t.playerId) errors.push('Chưa chọn người bị thối.')
+      else if (!inGame(t.playerId)) errors.push('Người bị thối không có trong ván.')
       else if (t.playerId === ranking[0]) errors.push('Người về Nhất không thể bị thối.')
       if (cardValue(t.cards, cfg) <= 0) errors.push('Thối phải có ít nhất một quân.')
     }
@@ -112,7 +118,8 @@ export const tienlen: GameModule<TienLenConfig, TienLenInput> = {
         errors.push('Chặt cần ít nhất 2 bước (người đánh và người chặt).')
         continue
       }
-      if (!steps.every((s) => inGame(s.playerId))) errors.push('Người trong chuỗi chặt không có trong ván.')
+      if (steps.some((s) => !s.playerId)) errors.push('Chưa chọn đủ người trong chuỗi chặt.')
+      else if (!steps.every((s) => inGame(s.playerId))) errors.push('Người trong chuỗi chặt không có trong ván.')
       if (steps.some((s, i) => i > 0 && s.playerId === steps[i - 1].playerId)) {
         errors.push('Không thể tự chặt mình.')
       }

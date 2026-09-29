@@ -1,0 +1,58 @@
+import { useState } from 'react'
+import { Link } from 'react-router'
+import { appStore, repo } from '../../store'
+import { dateOf } from '../format'
+
+export function Home() {
+  const [sessions, setSessions] = useState(() => repo.list())
+
+  const remove = (id: string, name: string) => {
+    if (!confirm(`Xóa buổi "${name}"? Toàn bộ lịch sử của buổi này sẽ mất.`)) return
+    appStore.getState().deleteSession(id)
+    setSessions(repo.list())
+  }
+
+  return (
+    <main className="pt-12">
+      <h1 className="font-display text-6xl leading-none font-extrabold tracking-tight">
+        Candy<span className="text-lemon">Pot</span>
+      </h1>
+      <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
+
+      <Link
+        to="/new"
+        className="font-display mt-8 flex items-center justify-center rounded-3xl bg-lemon py-4 text-2xl font-extrabold text-night shadow-[inset_0_-5px_0_rgb(0_0_0/0.18)]"
+      >
+        + Tạo buổi mới
+      </Link>
+
+      <h2 className="font-display mt-10 mb-3 text-lg font-bold">Buổi đã chơi</h2>
+      {sessions.length === 0 ? (
+        <p className="rounded-3xl border border-dashed border-line p-6 text-center text-muted">
+          Chưa có buổi nào. Tạo buổi mới để bắt đầu ghi kẹo.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {sessions.map((s) => (
+            <li key={s.id} className="flex items-center gap-2 rounded-3xl border border-line/60 bg-plum p-2 pl-4">
+              <Link to={`/s/${s.id}`} className="min-w-0 flex-1 py-2">
+                <div className="truncate font-semibold">{s.name}</div>
+                <div className="text-sm text-muted">
+                  {s.playerCount} người · {dateOf(s.updatedAt)}
+                </div>
+              </Link>
+              <button
+                type="button"
+                aria-label={`Xóa buổi ${s.name}`}
+                className="rounded-full px-3 py-2 text-muted hover:text-berry"
+                onClick={() => remove(s.id, s.name)}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </main>
+  )
+}

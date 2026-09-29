@@ -1,1 +1,100 @@
+@import '@fontsource/baloo-2/700.css';
+@import '@fontsource/baloo-2/800.css';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/500.css';
+@import '@fontsource/be-vietnam-pro/600.css';
+@import '@fontsource/be-vietnam-pro/700.css';
 @import 'tailwindcss';
+
+@theme {
+  --color-night: #1c0e22;
+  --color-plum: #2b1734;
+  --color-plum-2: #3b2147;
+  --color-line: #4d2f5c;
+  --color-cream: #fff1e0;
+  --color-muted: #bda3c8;
+  --color-lemon: #ffd23f;
+  --color-mint: #3ddc97;
+  --color-berry: #ff5c7a;
+  --color-grape: #a974f0;
+
+  --font-display: 'Baloo 2', system-ui, sans-serif;
+  --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-night);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #3a1a45 0%, transparent 60%),
+    var(--color-night);
+  background-attachment: fixed;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-lemon);
+  outline-offset: 2px;
+}
+
+/* Viên kẹo gói giấy xoắn hai đầu — dấu ấn của CandyPot */
+.candy {
+  --candy: var(--color-lemon);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  padding: 0.2rem 0.7rem;
+  margin: 0 0.8rem;
+  border-radius: 999px;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 7px, rgb(255 255 255 / 0.18) 7px 11px),
+    var(--candy);
+  color: var(--color-night);
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1.4;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.15);
+}
+.candy::before,
+.candy::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 0.85rem;
+  height: 1.5rem;
+  translate: 0 -50%;
+  background: var(--candy);
+  opacity: 0.85;
+}
+.candy::before {
+  right: calc(100% - 2px);
+  clip-path: polygon(0 0, 100% 38%, 100% 62%, 0 100%, 25% 50%);
+}
+.candy::after {
+  left: calc(100% - 2px);
+  clip-path: polygon(0 38%, 100% 0, 75% 50%, 100% 100%, 0 62%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pop {
+    animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+  @keyframes pop {
+    from {
+      scale: 0.6;
+      opacity: 0;
+    }
+  }
+}
