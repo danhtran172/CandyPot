@@ -4,6 +4,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 
 - Game: **Tiến lên miền Nam**, **Xì dách** (có nhà cái), **Poker** (có pot, tính side pot)
 - Bàn oval tối đa 10 người, bạn ngồi dưới cùng: mở ván đặt cược → **kéo hũ kẹo** thả vào người nhận (popup 3 số: cược × 1 / × 1,5 / × 2) → chốt ván
+- **Lịch sử trả/nhận** của riêng bạn (nút 📜 góc bàn); hoàn tác cần **host** xác nhận
 - **Đòi kẹo:** kéo hũ kẹo của người khác về chỗ mình → người đó nhận thông báo, bấm OK mới chuyển
 - Tiến lên cược 2 mức Nhất / Nhì (vd 4/2); Xì dách: đặt cược bằng **ô Bet** giữa bàn → **Chốt cược** → chia bài, kéo trả kẹo → **Kết thúc** (một nút đổi chữ theo bước; ván sau tự giữ cược cũ)
 - Lời/lỗ cộng dồn từ 0, lịch sử theo ván / theo người, danh hiệu, luật nhà

@@ -26,6 +26,8 @@ function session(rounds: Round[]): Session {
     createdAt: 0,
     updatedAt: 0,
     requests: [],
+    undos: [],
+    hostId: null,
     players: ['a', 'b', 'c'].map((id) => ({ id, name: id, emoji: '', active: true })),
     games: [{ id: 'g', type: 'tienlen', name: '', rounds }],
   }

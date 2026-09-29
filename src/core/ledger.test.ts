@@ -9,6 +9,8 @@ function session(): Session {
     createdAt: 0,
     updatedAt: 0,
     requests: [],
+    undos: [],
+    hostId: null,
     players: [
       { id: 'a', name: 'An', emoji: '🐱', active: true },
       { id: 'b', name: 'Bình', emoji: '🐶', active: true },

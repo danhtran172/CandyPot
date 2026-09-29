@@ -87,14 +87,27 @@ export interface CandyRequest {
   at: number
 }
 
+/** Yêu cầu hoàn tác một lượt kéo — chờ host xác nhận. */
+export interface UndoRequest {
+  id: ID
+  gameId: ID
+  roundId: ID
+  moveId: ID
+  by: ID
+  at: number
+}
+
 export interface Session {
   id: ID
   name: string
   createdAt: number
   updatedAt: number
+  /** Người quản lý buổi: xác nhận các yêu cầu hoàn tác. */
+  hostId: ID | null
   players: Player[]
   games: Game[]
   requests: CandyRequest[]
+  undos: UndoRequest[]
 }
 
 export type Net = Record<ID, number>

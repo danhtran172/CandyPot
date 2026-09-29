@@ -70,6 +70,12 @@ export interface AppState {
   /** Người bị đòi trả lời: OK thì chuyển kẹo. */
   answerRequest(requestId: ID, accept: boolean): string[]
   cancelRequest(requestId: ID): void
+  setHost(playerId: ID): void
+  /** Bỏ một lượt kéo (ván đang mở hoặc đã kết thúc — tính lại lời/lỗ). Chỉ host gọi trực tiếp. */
+  undoMove(gameId: ID, roundId: ID, moveId: ID): string[]
+  /** Người chơi xin hoàn tác một lượt — chờ host xác nhận. */
+  requestUndo(gameId: ID, roundId: ID, moveId: ID, by: ID): string[]
+  answerUndo(undoId: ID, accept: boolean): string[]
   /** Xì dách: người con đặt cược (ghi đè mức cược của ván đang mở). */
   setStake(gameId: ID, playerId: ID, amount: number): string[]
   closeRound(gameId: ID): string[]
@@ -155,12 +161,15 @@ export function createAppStore(repo: SessionRepo) {
           name: name.trim() || 'Buổi chơi',
           createdAt: now,
           updatedAt: now,
+          hostId: null,
           players: players
             .slice(0, MAX_PLAYERS)
             .map((p) => ({ id: newId(), name: p.name.trim(), emoji: p.emoji, active: true })),
           games: [],
           requests: [],
+          undos: [],
         }
+        session.hostId = session.players[0]?.id ?? null
         repo.save(session)
         set({ session, error: null })
         return session.id
@@ -227,6 +236,7 @@ export function createAppStore(repo: SessionRepo) {
           ...s,
           games: s.games.filter((g) => g.id !== gameId),
           requests: s.requests.filter((r) => r.gameId !== gameId),
+          undos: s.undos.filter((u) => u.gameId !== gameId),
         }))
       },
 
@@ -366,7 +376,11 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       deleteRound(gameId, roundId) {
-        mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
+        mutate((s) => ({
+          ...s,
+          games: s.games.map((g) => (g.id === gameId ? { ...g, rounds: g.rounds.filter((r) => r.id !== roundId) } : g)),
+          undos: s.undos.filter((u) => u.roundId !== roundId),
+        }))
       },
 
       requestCandy(gameId, from, to, amount) {
@@ -396,6 +410,52 @@ export function createAppStore(repo: SessionRepo) {
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (!Number.isInteger(amount) || amount <= 0) return ['Tiền cược phải là số nguyên lớn hơn 0.']
         mapRound(gameId, open.id, (r) => ({ ...r, stakes: { ...r.stakes, [playerId]: amount } }))
+        return []
+      },
+
+      setHost(playerId) {
+        mutate((s) => ({ ...s, hostId: playerId }))
+      },
+
+      undoMove(gameId, roundId, moveId) {
+        const round = game(gameId)?.rounds.find((r) => r.id === roundId)
+        if (!round?.moves.some((m) => m.id === moveId)) return ['Lượt này không còn nữa.']
+        const moves = round.moves.filter((m) => m.id !== moveId)
+        const dropPending = (s: Session) => ({ ...s, undos: s.undos.filter((u) => u.moveId !== moveId) })
+        if (round.status === 'open') {
+          mapRound(gameId, roundId, (r) => ({ ...r, moves }))
+        } else if (round.kind === 'manual' && moves.length === 0) {
+          mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
+        } else {
+          let transfers
+          try {
+            transfers = closeTransfers({ ...round, moves })
+          } catch (e) {
+            return [`Không hoàn tác được: ${(e as Error).message}`]
+          }
+          mapRound(gameId, roundId, (r) => ({ ...r, moves, transfers }))
+        }
+        mutate(dropPending)
+        return []
+      },
+
+      requestUndo(gameId, roundId, moveId, by) {
+        const s = get().session
+        const round = game(gameId)?.rounds.find((r) => r.id === roundId)
+        if (!s || !round?.moves.some((m) => m.id === moveId)) return ['Lượt này không còn nữa.']
+        if (s.undos.some((u) => u.moveId === moveId)) return ['Lượt này đang chờ host xác nhận.']
+        mutate((s) => ({ ...s, undos: [...s.undos, { id: newId(), gameId, roundId, moveId, by, at: Date.now() }] }))
+        return []
+      },
+
+      answerUndo(undoId, accept) {
+        const u = get().session?.undos.find((x) => x.id === undoId)
+        if (!u) return ['Yêu cầu này không còn nữa.']
+        if (accept) {
+          const errors = get().undoMove(u.gameId, u.roundId, u.moveId)
+          if (errors.length) return errors
+        }
+        mutate((s) => ({ ...s, undos: s.undos.filter((x) => x.id !== undoId) }))
         return []
       },
 

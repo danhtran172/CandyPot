@@ -103,6 +103,7 @@ export function Table() {
   }
 
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
+  const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
   /** Xì dách: khóa cược để chia bài và trả kẹo. */
   const lockBets = () => {
@@ -246,9 +247,9 @@ export function Table() {
                 className="flex items-center gap-1.5 rounded-2xl border border-line/60 bg-night/70 px-2.5 py-1.5 text-xs font-semibold"
               >
                 📜 Trả/nhận
-                {(round?.moves.length ?? 0) + asking.length > 0 && (
+                {myRoundMoves + asking.length > 0 && (
                   <span className="num rounded-full bg-lemon px-1.5 text-[10px] leading-4 text-night">
-                    {(round?.moves.length ?? 0) + asking.length}
+                    {myRoundMoves + asking.length}
                   </span>
                 )}
               </button>

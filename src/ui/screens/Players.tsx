@@ -33,7 +33,7 @@ export function Players() {
     <main>
       <TopBar title="Người chơi" back={`/s/${session.id}`} />
       <p className="mb-3 text-sm text-muted">
-        Bấm <b>Tôi</b> ở người của bạn: chỗ của bạn luôn nằm dưới cùng bàn. Người đã chơi không xóa được, chỉ tạm nghỉ — lời/lỗ vẫn được giữ.
+        Bấm <b>Tôi</b> ở người của bạn: chỗ của bạn luôn nằm dưới cùng bàn. <b>Host</b> là người xác nhận các yêu cầu hoàn tác. Người đã chơi không xóa được, chỉ tạm nghỉ — lời/lỗ vẫn được giữ.
       </p>
 
       <Card className="p-2">
@@ -62,6 +62,14 @@ export function Players() {
               />
               <Chip active={me === p.id} onClick={() => setMe(p.id)} aria-label={`${p.name} là tôi`}>
                 Tôi
+              </Chip>
+              <Chip
+                tone="mint"
+                active={session.hostId === p.id}
+                onClick={() => actions().setHost(p.id)}
+                aria-label={`${p.name} là host`}
+              >
+                Host
               </Chip>
               {isPlayerUsed(session, p.id) ? (
                 <Chip active={!p.active} tone="grape" onClick={() => actions().updatePlayer(p.id, { active: !p.active })}>

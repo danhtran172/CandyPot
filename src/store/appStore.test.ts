@@ -208,3 +208,47 @@ describe('appStore — đòi kẹo', () => {
     expect(session().requests).toEqual([])
   })
 })
+
+describe('appStore — hoàn tác cần host', () => {
+  it('host mặc định là người đầu tiên, đổi được', () => {
+    expect(session().hostId).toBe(a)
+    s().setHost(b)
+    expect(session().hostId).toBe(b)
+  })
+
+  it('xin hoàn tác → host OK → bỏ lượt và tính lại ván đã kết thúc', () => {
+    const g = s().addGame('tienlen')
+    s().openRound(g, { participants: [a, b, c], bet: 4, bet2: 2, stakes: {}, dealer: null })
+    s().addMove(g, c, a, 4, '')
+    s().addMove(g, b, a, 2, '')
+    s().closeRound(g)
+    const r = session().games[0].rounds[0]
+    expect(s().requestUndo(g, r.id, r.moves[1].id, b)).toEqual([])
+    expect(s().requestUndo(g, r.id, r.moves[1].id, b)).toEqual(['Lượt này đang chờ host xác nhận.'])
+    expect(netOf(session())[a]).toBe(6)
+    expect(s().answerUndo(session().undos[0].id, true)).toEqual([])
+    expect(session().undos).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 4, [b]: 0, [c]: -4 })
+  })
+
+  it('host từ chối thì giữ nguyên; hoàn tác chuyển tay cuối cùng thì xóa luôn lượt', () => {
+    const g = s().addGame('xidach')
+    s().addMove(g, a, b, 3, '')
+    const r = session().games[0].rounds[0]
+    s().requestUndo(g, r.id, r.moves[0].id, b)
+    s().answerUndo(session().undos[0].id, false)
+    expect(netOf(session())[b]).toBe(3)
+    expect(s().undoMove(g, r.id, r.moves[0].id)).toEqual([])
+    expect(session().games[0].rounds).toEqual([])
+  })
+
+  it('không hoàn tác được lượt pot làm lệch ván Poker đã kết thúc', () => {
+    const g = s().addGame('poker')
+    s().openRound(g, { participants: [a, b], bet: 2, stakes: { [a]: 2, [b]: 2 }, dealer: null })
+    s().addMove(g, POT, a, 4, '')
+    s().closeRound(g)
+    const r = session().games[0].rounds[0]
+    const win = r.moves.find((m) => m.from === POT)!
+    expect(s().undoMove(g, r.id, win.id)[0]).toMatch(/Không hoàn tác được/)
+  })
+})
