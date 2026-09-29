@@ -329,3 +329,25 @@ describe('appStore — bầu host', () => {
     expect(session().hostVotes).toEqual({})
   })
 })
+
+describe('appStore — Lô tô', () => {
+  it('đặt giá → mua tờ vào Pot → Chốt → host trao pot → kết thúc ván → ván mới giữ giá', () => {
+    const g = s().addGame('loto')
+    expect(s().setLotoPrice(g, 3)).toEqual([])
+    expect(s().quickOpen(g)).toEqual([])
+    const open = () => openRound(session(), g)!
+    expect([open().bet, open().phase, open().moves]).toEqual([3, 'betting', []])
+    // An mua 2 tờ, Bình 1 tờ
+    expect(s().addMove(g, a, POT, 6, '2 tờ')).toEqual([])
+    expect(s().addMove(g, b, POT, 3, '1 tờ')).toEqual([])
+    expect(s().setLotoPrice(g, 4)).toEqual(['Ván này đã có người mua tờ — đổi giá ở ván sau.'])
+    expect(s().addMove(g, POT, c, 9, '')).toEqual(['Đang mua tờ — bấm Chốt rồi host mới trao pot.'])
+    s().lockBets(g)
+    expect(s().addMove(g, c, POT, 3, '')).toEqual(['Đã chốt — không mua thêm tờ được nữa.'])
+    expect(s().addMove(g, POT, c, 9, 'Ăn pot')).toEqual([])
+    expect(s().closeRound(g)).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: -6, [b]: -3, [c]: 9 })
+    s().quickOpen(g)
+    expect(open().bet).toBe(3)
+  })
+})

@@ -6,4 +6,5 @@ export const xidach: GameModule = {
   minPlayers: 2,
   maxPlayers: MAX_PLAYERS,
   stakeMode: 'dealer',
+  phases: true,
 }

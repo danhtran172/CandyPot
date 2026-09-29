@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Option, Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
 
-const VERB = { pay: 'Đưa', request: 'Đòi', bet: 'Đặt' } as const
+const VERB = { pay: 'Đưa', request: 'Đòi', bet: 'Đặt', buy: 'Mua' } as const
 
 /** Popup chọn số kẹo sau khi kéo hũ kẹo: các mức gợi ý (chỉ ghi số) + số khác. */
 export function AmountSheet({
@@ -10,18 +10,24 @@ export function AmountSheet({
   to,
   options,
   mode = 'pay',
+  unit,
   onPick,
   onClose,
 }: {
   from: Player
   to: Player
-  /** pay = trả ngay; request = đòi kẹo, chờ người kia bấm OK; bet = đặt cược (Xì dách). */
-  mode?: 'pay' | 'request' | 'bet'
+  /** pay = trả ngay; request = đòi kẹo, chờ người kia bấm OK; bet = đặt cược (Xì dách); buy = mua tờ (Lô tô). */
+  mode?: 'pay' | 'request' | 'bet' | 'buy'
+  /** Chọn theo đơn vị (vd "tờ" giá 5 kẹo): nút ghi số tờ, số kẹo = số tờ × giá. */
+  unit?: { name: string; price: number }
   options: { amount: number; label: string }[]
   onPick: (option: Option) => void
   onClose: () => void
 }) {
-  const [custom, setCustom] = useState(options[0]?.amount ?? 1)
+  const per = unit?.price ?? 1
+  const [custom, setCustom] = useState(unit ? 1 : (options[0]?.amount ?? 1))
+  const pickCustom = () =>
+    onPick(unit ? { amount: custom * per, label: `${custom} ${unit.name}` } : { amount: custom, label: 'Tự nhập' })
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -34,7 +40,16 @@ export function AmountSheet({
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70 backdrop-blur-sm" onClick={onClose} />
       <div className="pop relative w-full max-w-lg rounded-t-[2rem] border-t border-line bg-plum px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
-        {mode === 'bet' ? (
+        {mode === 'buy' && unit ? (
+          <div className="text-center">
+            <div className="font-display text-xl font-bold">
+              <Who player={from} className="text-sky" /> mua mấy {unit.name}?
+            </div>
+            <div className="text-xs text-muted">
+              Giá <span className="font-semibold text-lemon">{unit.price} kẹo</span> / {unit.name} — app tự tính số kẹo bỏ vào Pot.
+            </div>
+          </div>
+        ) : mode === 'bet' ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
               <Who player={from} className="text-sky" /> đặt cược
@@ -61,19 +76,37 @@ export function AmountSheet({
             <button
               key={o.amount}
               type="button"
-              aria-label={`${VERB[mode]} ${o.amount} kẹo`}
+              aria-label={unit ? `${VERB[mode]} ${o.amount / per} ${unit.name} (${o.amount} kẹo)` : `${VERB[mode]} ${o.amount} kẹo`}
               onClick={() => onPick(o)}
               className="grid min-h-24 place-items-center rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
             >
-              <span className={`candy num px-2 ${options.length > 3 ? 'text-2xl' : 'text-3xl'}`}>{o.amount}</span>
+              {unit ? (
+                <span className="flex flex-col items-center gap-1">
+                  <span className="font-display text-2xl font-extrabold">
+                    {o.amount / per} <span className="text-base font-bold text-muted">{unit.name}</span>
+                  </span>
+                  <span className="candy num text-sm">{o.amount}</span>
+                </span>
+              ) : (
+                <span className={`candy num px-2 ${options.length > 3 ? 'text-2xl' : 'text-3xl'}`}>{o.amount}</span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="mt-3 flex items-center gap-2 rounded-3xl border border-line/60 bg-night/30 p-2 pl-4">
-          <span className="flex-1 text-sm font-semibold text-muted">Số khác</span>
-          <Stepper value={custom} min={1} onChange={setCustom} label="số kẹo khác" />
-          <Button variant="primary" disabled={custom <= 0} onClick={() => onPick({ amount: custom, label: 'Tự nhập' })}>
+          <span className="flex-1 text-sm font-semibold text-muted">
+            {unit ? (
+              <>
+                Số {unit.name} khác
+                <span className="block text-xs font-normal">= {custom * per} kẹo</span>
+              </>
+            ) : (
+              'Số khác'
+            )}
+          </span>
+          <Stepper value={custom} min={1} onChange={setCustom} label={unit ? `số ${unit.name}` : 'số kẹo khác'} />
+          <Button variant="primary" disabled={custom <= 0} onClick={pickCustom}>
             {VERB[mode]}
           </Button>
         </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ORDER, GAMES } from '../../core/games'
+import { lotoPrice } from '../../core/games/loto'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
@@ -10,6 +11,7 @@ import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
+import { PriceSheet } from '../components/PriceSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
@@ -27,6 +29,7 @@ export function Table() {
   const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
   const [showLog, setShowLog] = useState(false)
   const [editBets, setEditBets] = useState(false)
+  const [editPrice, setEditPrice] = useState(false)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -61,7 +64,7 @@ export function Table() {
    */
   const openNext = () => {
     if (!game) return false
-    if (!hasPrev && game.type !== 'xidach') {
+    if (!hasPrev && game.type !== 'xidach' && game.type !== 'loto') {
       navigate(`${base}/g/${game.id}/open`)
       return false
     }
@@ -73,8 +76,39 @@ export function Table() {
     return true
   }
 
+  const isLoto = game?.type === 'loto'
+  const hostName = players[session.hostId ?? '']?.name ?? '?'
+
+  /** Lô tô: host kéo Pot vào người thắng → xác nhận → trao cả pot và kết thúc ván. */
+  const awardPot = async (to: ID) => {
+    if (!game || !round) return flash('Chưa có ván nào.', true)
+    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới trao pot được.`, true)
+    if (round.phase !== 'playing') return flash('Bấm Chốt trước rồi mới trao pot.', true)
+    const pot = potOf(round)
+    if (!pot) return flash('Pot đang trống.', true)
+    const name = players[to]?.name
+    const ok = await ask(`${name} thắng?`, {
+      icon: '💰',
+      message: `Trao cả pot ${pot} kẹo cho ${name} và kết thúc ván.`,
+      okLabel: 'Trao pot',
+    })
+    if (!ok) return
+    const errors = actions().addMove(game.id, POT, to, pot, 'Ăn pot')
+    if (errors.length) return flash(errors[0], true)
+    flyCandy(POT, to, pot)
+    const closing = actions().closeRound(game.id)
+    if (closing.length) flash(closing[0], true)
+    else flash(`${name} ăn ${pot} kẹo! Bấm Ván mới để chơi tiếp.`)
+  }
+
   const onTransfer = (from: ID, to: ID) => {
     if (!game) return
+    if (isLoto && (to === POT || from === POT)) {
+      if (from === POT) return void awardPot(to)
+      if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
+      if (!round && !openNext()) return
+      return setPending({ from, to })
+    }
     if (from === DEALER) {
       const errors = actions().setDealer(game.id, to)
       if (errors.length) flash(errors[0], true)
@@ -121,12 +155,19 @@ export function Table() {
     setEditBets(true)
   }
 
-  /** Xì dách: khóa cược để chia bài và trả kẹo. */
+  /** Lô tô: host bấm ô Price để đặt giá mỗi tờ. */
+  const openPrice = () => {
+    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới đổi giá được.`, true)
+    setEditPrice(true)
+  }
+
+  /** Xì dách / Lô tô: khóa cược (mua tờ) để chơi và trả kẹo. */
   const lockBets = () => {
     if (!game) return
+    if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — kéo mình vào 💰 Pot để mua.', true)
     const errors = actions().lockBets(game.id)
     if (errors.length) flash(errors[0], true)
-    else flash('Đã chốt cược — chia bài rồi kéo để trả kẹo.')
+    else flash(isLoto ? `Đã chốt — ${hostName} kéo 💰 Pot cho người thắng.` : 'Đã chốt cược — chia bài rồi kéo để trả kẹo.')
   }
 
   /** Xì dách: host nhấn giữ ô Bet để bỏ chốt cược. */
@@ -218,7 +259,15 @@ export function Table() {
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
                 Ván {roundNumber(game, round)}{' '}
-                {round.phase === 'betting' ? 'đang đặt cược' : round.phase === 'playing' ? 'đã chốt cược' : 'đang chơi'}
+                {game.type === 'loto'
+                  ? round.phase === 'betting'
+                    ? 'đang mua tờ'
+                    : 'đã chốt — host trao pot'
+                  : round.phase === 'betting'
+                    ? 'đang đặt cược'
+                    : round.phase === 'playing'
+                      ? 'đã chốt cược'
+                      : 'đang chơi'}
                 {game.type === 'tienlen' && (
                   <span className="text-muted">
                     {' '}
@@ -236,13 +285,14 @@ export function Table() {
 
           <Board
             seats={seats}
-            pot={round && game.type === 'poker' ? potOf(round) : undefined}
+            pot={game.type === 'loto' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
+            potAfterCenter={game.type === 'loto'}
             betBox={game.type === 'xidach'}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
-            center={<TableCenter game={game} round={round} onEditBets={openBets} />}
+            center={<TableCenter game={game} round={round} onEditBets={openBets} onEditPrice={openPrice} />}
             corner={
               <button
                 type="button"
@@ -271,7 +321,28 @@ export function Table() {
 
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {GAMES[game.type].soon ? null : game.type === 'xidach' ? (
+            {GAMES[game.type].soon ? null : game.type === 'loto' ? (
+              round ? (
+                <>
+                  <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                    Hủy ván
+                  </Button>
+                  {round.phase === 'betting' ? (
+                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
+                      Chốt
+                    </Button>
+                  ) : (
+                    <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 text-center text-sm font-semibold text-lemon">
+                      {me === session.hostId ? 'Kéo 💰 Pot vào người thắng' : `Chờ ${hostName} trao pot`}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
+                  Ván mới
+                </Button>
+              )
+            ) : game.type === 'xidach' ? (
               <>
                 {!round && (
                   <Button
@@ -327,6 +398,21 @@ export function Table() {
         </div>
       )}
 
+      {editPrice && game && (
+        <PriceSheet
+          title="Price · Lô tô"
+          hint="Giá mỗi tờ — mua N tờ thì bỏ N × giá kẹo vào Pot."
+          unit="kẹo / tờ"
+          initial={lotoPrice(game)}
+          onSave={(v) => {
+            const errors = actions().setLotoPrice(game.id, v)
+            if (!errors.length) flash(`Giá mỗi tờ: ${v} kẹo.`)
+            return errors
+          }}
+          onClose={() => setEditPrice(false)}
+        />
+      )}
+
       {editBets && game && (
         <TienlenBetSheet
           game={game}
@@ -344,11 +430,14 @@ export function Table() {
           from={players[pending.from]}
           to={players[pending.to]}
           options={
-            pending.to === BET
-              ? scaledOptions(round?.stakes[pending.from] ?? round?.bet ?? 1)
-              : suggestOptions({ game, round: round ?? null, from: pending.from, to: pending.to })
+            isLoto && pending.to === POT
+              ? [1, 2, 3].map((n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
+              : pending.to === BET
+                ? scaledOptions(round?.stakes[pending.from] ?? round?.bet ?? 1)
+                : suggestOptions({ game, round: round ?? null, from: pending.from, to: pending.to })
           }
-          mode={pending.to === BET ? 'bet' : isRequest(pending) ? 'request' : 'pay'}
+          mode={isLoto && pending.to === POT ? 'buy' : pending.to === BET ? 'bet' : isRequest(pending) ? 'request' : 'pay'}
+          unit={isLoto && pending.to === POT ? { name: 'tờ', price: lotoPrice(game) } : undefined}
           onPick={pick}
           onClose={() => setPending(null)}
         />
@@ -378,7 +467,38 @@ function CornerLink({ to, icon, label, count }: { to: string; icon: string; labe
 }
 
 /** Giữa bàn: thông tin riêng của từng game. */
-function TableCenter({ game, round, onEditBets }: { game: Game; round?: Round; onEditBets: () => void }) {
+function TableCenter({
+  game,
+  round,
+  onEditBets,
+  onEditPrice,
+}: {
+  game: Game
+  round?: Round
+  onEditBets: () => void
+  onEditPrice: () => void
+}) {
+  if (game.type === 'loto') {
+    const price = lotoPrice(game)
+    return (
+      <>
+        <span className="text-xs text-muted">{round ? `Ván ${roundNumber(game, round)}` : 'Chưa mở ván'}</span>
+        <button
+          type="button"
+          onClick={onEditPrice}
+          aria-label={`Price: ${price} kẹo mỗi tờ — host bấm để đổi`}
+          className="flex flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-4 py-1.5 transition active:scale-95"
+        >
+          <span className="font-display text-xl leading-none font-bold text-sky">Price</span>
+          <span className="mt-1 flex items-center gap-1">
+            <span className="candy num text-base">{price}</span>
+            <span className="text-xs text-muted">/ tờ</span>
+          </span>
+          <span className="mt-0.5 text-[10px] text-muted">host bấm để đổi</span>
+        </button>
+      </>
+    )
+  }
   if (game.type === 'tienlen') {
     const { bet, bet2 } = round ?? tienlenBets(game)
     return (

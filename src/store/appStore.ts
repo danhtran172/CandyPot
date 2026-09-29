@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
+import { lotoPrice } from '../core/games/loto'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
@@ -32,10 +33,12 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const fromPrev = prev?.participants.filter((id) => active.includes(id))
   const participants = (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
   const tl = game.type === 'tienlen' ? tienlenBets(game) : undefined
-  const bet = tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
+  const price = game.type === 'loto' ? lotoPrice(game) : undefined
+  const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
-  const stakes = Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
+  // Lô tô: không bỏ kẹo vào pot lúc mở ván — mua tờ bằng cách kéo vào Pot
+  const stakes = game.type === 'loto' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
   return { participants, bet, bet2, stakes, dealer }
 }
 
@@ -64,6 +67,8 @@ export interface AppState {
   setDealer(gameId: ID, playerId: ID): string[]
   /** Xì dách: chốt cược để chia bài và trả kẹo. */
   lockBets(gameId: ID): string[]
+  /** Lô tô: host đặt giá mỗi tờ (ván đang mở chưa ai mua + mặc định cho ván sau). */
+  setLotoPrice(gameId: ID, price: number): string[]
   /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
   setTienlenBets(gameId: ID, bet: number, bet2: number): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
@@ -294,7 +299,7 @@ export function createAppStore(repo: SessionRepo) {
           bet2: mode === 'common' ? draft.bet2 : undefined,
           stakes,
           dealer: mode === 'dealer' ? draft.dealer : null,
-          phase: mode === 'dealer' ? 'betting' : undefined,
+          phase: GAMES[g.type].phases ? 'betting' : undefined,
           moves:
             mode === 'pot'
               ? Object.entries(stakes)
@@ -322,6 +327,20 @@ export function createAppStore(repo: SessionRepo) {
           ...x,
           bets: { bet, bet2 },
           rounds: x.rounds.map((r) => (r.id === open?.id ? { ...r, bet, bet2 } : r)),
+        }))
+        return []
+      },
+
+      setLotoPrice(gameId, price) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (!Number.isInteger(price) || price <= 0) return ['Giá mỗi tờ phải là số nguyên lớn hơn 0.']
+        const open = findOpenIn(g)
+        if (open?.moves.length) return ['Ván này đã có người mua tờ — đổi giá ở ván sau.']
+        mapGame(gameId, (x) => ({
+          ...x,
+          price,
+          rounds: x.rounds.map((r) => (r.id === open?.id ? { ...r, bet: price } : r)),
         }))
         return []
       },
@@ -379,7 +398,10 @@ export function createAppStore(repo: SessionRepo) {
         if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
         const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
         const open = findOpenIn(g)
-        if (open?.phase === 'betting') return ['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.']
+        if (g.type === 'loto' && open) {
+          if (open.phase === 'betting' && to !== POT) return ['Đang mua tờ — bấm Chốt rồi host mới trao pot.']
+          if (open.phase === 'playing' && to === POT) return ['Đã chốt — không mua thêm tờ được nữa.']
+        } else if (open?.phase === 'betting') return ['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.']
         if (open) {
           const inRound = (id: ID) => id === POT || open.participants.includes(id)
           if (!inRound(from) || !inRound(to)) return ['Chỉ kéo kẹo giữa những người trong ván.']

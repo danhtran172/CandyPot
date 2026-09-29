@@ -79,6 +79,8 @@ export interface Game {
   rounds: Round[]
   /** Tiến lên: mức cược Nhất/Nhì host đặt ở ô Bet — gợi ý khi kéo kẹo, mặc định cho ván sau. */
   bets?: { bet: number; bet2: number }
+  /** Lô tô: giá mỗi tờ host đặt ở ô Price. */
+  price?: number
 }
 
 /** Đòi kẹo: `to` đòi `from` trả `amount` kẹo, chờ `from` bấm OK. */
@@ -133,4 +135,6 @@ export interface GameModule {
   stakeMode: 'common' | 'dealer' | 'pot'
   /** Chưa có luật riêng (sắp có): không mở ván, chỉ kéo kẹo chuyển tay. */
   soon?: boolean
+  /** Ván có 2 bước: đặt cược/mua vé (betting) → Chốt → trả kẹo (playing). */
+  phases?: boolean
 }

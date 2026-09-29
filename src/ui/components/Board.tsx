@@ -57,6 +57,7 @@ export function Board({
   corner,
   cornerRight,
   pot,
+  potAfterCenter,
   betBox,
   betLocked,
   onBetHold,
@@ -75,6 +76,8 @@ export function Board({
   cornerRight?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
+  /** Đặt ô Pot bên dưới nội dung giữa bàn (Lô tô: Price ở trên, Pot ở dưới). */
+  potAfterCenter?: boolean
   /** Hiện ô Bet giữa bàn (Xì dách): thả vào để đặt cược. Không giữ kẹo, không cộng tổng. */
   betBox?: boolean
   /** Đã chốt cược: ô Bet chỉ hiển thị, không nhận đặt cược nữa. */
@@ -164,6 +167,20 @@ export function Board({
   const size = sizeFor(n)
   const square = shape === 'square'
 
+  const potBox = pot !== undefined && (
+    <div
+      data-drop={POT}
+      onPointerDown={start(POT)}
+      className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
+    >
+      <span aria-hidden className="text-3xl leading-none">
+        💰
+      </span>
+      <span className="candy num mt-1 text-lg">{pot}</span>
+      <span className="text-[11px] text-muted">Pot</span>
+    </div>
+  )
+
   return (
     <>
       <div className="relative -mx-3" style={{ height: HEIGHT }}>
@@ -185,19 +202,7 @@ export function Board({
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             }`}
           >
-            {pot !== undefined && (
-              <div
-                data-drop={POT}
-                onPointerDown={start(POT)}
-                className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
-              >
-                <span aria-hidden className="text-3xl leading-none">
-                  💰
-                </span>
-                <span className="candy num mt-1 text-lg">{pot}</span>
-                <span className="text-[11px] text-muted">Pot</span>
-              </div>
-            )}
+            {!potAfterCenter && potBox}
             {betBox && (
               <div
                 data-drop={BET}
@@ -229,6 +234,7 @@ export function Board({
               </button>
             )}
             {center}
+            {potAfterCenter && potBox}
           </div>
 
           {ordered.map((s, i) => {
