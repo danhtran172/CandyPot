@@ -30,7 +30,7 @@ export function HostTasks() {
 
   return (
     <main>
-      <TopBar title="🛎️ Host" />
+      <TopBar title="🛎️ Host" back={`/s/${session.id}`} />
       <p className="mb-4 flex items-center gap-1.5 text-sm text-muted">
         Host: <Who player={host} className="font-semibold text-cream" />
         {isHost && <span className="rounded-full bg-lemon px-2 text-xs font-bold text-night">bạn</span>}

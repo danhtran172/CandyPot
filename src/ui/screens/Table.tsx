@@ -16,6 +16,7 @@ import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { useMe } from '../me'
+import { hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
   const session = useSession()
@@ -273,6 +274,12 @@ export function Table() {
                 )}
               </button>
             }
+            cornerRight={
+              <>
+                <CornerLink to={`${base}/host`} icon="🛎️" label="Host" count={hostTasks(session, me).length} />
+                <CornerLink to={`${base}/requests`} icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
+              </>
+            }
             onTransfer={onTransfer}
           />
 
@@ -364,6 +371,26 @@ export function Table() {
         />
       )}
     </main>
+  )
+}
+
+/** Nút nhỏ ở góc bàn (Host / Yêu cầu) với số việc đang chờ mình. */
+function CornerLink({ to, icon, label, count }: { to: string; icon: string; label: string; count: number }) {
+  return (
+    <Link
+      to={to}
+      className={`relative flex items-center gap-1 rounded-2xl border bg-night/70 px-2.5 py-1.5 text-xs font-semibold ${
+        count ? 'border-berry/70' : 'border-line/60'
+      }`}
+    >
+      <span aria-hidden>{icon}</span>
+      {label}
+      {count > 0 && (
+        <span className="num absolute -top-2 -right-1.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-berry px-1 text-[10px] font-bold text-night">
+          {count}
+        </span>
+      )}
+    </Link>
   )
 }
 

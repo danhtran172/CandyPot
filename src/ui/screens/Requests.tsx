@@ -25,7 +25,7 @@ export function Requests() {
 
   return (
     <main>
-      <TopBar title="📨 Yêu cầu" />
+      <TopBar title="📨 Yêu cầu" back={`/s/${session.id}`} />
 
       <SectionTitle
         aside={

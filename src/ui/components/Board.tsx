@@ -55,6 +55,7 @@ export function Board({
   seats,
   center,
   corner,
+  cornerRight,
   pot,
   betBox,
   betLocked,
@@ -70,6 +71,8 @@ export function Board({
   center?: ReactNode
   /** Nút ở góc dưới bên trái bàn. */
   corner?: ReactNode
+  /** Nút ở góc dưới bên phải bàn. */
+  cornerRight?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   /** Hiện ô Bet giữa bàn (Xì dách): thả vào để đặt cược. Không giữ kẹo, không cộng tổng. */
@@ -287,6 +290,7 @@ export function Board({
         </div>
 
         {corner && <div className="absolute bottom-1 left-3 z-10">{corner}</div>}
+        {cornerRight && <div className="absolute right-3 bottom-1 z-10 flex gap-1.5">{cornerRight}</div>}
       </div>
 
       {drag?.moved && (
