@@ -24,7 +24,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Tiến lên 2 mức cược:** Nhất / Nhì (vd 4/2). Gợi ý: Nhì, Nhất, Nhất × 1,5, Nhất × 2.
 - **Ô Bet (Xì dách):** giữa bàn có ô Bet chỉ để *đặt cược* (không giữ kẹo): người con kéo vào → popup cược × 1 / 1,5 / 2 hoặc số khác → ghi đè cược của ván đang mở; nhà cái không đặt được. Cược hiện trước mỗi người dạng [1 icon kẹo ngẫu nhiên] × N. Ô Bet luôn hiện trong tab Xì dách (kể cả khi chưa mở ván — chip cược ván trước hiện mờ); kéo vào khi chưa có ván thì tự mở ván với người chơi/cái/cược của ván trước (ván đầu: mọi người đang chơi, người đầu làm cái, cược 5). Đổi cái: kéo mũ 🎩 giữa bàn thả vào người khác (cược của người mới làm cái chuyển cho cái cũ).
 - **Mở ván nhanh:** "+ Mở ván" mở luôn với cài đặt của ván trước (Xì dách mở luôn cả ván đầu); "⚙ Tùy chỉnh" để vào màn Mở ván.
-- **Đống kẹo:** lời/lỗ (cả buổi + ván đang mở) của mỗi người vẽ thành đống icon trên mặt bàn trước chỗ ngồi. 1 icon = 1 "đơn vị cược" theo ván gần nhất của game đang chọn (Tiến lên = cược Nhì; Xì dách = trung bình cược của con; Poker = trung bình kẹo bỏ vào lúc mở ván). Làm tròn, ít nhất 1 icon nếu ≠ 0, tối đa 15 (xếp tam giác 5-4-3-2-1, quá thì có dấu +). Icon kẹo chọn ngẫu nhiên ổn định theo người; âm thì dùng icon 💩. Đống kẹo của mình hiện cố định ở góc dưới bên trái bàn; của người khác hiện trong popup khi bấm (không kéo) vào avatar — bấm không còn dùng để chuyển kẹo, chỉ kéo thả.
+- **Bỏ đống kẹo** (hiển thị lời/lỗ bằng icon), bỏ hàng nút "Cái ăn/đền cả bàn" và dòng hướng dẫn dưới bàn; bàn to hơn, nút Hủy/Chốt nhỏ lại.
 
 ## 1. Mục tiêu
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { BET, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
-import { candyFor } from './CandyPile'
+import { candyFor } from '../candyIcons'
 
 export interface Seat {
   player: Player
@@ -48,23 +48,18 @@ function sizeFor(n: number) {
 /**
  * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
  * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo.
- * Bấm (không kéo) vào một người thì gọi onTap (xem đống kẹo của họ).
  */
 export function Board({
   seats,
   center,
-  corner,
   pot,
   betBox,
   hat,
   onTransfer,
-  onTap,
 }: {
   seats: Seat[]
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
-  /** Nội dung góc dưới bên trái (đống kẹo của mình). */
-  corner?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   /** Ô Bet giữa bàn (Xì dách): thả vào để đặt cược; giá trị = tổng cược đang đặt. */
@@ -72,7 +67,6 @@ export function Board({
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   onTransfer: (from: ID, to: ID) => void
-  onTap?: (id: ID) => void
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [hover, setHover] = useState<ID | null>(null)
@@ -105,7 +99,6 @@ export function Board({
         if (to && to !== d.from) onTransfer(d.from, to)
         return
       }
-      onTap?.(d.from)
     }
 
     window.addEventListener('pointermove', move)
@@ -116,7 +109,7 @@ export function Board({
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [dragging, onTransfer, onTap])
+  }, [dragging, onTransfer])
 
   const start = (id: ID) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
@@ -139,7 +132,7 @@ export function Board({
 
   return (
     <>
-      <div className="relative mx-auto w-full" style={{ height: 'clamp(380px, calc(100dvh - 340px), 540px)' }}>
+      <div className="relative -mx-3" style={{ height: 'clamp(420px, calc(100dvh - 270px), 640px)' }}>
         {/* Mặt bàn */}
         <div className="absolute inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] border-2 border-line bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)] shadow-[inset_0_0_40px_rgb(0_0_0/0.45)]" />
         <div className="absolute inset-x-[22%] top-[23%] bottom-[29%] flex flex-col items-center justify-center gap-1 text-center">
@@ -183,8 +176,6 @@ export function Board({
           )}
           {center}
         </div>
-
-        {corner && <div className="absolute bottom-3 left-0">{corner}</div>}
 
         {ordered.map((s, i) => {
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n

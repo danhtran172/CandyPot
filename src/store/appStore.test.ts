@@ -95,12 +95,12 @@ describe('appStore — ván Tiến lên', () => {
 })
 
 describe('appStore — Xì dách', () => {
-  it('cái ăn / đền cả bàn theo cược từng con, gắn tag làm cái', () => {
+  it('chốt ván Xì dách gắn tag làm cái', () => {
     const g = s().addGame('xidach')
-    expect(s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })).toEqual([])
-    s().dealerAll(g, 'eat', 2)
+    s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })
+    s().addMove(g, b, a, 10, '')
     s().closeRound(g)
-    expect(netOf(session())).toEqual({ [a]: 30, [b]: -10, [c]: -20 })
+    expect(netOf(session())).toEqual({ [a]: 10, [b]: -10, [c]: 0 })
     expect(session().games[0].rounds[0].tags).toEqual([{ type: 'lam-cai', playerId: a }])
   })
 

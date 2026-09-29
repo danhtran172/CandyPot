@@ -68,8 +68,6 @@ export interface AppState {
   cancelRequest(requestId: ID): void
   /** Xì dách: người con đặt cược (ghi đè mức cược của ván đang mở). */
   setStake(gameId: ID, playerId: ID, amount: number): string[]
-  /** Xì dách: cái ăn (eat) hoặc đền (pay) cả bàn theo hệ số. */
-  dealerAll(gameId: ID, mode: 'eat' | 'pay', multiplier: number): void
   closeRound(gameId: ID): string[]
   reopenRound(gameId: ID, roundId: ID): string[]
   deleteRound(gameId: ID, roundId: ID): void
@@ -323,21 +321,6 @@ export function createAppStore(repo: SessionRepo) {
 
       removeMove(gameId, roundId, moveId) {
         mapRound(gameId, roundId, (r) => ({ ...r, moves: r.moves.filter((m) => m.id !== moveId) }))
-      },
-
-      dealerAll(gameId, mode, multiplier) {
-        const open = openOf(gameId)
-        if (!open?.dealer) return
-        const dealer = open.dealer
-        const label = `${mode === 'eat' ? 'Cái ăn cả bàn' : 'Cái đền cả bàn'} ×${multiplier}`
-        const moves = Object.entries(open.stakes).map(([con, stake]) => ({
-          id: newId(),
-          from: mode === 'eat' ? con : dealer,
-          to: mode === 'eat' ? dealer : con,
-          amount: stake * multiplier,
-          label,
-        }))
-        mapRound(gameId, open.id, (r) => ({ ...r, moves: [...r.moves, ...moves] }))
       },
 
       closeRound(gameId) {

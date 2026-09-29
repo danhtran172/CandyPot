@@ -1,20 +1,17 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
-import { pileUnit } from '../../core/pile'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
 import { suggestOptions } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
-import { CandyPile } from '../components/CandyPile'
-import { PileSheet } from '../components/PileSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { useSession } from '../components/useSession'
-import { playCount, playerMap, roundNumber, signed, toneOf } from '../format'
+import { playCount, playerMap, roundNumber } from '../format'
 import { useMe } from '../me'
 
 export function Table() {
@@ -22,7 +19,6 @@ export function Table() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
-  const [peek, setPeek] = useState<ID | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -79,7 +75,6 @@ export function Table() {
     }
     setPending({ from, to })
   }
-  const onTap = useCallback((id: ID) => (id !== me && id !== POT ? setPeek(id) : undefined), [me])
 
   /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
   const isRequest = (p: { from: ID; to: ID }) => p.to === me && p.from !== me && p.from !== POT
@@ -101,10 +96,6 @@ export function Table() {
     }
     setPending(null)
   }
-
-  const unit = pileUnit(game)
-  /** Kẹo của một người: cả buổi + ván đang mở. */
-  const pileOf = (id: ID) => (net[id] ?? 0) + (roundDelta[id] ?? 0)
 
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
 
@@ -136,7 +127,7 @@ export function Table() {
   }))
 
   return (
-    <main className="pb-40">
+    <main className="pb-28">
       <TopBar
         title={session.name}
         back="/"
@@ -217,8 +208,6 @@ export function Table() {
 
           <Board
             seats={seats}
-            corner={me && <MyPile amount={pileOf(me)} unit={unit} seed={me} />}
-            onTap={onTap}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             betBox={
               game.type === 'xidach' ? Object.values((round ?? lastPlay)?.stakes ?? {}).reduce((a, b) => a + b, 0) : undefined
@@ -228,27 +217,7 @@ export function Table() {
             onTransfer={onTransfer}
           />
 
-          <p className="text-center text-xs text-muted">
-            {round
-              ? 'Kéo từ chỗ bạn sang người khác để trả, kéo người khác về chỗ bạn để đòi. Bấm vào ai để xem kẹo của họ.'
-              : 'Chưa mở ván: kéo từ người này sang người khác sẽ được ghi là chuyển tay. Bấm vào ai để xem kẹo của họ.'}
-          </p>
 
-          {round && game.type === 'xidach' && (
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs">
-              <span className="font-semibold text-muted">🎩 Cả bàn:</span>
-              {([1, 2] as const).map((m) => (
-                <Chip key={`eat${m}`} tone="mint" className="px-2.5 py-1 text-xs" onClick={() => actions().dealerAll(game.id, 'eat', m)}>
-                  Cái ăn ×{m}
-                </Chip>
-              ))}
-              {([1, 2] as const).map((m) => (
-                <Chip key={`pay${m}`} tone="berry" className="px-2.5 py-1 text-xs" onClick={() => actions().dealerAll(game.id, 'pay', m)}>
-                  Cái đền ×{m}
-                </Chip>
-              ))}
-            </div>
-          )}
 
           {asking.length > 0 && (
             <Card className="mt-3 p-3">
@@ -300,21 +269,21 @@ export function Table() {
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
             {round ? (
               <>
-                <Button variant="danger" className="bg-night/90" onClick={cancelRound}>
+                <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                   Hủy ván
                 </Button>
-                <Button variant="primary" className="font-display flex-1 py-3.5 text-xl" onClick={closeRound}>
+                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={closeRound}>
                   Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
                 </Button>
               </>
             ) : (
               <>
                 {(hasPrev || game.type === 'xidach') && (
-                  <Button className="bg-night/90 px-3 text-sm" onClick={() => navigate(`${base}/g/${game.id}/open`)}>
+                  <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/g/${game.id}/open`)}>
                     ⚙ Tùy chỉnh
                   </Button>
                 )}
-                <Button variant="primary" className="font-display flex-1 py-3.5 text-xl" onClick={openNext}>
+                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                   + Mở ván
                 </Button>
               </>
@@ -332,16 +301,6 @@ export function Table() {
         >
           {toast.text}
         </div>
-      )}
-
-      {peek && players[peek] && (
-        <PileSheet
-          player={players[peek]}
-          amount={pileOf(peek)}
-          round={round ? (roundDelta[peek] ?? 0) : undefined}
-          unit={unit}
-          onClose={() => setPeek(null)}
-        />
       )}
 
       {pending && game && (
@@ -406,14 +365,3 @@ function TableCenter({ game, round }: { game: Game; round?: Round }) {
   return <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
 }
 
-/** Đống kẹo của chính mình, luôn hiện ở góc trái bàn. */
-function MyPile({ amount, unit, seed }: { amount: number; unit: number; seed: string }) {
-  return (
-    <div className="flex flex-col items-start gap-1 rounded-2xl border border-line/60 bg-night/50 px-2.5 py-2">
-      <CandyPile amount={amount} unit={unit} seed={seed} size={18} />
-      <span className="text-[11px] leading-tight text-muted">
-        Kẹo của bạn <b className={`num ${toneOf(amount)}`}>{signed(amount)}</b>
-      </span>
-    </div>
-  )
-}
