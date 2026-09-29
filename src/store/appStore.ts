@@ -507,7 +507,9 @@ export function createAppStore(repo: SessionRepo) {
         const open = openOf(gameId)
         if (!open) return ['Chưa có ván nào đang mở.']
         if (open.phase !== 'playing') return []
-        if (open.moves.length) return ['Ván đã có lượt trả kẹo — hoàn tác hết rồi mới bỏ chốt được.']
+        // Tự do: cược nằm trong pot nên chỉ chặn khi đã trao pot; Xì dách: chặn khi đã có lượt trả kẹo
+        const paid = game(gameId)?.type === 'free' ? open.moves.some((m) => m.from === POT) : open.moves.length > 0
+        if (paid) return ['Ván đã có lượt trả kẹo — hoàn tác hết rồi mới bỏ chốt được.']
         mapRound(gameId, open.id, (r) => ({ ...r, phase: 'betting' }))
         return []
       },
@@ -525,7 +527,10 @@ export function createAppStore(repo: SessionRepo) {
         const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
         const open = findOpenIn(g)
         if (open?.poker && (from === POT || to === POT)) return ['Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.']
-        if (g.type === 'loto' && open) {
+        if (g.type === 'free' && open) {
+          if (open.phase === 'betting' && from === POT) return ['Chưa chốt cược — bấm Chốt cược rồi mới trao pot.']
+          if (open.phase === 'playing' && to === POT) return ['Đã chốt cược — không cược thêm được nữa.']
+        } else if (g.type === 'loto' && open) {
           if (open.phase === 'betting' && to !== POT) return ['Đang mua tờ — bấm Chốt rồi host mới trao pot.']
           if (open.phase === 'playing' && to === POT) return ['Đã chốt — không mua thêm tờ được nữa.']
           if (to === POT) {

@@ -48,7 +48,8 @@ const PLAYER_GAME: Record<GameType, GuideStep[]> = {
   ],
   free: [
     { target: 'pot', title: 'Cược', text: 'Bấm Pot để cược — số kẹo mỗi người đã cược hiện trước chỗ ngồi.' },
-    { target: 'pot', title: 'Trao thưởng', text: 'Kéo Pot vào người thắng (hoặc bấm Pot → Trao pot). Pot hết là xong ván.' },
+    { target: 'actions', title: 'Chốt cược', text: 'Cược xong thì bấm Chốt cược — sau đó không cược thêm được (host bấm Bỏ chốt nếu cần).' },
+    { target: 'pot', title: 'Trao thưởng', text: 'Đã chốt thì kéo Pot vào người thắng (hoặc bấm Pot → chọn người). Pot hết là xong ván.' },
   ],
 }
 

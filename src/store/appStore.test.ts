@@ -387,13 +387,19 @@ describe('appStore — Lô tô', () => {
 })
 
 describe('appStore — Tự do', () => {
-  it('cược vào Pot, gửi cho nhau, trao pot → hết pot thì chốt được', () => {
+  it('cược vào Pot, gửi cho nhau, chốt cược, trao pot → hết pot thì chốt được', () => {
     const g = s().addGame('free')
     expect(s().quickOpen(g)).toEqual([])
-    expect(openRound(session(), g)!.moves).toEqual([])
+    expect(openRound(session(), g)!.phase).toBe('betting')
     s().addMove(g, a, POT, 3, '')
     s().addMove(g, b, POT, 5, '')
     s().addMove(g, c, a, 2, '')
+    expect(s().addMove(g, POT, b, 8, '')).toEqual(['Chưa chốt cược — bấm Chốt cược rồi mới trao pot.'])
+    s().lockBets(g)
+    expect(s().addMove(g, c, POT, 1, '')).toEqual(['Đã chốt cược — không cược thêm được nữa.'])
+    // Bỏ chốt được khi chưa trao pot, rồi chốt lại
+    expect(s().unlockBets(g)).toEqual([])
+    s().lockBets(g)
     expect(s().closeRound(g)).toEqual(['Pot còn 8 kẹo — kéo pot cho người thắng trước khi chốt.'])
     s().addMove(g, POT, b, 8, 'Cả pot')
     expect(s().closeRound(g)).toEqual([])

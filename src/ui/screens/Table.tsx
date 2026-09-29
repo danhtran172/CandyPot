@@ -204,6 +204,8 @@ export function Table() {
     if (isFree && (to === POT || from === POT)) {
       // Tự do: cược vào Pot (chưa có ván thì tự mở), kéo Pot để trao thưởng
       if (from === POT && (!round || potOf(round) === 0)) return flash('Pot đang trống — bấm 💰 Pot để cược trước.', true)
+      if (from === POT && round?.phase === 'betting') return flash('Chưa chốt cược — bấm Chốt cược rồi mới trao pot.', true)
+      if (to === POT && round?.phase === 'playing') return flash('Đã chốt cược — không cược thêm được nữa.', true)
       if (to === POT && !round && !openNext()) return
       return setPending({ from, to })
     }
@@ -243,6 +245,8 @@ export function Table() {
     if (id === DEALER) return setPicker('dealer')
     if (id === POT) {
       if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
+      // Tự do đã chốt cược: bấm Pot = chọn người thắng để trao
+      if (isFree && round?.phase === 'playing') return setPicker('award')
       if (isLoto && round?.phase === 'playing') {
         if (me !== session.hostId) return flash(`Chờ ${hostName} trao pot cho người thắng.`, true)
         return setPicker('award')
@@ -301,9 +305,17 @@ export function Table() {
   const lockBets = () => {
     if (!game) return
     if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — bấm 💰 Pot để mua.', true)
+    if (isFree && round && potOf(round) === 0) return flash('Chưa ai cược — bấm 💰 Pot để cược.', true)
     const errors = actions().lockBets(game.id)
     if (errors.length) flash(errors[0], true)
-    else flash(isLoto ? `Đã chốt — ${hostName} bấm 💰 Pot để trao cho người thắng.` : 'Đã chốt cược — chia bài rồi bấm vào người để trả kẹo.')
+    else
+      flash(
+        isLoto
+          ? `Đã chốt — ${hostName} bấm 💰 Pot để trao cho người thắng.`
+          : isFree
+            ? 'Đã chốt cược — kéo 💰 Pot vào người thắng.'
+            : 'Đã chốt cược — chia bài rồi bấm vào người để trả kẹo.',
+      )
   }
 
   /** Xì dách: host nhấn giữ ô Bet để bỏ chốt cược. */
@@ -558,12 +570,25 @@ export function Table() {
             {GAMES[game.type].soon ? null : game.type === 'free' ? (
               round ? (
                 <>
-                  <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
-                    Hủy ván
-                  </Button>
-                  <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
-                    Kéo 💰 Pot vào người thắng để trao
-                  </div>
+                  {round.phase === 'betting' ? (
+                    <>
+                      <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                        Hủy ván
+                      </Button>
+                      <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
+                        Chốt cược
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={unlockBets}>
+                        Bỏ chốt
+                      </Button>
+                      <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
+                        Kéo 💰 Pot vào người thắng
+                      </div>
+                    </>
+                  )}
                 </>
               ) : null
             ) : game.type === 'poker' && (hand || !round) ? (
@@ -834,7 +859,7 @@ export function Table() {
               : undefined
           }
           extra={
-            (game.type === 'poker' || isFree) && pending.to === POT && round && potOf(round) > 0 ? (
+            game.type === 'poker' && pending.to === POT && round && potOf(round) > 0 ? (
               <button
                 type="button"
                 onClick={() => {
