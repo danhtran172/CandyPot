@@ -17,12 +17,13 @@ export function PlayerPicker({
   /** Người đang được chọn sẵn (vd nhà cái hiện tại) — tô đậm. */
   current?: ID | null
   onPick?: (id: ID) => void
-  /** Chọn được nhiều người (vd chia pot) — có nút xác nhận. */
+  /** Chọn người thắng: bấm một người là xong; "Hòa?" để chọn nhiều người rồi xác nhận. */
   onPickMany?: (ids: ID[]) => void
   onClose: () => void
 }) {
   const [chosen, setChosen] = useState<ID[]>([])
-  const multi = !!onPickMany
+  const [tie, setTie] = useState(false)
+  const multi = !!onPickMany && tie
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -45,7 +46,9 @@ export function PlayerPicker({
                 onClick={() =>
                   multi
                     ? setChosen((c) => (c.includes(p.id) ? c.filter((x) => x !== p.id) : [...c, p.id]))
-                    : onPick?.(p.id)
+                    : onPickMany
+                      ? onPickMany([p.id])
+                      : onPick?.(p.id)
                 }
                 className={`flex w-full flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 active:scale-95 ${
                   (multi ? chosen.includes(p.id) : p.id === current) ? 'border-lemon bg-lemon/15' : 'border-line bg-night/50'
@@ -59,14 +62,23 @@ export function PlayerPicker({
             </li>
           ))}
         </ul>
+        {onPickMany && !tie && players.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setTie(true)}
+            className="mt-3 w-full rounded-2xl border border-dashed border-line py-2 text-sm font-semibold text-muted"
+          >
+            🤝 Hòa? Chọn nhiều người
+          </button>
+        )}
         {multi && (
           <button
             type="button"
-            disabled={!chosen.length}
+            disabled={chosen.length < 2}
             onClick={() => onPickMany?.(chosen)}
             className="font-display mt-3 w-full rounded-2xl bg-lemon py-2.5 text-lg font-bold text-night shadow-[inset_0_-4px_0_rgb(0_0_0/0.18)] disabled:opacity-40"
           >
-            {chosen.length > 1 ? `Chia đều cho ${chosen.length} người` : chosen.length ? 'Trao pot' : 'Chọn người thắng'}
+            {chosen.length >= 2 ? `Hòa · chia cho ${chosen.length} người` : 'Chọn những người hòa'}
           </button>
         )}
       </div>

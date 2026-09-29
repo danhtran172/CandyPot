@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { POT } from '../types'
-import { act, award, pots, raiseOptions, startHand, toCall, undoLast, type HandState, type PokerAction } from './pokerHand'
+import { act, award, awardBest, contenders, pots, raiseOptions, startHand, toCall, undoLast, type HandState, type PokerAction } from './pokerHand'
 
 let n = 0
 const newId = () => `m${n++}`
@@ -85,5 +85,37 @@ describe('pokerHand', () => {
     expect(act(s, 'b', { type: 'raise', to: 5 }, newId)).toBe('Tố tối thiểu lên 6.')
     const back = undoLast(s) as HandState
     expect([back.hand.toAct, back.moves.length, back.hand.currentBet]).toEqual(['a', 2, 2])
+  })
+})
+
+describe('awardBest — chỉ chọn người mạnh nhất', () => {
+  // a, c theo tới 10; b all-in thiếu 4 → pot chính 12 (a,b,c), pot phụ 12 (a,c)
+  const sidePot = () => {
+    const s = startHand(['a', 'b', 'c'], 'a', 1, 10, newId)
+    return play(s, ['a', { type: 'raise', to: 10 }], ['b', { type: 'allin', amount: 3 }], ['c', { type: 'call' }])
+  }
+
+  it('người thắng được ăn mọi pot → một lần chọn là xong', () => {
+    const s = awardBest(sidePot(), ['c'], newId) as HandState
+    expect(s.hand.street).toBe('done')
+    expect(net(s)).toEqual({ a: -10, b: -4, c: 14 })
+  })
+
+  it('người all-in thiếu thắng → ăn pot chính, còn pot phụ hỏi tiếp trong số còn lại', () => {
+    let s = awardBest(sidePot(), ['b'], newId) as HandState
+    expect(s.hand.street).toBe('showdown')
+    expect(contenders(s)).toEqual(['a', 'c'])
+    s = awardBest(s, ['a'], newId) as HandState
+    expect(s.hand.street).toBe('done')
+    expect(net(s)).toEqual({ a: 2, b: 8, c: -10 })
+  })
+
+  it('hòa: chia đều từng pot giữa những người được ăn pot đó; hoàn tác một lần', () => {
+    const before = sidePot()
+    const s = awardBest(before, ['b', 'c'], newId) as HandState
+    expect(s.hand.street).toBe('done')
+    expect(net(s)).toEqual({ a: -10, b: 2, c: 8 })
+    const back = undoLast(s) as HandState
+    expect([back.hand.street, back.moves.length, back.hand.awarded]).toEqual(['showdown', before.moves.length, []])
   })
 })

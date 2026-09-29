@@ -273,6 +273,35 @@ export function award(state: HandState, index: number, winners: ID[], newId: New
   }
 }
 
+/**
+ * Showdown chỉ cần chọn người bài mạnh nhất (nhiều người = hòa): họ ăn mọi pot chưa trao mà họ được ăn
+ * (hòa thì chia đều giữa những người được ăn pot đó). Pot họ không được ăn (all-in thiếu) để lại —
+ * lần chọn sau là người mạnh nhất trong số còn lại.
+ */
+export function awardBest(state: HandState, winners: ID[], newId: NewId): HandState | string {
+  if (state.hand.street !== 'showdown') return 'Chưa tới showdown.'
+  if (!winners.length) return 'Chọn người thắng.'
+  const list = pots(state)
+  const open = list.map((_, i) => i).filter((i) => !state.hand.awarded.includes(i))
+  const won = open.filter((i) => winners.some((w) => list[i].eligible.includes(w)))
+  if (!won.length) return 'Người này không được ăn pot nào còn lại.'
+  let next: HandState = state
+  for (const i of won) {
+    const r = award(next, i, winners.filter((w) => list[i].eligible.includes(w)), newId)
+    if (typeof r === 'string') return r
+    next = r
+  }
+  // Cả lượt chọn này là một thao tác → hoàn tác một lần là về như trước
+  return { ...next, hand: { ...next.hand, undo: [...state.hand.undo, { hand: withoutUndo(state.hand), moves: state.moves.length }] } }
+}
+
+/** Người có thể thắng các pot chưa trao (hỏi "ai mạnh nhất" chỉ trong số này). */
+export function contenders(state: HandState): ID[] {
+  const list = pots(state)
+  const ids = new Set(list.flatMap((p, i) => (state.hand.awarded.includes(i) ? [] : p.eligible)))
+  return state.hand.order.filter((p) => ids.has(p))
+}
+
 /** Hoàn tác thao tác cuối (hành động hoặc trao pot). */
 export function undoLast(state: HandState): HandState | string {
   const snap = state.hand.undo[state.hand.undo.length - 1]

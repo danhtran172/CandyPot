@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { lotoPrice } from '../core/games/loto'
-import { act, ALL_IN_MULTIPLIER, award, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
+import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
@@ -72,6 +72,8 @@ export interface AppState {
   pokerAct(gameId: ID, playerId: ID, action: PokerAction): string[]
   /** Poker (showdown): trao pot thứ `index` cho người thắng (nhiều người thì chia đều). */
   pokerAward(gameId: ID, index: number, winners: ID[]): string[]
+  /** Poker (showdown): chọn người bài mạnh nhất (nhiều người = hòa) → tự trao mọi pot họ được ăn. */
+  pokerAwardBest(gameId: ID, winners: ID[]): string[]
   /** Poker: hoàn tác thao tác cuối trong tay bài. */
   pokerUndo(gameId: ID): string[]
   /** Poker: small blind và mức all-in (áp dụng từ tay sau). */
@@ -381,6 +383,15 @@ export function createAppStore(repo: SessionRepo) {
         const open = openOf(gameId)
         if (!open?.poker) return ['Chưa có tay bài nào đang chơi.']
         const r = award({ hand: open.poker, moves: open.moves }, index, winners, newId)
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => ({ ...x, poker: r.hand, moves: r.moves }))
+        return []
+      },
+
+      pokerAwardBest(gameId, winners) {
+        const open = openOf(gameId)
+        if (!open?.poker) return ['Chưa có tay bài nào đang chơi.']
+        const r = awardBest({ hand: open.poker, moves: open.moves }, winners, newId)
         if (typeof r === 'string') return [r]
         mapRound(gameId, open.id, (x) => ({ ...x, poker: r.hand, moves: r.moves }))
         return []

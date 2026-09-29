@@ -4,6 +4,7 @@ import { GAME_ORDER, GAMES } from '../../core/games'
 import { lotoPrice } from '../../core/games/loto'
 import {
   blindsOf,
+  contenders,
   pots as handPotsOf,
   raiseOptions,
   remaining,
@@ -99,7 +100,8 @@ export function Table() {
   const handState = hand && round ? { hand, moves: round.moves } : undefined
   const handPots = handState ? handPotsOf(handState) : []
   const actor = hand?.toAct ?? null
-  const nextPot = hand ? handPots.findIndex((_, i) => !hand.awarded.includes(i)) : -1
+  /** Tổng các pot chưa trao. */
+  const restPot = hand ? handPots.reduce((sum, p, i) => sum + (hand.awarded.includes(i) ? 0 : p.amount), 0) : 0
 
   /** Người đang tới lượt Bỏ bài / Xem / Theo / Tố / All-in; báo khi sang vòng mới. */
   const pokerDo = (action: PokerAction) => {
@@ -121,14 +123,23 @@ export function Table() {
     if (errors.length) flash(errors[0], true)
   }
 
-  /** Showdown: host trao pot kế tiếp cho một hoặc nhiều người (chia đều). */
-  const awardNextPot = (winners: ID[]) => {
+  /** Showdown: host chọn người bài mạnh nhất (nhiều người = hòa) → app tự trao mọi pot họ được ăn. */
+  const awardBest = (winners: ID[]) => {
     setPicker(null)
-    if (!game) return
-    const errors = actions().pokerAward(game.id, nextPot, winners)
+    if (!game || !round) return
+    const before = round.moves.length
+    const errors = actions().pokerAwardBest(game.id, winners)
     if (errors.length) return flash(errors[0], true)
-    const done = openRound(actions().session!, game.id)?.poker?.street === 'done'
-    flash(`${winners.map((w) => players[w]?.name).join(', ')} ăn ${handPots[nextPot].amount} kẹo${done ? ' — bấm Tay mới.' : '.'}`)
+    const after = openRound(actions().session!, game.id)
+    const got: Record<ID, number> = {}
+    for (const m of after?.moves.slice(before) ?? []) got[m.to] = (got[m.to] ?? 0) + m.amount
+    const text = Object.entries(got)
+      .map(([id, n]) => `${players[id]?.name} ăn ${n}`)
+      .join(', ')
+    if (after?.poker?.street === 'done') return flash(`${text} kẹo — bấm Tay mới.`)
+    // Còn pot người thắng không được ăn (all-in thiếu) → hỏi tiếp người mạnh nhất trong số còn lại
+    flash(`${text} kẹo. Còn pot phụ — chọn người mạnh nhất trong số còn lại.`)
+    setPicker('award')
   }
 
   const openPokerSettings = () => {
@@ -467,7 +478,7 @@ export function Table() {
                         me === session.hostId ? setPicker('award') : flash(`Chờ ${hostName} trao pot.`, true)
                       }
                     >
-                      🏆 Trao {nextPot === 0 ? 'pot chính' : `pot phụ ${nextPot}`} ({handPots[nextPot]?.amount ?? 0})
+                      🏆 {hand.awarded.length ? `Còn ${restPot} kẹo — ai mạnh nhất tiếp?` : 'Ai bài mạnh nhất?'}
                     </Button>
                   ) : actor && handState ? (
                     <>
@@ -645,12 +656,12 @@ export function Table() {
         />
       )}
 
-      {picker === 'award' && hand && handPots[nextPot] && (
+      {picker === 'award' && hand && handState && hand.street === 'showdown' && (
         <PlayerPicker
-          title={`🏆 Ai ăn ${nextPot === 0 ? 'pot chính' : `pot phụ ${nextPot}`} (${handPots[nextPot].amount} kẹo)?`}
-          hint="Chọn một người, hoặc nhiều người để chia đều."
-          players={session.players.filter((p) => handPots[nextPot].eligible.includes(p.id))}
-          onPickMany={awardNextPot}
+          title={hand.awarded.length ? '🏆 Trong những người còn lại, ai mạnh nhất?' : '🏆 Ai bài mạnh nhất?'}
+          hint={`${hand.awarded.length ? `Còn ${restPot} kẹo. ` : ''}Bấm người thắng — app tự chia pot chính / pot phụ. Hòa thì bấm 🤝.`}
+          players={session.players.filter((p) => contenders(handState).includes(p.id))}
+          onPickMany={awardBest}
           onClose={() => setPicker(null)}
         />
       )}
