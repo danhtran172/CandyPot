@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { GAME_ORDER, GAMES } from '../../core/games'
 import type { GameType } from '../../core/types'
 import { GameIcon } from './GameIcon'
+import { GameName } from './GameName'
 
 /** Chọn 1 trong các game = đổi cách tính của bàn (lời/lỗ vẫn cộng chung). */
 export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type: GameType) => void }) {
@@ -27,7 +28,9 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
         {value ? (
           <>
             <GameIcon type={value} className="size-6" />
-            <span className="flex-1 text-left">{GAMES[value].label}</span>
+            <span className="flex-1 text-left">
+              <GameName type={value} />
+            </span>
           </>
         ) : (
           <span className="flex-1 py-1 pl-2 text-left text-muted">Chọn game…</span>
@@ -56,7 +59,9 @@ export function GamePicker({ value, onPick }: { value?: GameType; onPick: (type:
                   }`}
                 >
                   <GameIcon type={t} className="size-6" />
-                  <span className="flex-1">{GAMES[t].label}</span>
+                  <span className="flex-1">
+                    <GameName type={t} />
+                  </span>
                   {GAMES[t].soon && <span className="rounded-full bg-night/60 px-2 text-xs font-semibold text-muted">sắp có</span>}
                   {t === value && <span aria-hidden>✓</span>}
                 </button>

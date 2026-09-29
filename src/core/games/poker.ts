@@ -8,6 +8,7 @@ export const poker: GameModule = {
   minPlayers: 2,
   maxPlayers: MAX_PLAYERS,
   stakeMode: 'pot',
+  beta: true,
 }
 
 /** Phần pot tối đa một người được ăn (side pot): mỗi người góp tối đa bằng số người đó đã bỏ vào. */

@@ -171,4 +171,6 @@ export interface GameModule {
   soon?: boolean
   /** Ván có 2 bước: đặt cược/mua vé (betting) → Chốt → trả kẹo (playing). */
   phases?: boolean
+  /** Đang thử nghiệm — hiện chữ (Beta) sau tên game. */
+  beta?: boolean
 }

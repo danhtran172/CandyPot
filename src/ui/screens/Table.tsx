@@ -29,6 +29,7 @@ import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
+import { GameName } from '../components/GameName'
 import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
@@ -362,7 +363,7 @@ export function Table() {
             {GAME_ORDER.map((t) => (
               <Button key={t} className="flex flex-col items-center gap-1 py-3 text-lg" onClick={() => pickType(t)}>
                 <GameIcon type={t} className="size-8" />
-                {GAMES[t].label}
+                <GameName type={t} />
               </Button>
             ))}
           </div>
@@ -850,7 +851,9 @@ function TableCenter({
     return (
       <>
         <GameIcon type={game.type} className="size-9" />
-        <span className="font-display text-lg leading-tight font-bold">{GAMES[game.type].label}</span>
+        <span className="font-display text-lg leading-tight font-bold">
+          <GameName type={game.type} />
+        </span>
         <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : 'Chưa mở ván'}</span>
       </>
     )
