@@ -5,6 +5,7 @@ import { playerMap, roundNumber, signed, timeOf } from '../format'
 import { ask } from '../dialog'
 import { UndoIcon } from './UndoIcon'
 import { Who } from './kit'
+import { PingButton } from './PingButton'
 
 /**
  * Lịch sử trả/nhận của riêng mình trong một game: lời đòi đang chờ, các lượt mình trả/nhận.
@@ -27,7 +28,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
     .map((r) => ({ round: r, moves: r.moves.filter(involves) }))
     .filter((x) => x.moves.length > 0)
     .sort((a, b) => b.round.at - a.round.at)
-  const pendingUndo = new Set(session.undos.map((u) => u.moveId))
+  const pendingUndo = new Map(session.undos.map((u) => [u.moveId, u]))
 
   const undo = async (r: Round, m: Move) => {
     if (!me) return
@@ -106,7 +107,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
               <ul className="rounded-2xl bg-night/40">
                 {[...moves].reverse().map((m) => {
                   const d = m.to === me ? m.amount : -m.amount
-                  const waiting = pendingUndo.has(m.id)
+                  const waiting = pendingUndo.get(m.id)
                   return (
                     <li key={m.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2 text-sm last:border-0">
                       <span className="text-muted">{d > 0 ? 'Nhận từ' : 'Trả cho'}</span>
@@ -115,7 +116,10 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                         {signed(d)}
                       </span>
                       {waiting ? (
-                        <span className="text-[11px] whitespace-nowrap text-lemon">⏳ chờ host</span>
+                        <>
+                          <span className="text-[11px] whitespace-nowrap text-lemon">⏳ chờ host</span>
+                          {waiting.by === me && <PingButton req={waiting} />}
+                        </>
                       ) : (
                         <button
                           type="button"

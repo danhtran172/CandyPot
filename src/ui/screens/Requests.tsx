@@ -6,6 +6,7 @@ import { answerTask, incomingAsks, outgoingAsks } from '../tasks'
 import { Button, SectionTitle, TopBar, Who } from '../components/kit'
 import { TaskCard } from '../components/TaskCard'
 import { UndoIcon } from '../components/UndoIcon'
+import { PingButton } from '../components/PingButton'
 import { useSession } from '../components/useSession'
 
 /** Trung tâm yêu cầu: ai đòi mình (trả lời) và mình đang đòi ai (chờ họ). */
@@ -59,10 +60,10 @@ export function Requests() {
         <ul className="rounded-2xl bg-plum">
           {outgoing.map((r) => (
             <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2.5 text-sm last:border-0">
-              <span className="text-muted">Đòi</span>
               <Who player={players[r.from]} className="min-w-0 font-semibold text-sky" />
               <span className="candy num text-sm">{r.amount}</span>
               <span className="ml-auto text-[11px] whitespace-nowrap text-lemon">⏳ {timeOf(r.at)}</span>
+              <PingButton req={r} />
               <button
                 type="button"
                 aria-label="Hủy lời đòi"

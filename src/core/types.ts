@@ -129,6 +129,9 @@ export interface CandyRequest {
   to: ID
   amount: number
   at: number
+  /** Lần nhắc gần nhất và số lần đã nhắc (người đòi bấm 🔔). */
+  pingedAt?: number
+  pings?: number
 }
 
 /** Yêu cầu hoàn tác một lượt kéo — chờ host xác nhận. */
@@ -139,6 +142,9 @@ export interface UndoRequest {
   moveId: ID
   by: ID
   at: number
+  /** Lần nhắc host gần nhất và số lần đã nhắc. */
+  pingedAt?: number
+  pings?: number
 }
 
 export interface Session {

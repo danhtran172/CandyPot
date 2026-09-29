@@ -125,6 +125,8 @@ export interface AppState {
   /** Người bị đòi trả lời: OK thì chuyển kẹo. */
   answerRequest(requestId: ID, accept: boolean): string[]
   cancelRequest(requestId: ID): void
+  /** Nhắc lại một yêu cầu còn chờ (lời đòi kẹo hoặc xin hoàn tác) — thông báo bật lại bên kia. */
+  pingRequest(requestId: ID): string[]
   setHost(playerId: ID): void
   /** Người chơi bầu host mới (bấm lại để rút phiếu). Đủ phiếu thì người đó thành host. */
   voteHost(voter: ID, candidate: ID): { errors: string[]; elected: boolean }
@@ -178,6 +180,14 @@ function validateOpen(game: Game, d: OpenDraft): string[] {
 /** Poker: small blind + mức all-in của game (mặc định 1 và 10 × SB). */
 export function pokerSettingsOf(game: Game): { sb: number; cap: number } {
   return game.pokerSettings ?? { sb: DEFAULT_SB, cap: DEFAULT_SB * ALL_IN_MULTIPLIER }
+}
+
+/** Khoảng cách tối thiểu giữa hai lần nhắc một yêu cầu. */
+export const PING_COOLDOWN_MS = 30_000
+
+/** Còn bao nhiêu giây nữa mới nhắc lại được (0 = nhắc được ngay). */
+export function pingWait(req: { at: number; pingedAt?: number }, now: number): number {
+  return Math.max(0, Math.ceil(((req.pingedAt ?? req.at) + PING_COOLDOWN_MS - now) / 1000))
 }
 
 /** Mã bàn 5 số ngẫu nhiên (10000–99999). */
@@ -836,6 +846,18 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
 
       cancelRequest(requestId) {
         mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+      },
+
+      pingRequest(requestId) {
+        const s = get().session
+        const req = s?.requests.find((r) => r.id === requestId) ?? s?.undos.find((u) => u.id === requestId)
+        if (!req) return ['Yêu cầu này không còn nữa — đã được trả lời hoặc đã hủy.']
+        const wait = pingWait(req, Date.now())
+        if (wait > 0) return [`Vừa nhắc xong — đợi ${wait} giây nữa.`]
+        const ping = <T extends { id: ID; pings?: number }>(x: T): T =>
+          x.id === requestId ? { ...x, pingedAt: Date.now(), pings: (x.pings ?? 0) + 1 } : x
+        mutate((x) => ({ ...x, requests: x.requests.map(ping), undos: x.undos.map(ping) }))
+        return []
       },
 
     }

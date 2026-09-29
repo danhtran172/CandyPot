@@ -4,6 +4,7 @@ import { ask, tell } from '../dialog'
 import { playerMap, timeOf } from '../format'
 import { useMe } from '../me'
 import { answerTask, hostTasks, myUndos, othersPending } from '../tasks'
+import { PingButton } from '../components/PingButton'
 import { Button, SectionTitle, TopBar, Who } from '../components/kit'
 import { TaskCard, UndoDetail } from '../components/TaskCard'
 import { UndoIcon } from '../components/UndoIcon'
@@ -117,6 +118,7 @@ export function HostTasks() {
                     <UndoDetail session={session} undo={u} />
                     <div className="mt-0.5 text-xs font-semibold text-lemon">⏳ Chờ {host?.name ?? 'host'} xác nhận</div>
                   </div>
+                  <PingButton req={u} />
                   <Button variant="danger" className="px-3 py-1.5 text-sm" onClick={() => actions().answerUndo(u.id, false)}>
                     Rút lại
                   </Button>

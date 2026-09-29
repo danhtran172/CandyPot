@@ -13,6 +13,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - **Rule ? và ⚙:** giữa bàn có nút hồng **Rule ?** để ai cũng xem luật; host bấm ⚙ góc bàn để chỉnh — Tiến lên: Nhất / Nhì / heo đỏ / heo đen; Lô tô: giá + tối đa số tờ; Xì dách: min / max cược; Poker: small blind + all-in.
 - **Hướng dẫn:** nút **?** cạnh Người chơi → chọn Người chơi / Host → tour chỉ thẳng vào từng nút trên bàn theo mode đang chơi. Lần đầu chơi (hoặc lần đầu làm host) một mode thì tự hiện.
 - **Tạo bàn / Join bàn:** tạo bàn kiểu **Một máy** (host ghi hết) hoặc **Nhiều người join** (mã 5 số + mã QR / link). Người khác bấm **Join bàn** nhập mã (hoặc quét QR) → chọn "Bạn là ai?" → mọi thao tác đồng bộ tức thì giữa các điện thoại (Firebase). Mất mạng thì hiện banner, thay đổi gửi khi có mạng lại.
+- **Nhắc lại (🔔):** lời đòi / xin hoàn tác còn chờ thì bấm 🔔 Nhắc — thông báo bật lại bên kia (cách nhau ít nhất 30 giây).
 - **Quay lại ván trước:** host bấm ⏮ cạnh nút chính để mở lại ván vừa chốt và sửa.
 - **Bầu host:** host vắng thì mọi người bấm 🛎️ ở màn Người chơi để bầu host mới — đủ 2 phiếu là thành host. Host thì chuyển host thẳng, không cần vote.
 - **Nút Host và Yêu cầu** (góc phải dưới bàn chơi, ai cũng có, có số đếm): *Host* — host duyệt yêu cầu hoàn tác (từng cái hoặc OK tất cả) và theo dõi lời đòi giữa mọi người; người khác xem yêu cầu hoàn tác của mình đang chờ và rút lại được. *Yêu cầu* — ai đang đòi bạn (Không/OK, OK tất cả) và bạn đang đòi ai. Thông báo trên cùng có "Để sau" để không bị che bàn.

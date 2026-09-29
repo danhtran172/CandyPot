@@ -1,20 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ID, Session } from '../../core/types'
 import { useMe } from '../me'
-import { answerTask, okLabel, tasksFor } from '../tasks'
+import { answerTask, okLabel, tasksFor, type Task } from '../tasks'
 import { Button } from './kit'
 import { TaskSummary } from './TaskCard'
 
+/** Yêu cầu gốc của một việc (để biết lần nhắc). */
+const pingOf = (t: Task) => (t.kind === 'ask' ? t.req : t.undo)
+
 /**
  * Thông báo trên cùng cho việc cũ nhất đang chờ mình (bị đòi kẹo / host duyệt hoàn tác).
- * "Để sau" ẩn thông báo đến khi có việc mới — các việc vẫn nằm ở tab Yêu cầu / Host.
+ * "Để sau" ẩn thông báo đến khi có việc mới hoặc bên kia bấm 🔔 nhắc — các việc vẫn nằm ở tab Yêu cầu / Host.
  */
 export function RequestInbox({ session, onOpenAll }: { session: Session; onOpenAll: (tab: 'host' | 'requests') => void }) {
   const [me] = useMe(session)
   const [error, setError] = useState<string | null>(null)
-  const [snoozed, setSnoozed] = useState<Set<ID>>(() => new Set())
+  // Việc đã "Để sau" → lúc bấm; bị nhắc sau lúc đó thì hiện lại
+  const [snoozed, setSnoozed] = useState<Map<ID, number>>(() => new Map())
   const tasks = tasksFor(session, me)
-  const ids = tasks.map((t) => t.id).join()
+  const ids = tasks.map((t) => `${t.id}:${pingOf(t)?.pings ?? 0}`).join()
   const seen = useRef(new Set<string>())
 
   // Rung nhẹ khi có thông báo mới
@@ -24,12 +28,13 @@ export function RequestInbox({ session, onOpenAll }: { session: Session; onOpenA
     if (fresh.length) navigator.vibrate?.(200)
   }, [ids])
 
-  const task = tasks.find((t) => !snoozed.has(t.id))
+  const task = tasks.find((t) => !snoozed.has(t.id) || (pingOf(t)?.pingedAt ?? 0) > snoozed.get(t.id)!)
   if (!task) return null
   const later = () => {
     setError(null)
-    // Ẩn mọi việc hiện có — chỉ việc mới mới bật lại thông báo
-    setSnoozed((s) => new Set([...s, ...tasks.map((t) => t.id)]))
+    // Ẩn mọi việc hiện có — việc mới hoặc bị nhắc lại mới bật lại thông báo
+    const at = Date.now()
+    setSnoozed((s) => new Map([...s, ...tasks.map((t): [ID, number] => [t.id, at])]))
   }
 
   return (

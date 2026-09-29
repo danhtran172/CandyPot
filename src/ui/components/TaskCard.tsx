@@ -24,6 +24,7 @@ export function TaskSummary({ session, task }: { session: Session; task: Task })
           </div>
           <div className="text-xs text-muted">
             {game?.name} · {timeOf(req.at)}
+            {!!req.pings && <span className="ml-1.5 font-bold text-lemon">🔔 nhắc lần {req.pings}</span>}
           </div>
         </div>
       </div>
@@ -38,6 +39,7 @@ export function TaskSummary({ session, task }: { session: Session; task: Task })
       <div className="min-w-0 flex-1">
         <div className="font-display text-lg leading-tight font-bold">
           <span className="text-sky">{players[task.undo.by]?.name}</span> muốn hoàn tác
+          {!!task.undo.pings && <span className="ml-1.5 text-xs font-bold text-lemon">🔔 nhắc lần {task.undo.pings}</span>}
         </div>
         <UndoDetail session={session} undo={task.undo} />
       </div>

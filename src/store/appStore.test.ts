@@ -3,7 +3,7 @@ import { netOf } from '../core/ledger'
 import { openRound } from '../core/round'
 import { POT } from '../core/types'
 import { LocalRepo, MemoryKV } from '../storage/LocalRepo'
-import { createAppStore, type AppStore } from './appStore'
+import { createAppStore, pingWait, type AppStore } from './appStore'
 import { seatedOf } from '../core/games/tienlen'
 
 let repo: LocalRepo
@@ -467,6 +467,23 @@ describe('appStore — Tiến lên: người chơi = ai không tạm nghỉ', ()
     s().updatePlayer(b, { active: false })
     expect(s().quickOpen(g)).toEqual([])
     expect(openRound(session(), g)!.participants).toEqual([a, c, d, e])
+  })
+})
+
+describe('appStore — nhắc lại yêu cầu', () => {
+  it('nhắc lời đòi / xin hoàn tác còn chờ; phải đợi 30 giây giữa hai lần; yêu cầu đã xong thì báo', () => {
+    const g = s().addGame('free')
+    s().requestCandy(g, b, a, 3)
+    const req = session().requests[0]
+    expect(s().pingRequest(req.id)[0]).toMatch(/đợi \d+ giây/)
+    // Giả lập đã qua 30 giây
+    store.setState({ session: { ...session(), requests: [{ ...req, at: req.at - 31_000 }] } })
+    expect(s().pingRequest(req.id)).toEqual([])
+    expect(session().requests[0]).toMatchObject({ pings: 1 })
+    expect(s().pingRequest(req.id)[0]).toMatch(/Vừa nhắc xong/)
+    expect(pingWait({ at: 0, pingedAt: 1_000 }, 31_000)).toBe(0)
+    s().answerRequest(req.id, false)
+    expect(s().pingRequest(req.id)).toEqual(['Yêu cầu này không còn nữa — đã được trả lời hoặc đã hủy.'])
   })
 })
 
