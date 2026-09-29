@@ -31,7 +31,6 @@ export function Players() {
   const needed = hostVotesNeeded(session)
   const tally = hostVoteTally(session)
   const myVote = me ? session.hostVotes[me] : undefined
-  const activeCount = session.players.filter((p) => p.active).length
   const hostName = session.players.find((p) => p.id === session.hostId)?.name ?? 'host'
 
   /** 🛎️: host chuyển host ngay; người khác bỏ phiếu bầu (bấm lại để rút). */
@@ -73,9 +72,13 @@ export function Players() {
           </>
         )}
         <div className="mt-0.5 text-xs text-muted">
-          Cần <b className="text-cream">{needed} phiếu</b> — 30% của {activeCount} người đang chơi, tối thiểu 2
+          {!isHost && (
+            <>
+              Đủ <b className="text-cream">{needed} phiếu</b> là thành host
+            </>
+          )}
           {Object.keys(tally).length > 0 &&
-            ` · đang có: ${Object.entries(tally)
+            `${isHost ? 'Đang có phiếu bầu:' : ' ·'} ${Object.entries(tally)
               .sort((x, y) => y[1] - x[1])
               .map(([id, n]) => `${session.players.find((p) => p.id === id)?.name} ${n}/${needed}`)
               .join(', ')}`}

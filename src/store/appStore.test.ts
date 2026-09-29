@@ -288,12 +288,11 @@ describe('appStore — Tiến lên: host đặt mức cược ở ô Bet', () =>
 })
 
 describe('appStore — bầu host', () => {
-  it('đủ phiếu (≥ 30% số người, tối thiểu 2) thì thành host; phiếu bầu được xóa', () => {
+  it('đủ 2 phiếu thì thành host; phiếu bầu được xóa', () => {
     s().addPlayer('Dũng', '🦊')
     s().addPlayer('Em', '🐯')
     const d = session().players[3].id
     expect(session().hostId).toBe(a)
-    // 5 người → cần max(2, ceil(1,5)) = 2 phiếu
     expect(s().voteHost(b, c)).toEqual({ errors: [], elected: false })
     expect(session().hostVotes).toEqual({ [b]: c })
     expect(s().voteHost(d, c)).toEqual({ errors: [], elected: true })

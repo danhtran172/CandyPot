@@ -1,13 +1,10 @@
 import type { ID, Session } from './types'
 
-/** Tỉ lệ phiếu tối thiểu (so với số người đang chơi) và số phiếu tối thiểu để bầu host mới. */
-export const HOST_VOTE_RATIO = 0.3
-export const HOST_VOTE_MIN = 2
+/** Số phiếu cần để bầu host mới — luôn 2, không phụ thuộc số người. */
+export const HOST_VOTES_NEEDED = 2
 
-/** Số phiếu cần để bầu host mới: ≥ 30% số người đang chơi (làm tròn lên), tối thiểu 2. */
-export function hostVotesNeeded(session: Session): number {
-  const active = session.players.filter((p) => p.active).length
-  return Math.max(HOST_VOTE_MIN, Math.ceil(active * HOST_VOTE_RATIO))
+export function hostVotesNeeded(_session: Session): number {
+  return HOST_VOTES_NEEDED
 }
 
 /** Số phiếu hiện có của từng ứng viên (chỉ tính phiếu của người đang chơi, bỏ phiếu cho host hiện tại). */
