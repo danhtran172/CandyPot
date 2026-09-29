@@ -19,6 +19,8 @@ export interface Player {
   name: string
   emoji: string
   active: boolean
+  /** Đã xóa khỏi phòng nhưng đã chơi: ẩn khỏi danh sách/bàn, lời/lỗ và lịch sử vẫn giữ. */
+  removed?: boolean
 }
 
 /** "from đưa to amount kẹo" — đơn vị dữ liệu để tính lời/lỗ. */

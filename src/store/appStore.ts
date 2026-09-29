@@ -49,7 +49,8 @@ export interface AppState {
 
   addPlayer(name: string, emoji: string): void
   updatePlayer(id: ID, patch: Partial<Pick<Player, 'name' | 'emoji' | 'active'>>): void
-  removePlayer(id: ID): boolean
+  /** Chưa chơi: xóa hẳn. Đã chơi: ẩn khỏi phòng (lời/lỗ giữ nguyên). */
+  removePlayer(id: ID): string[]
 
   addGame(type: GameType): ID
   renameGame(gameId: ID, name: string): void
@@ -201,7 +202,14 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       addPlayer(name, emoji) {
-        if ((get().session?.players.length ?? 0) >= MAX_PLAYERS) return
+        const s = get().session
+        if (!s || s.players.filter((p) => !p.removed).length >= MAX_PLAYERS) return
+        // Thêm lại đúng tên người đã xóa khỏi phòng → đưa người đó về (giữ lời/lỗ cũ)
+        const back = s.players.find((p) => p.removed && p.name.toLowerCase() === name.trim().toLowerCase())
+        if (back) {
+          mutate((s) => ({ ...s, players: s.players.map((p) => (p.id === back.id ? { ...p, removed: false, active: true } : p)) }))
+          return
+        }
         mutate((s) => ({ ...s, players: [...s.players, { id: newId(), name: name.trim(), emoji, active: true }] }))
       },
 
@@ -211,13 +219,23 @@ export function createAppStore(repo: SessionRepo) {
 
       removePlayer(id) {
         const s = get().session
-        if (!s || isPlayerUsed(s, id)) return false
+        const p = s?.players.find((x) => x.id === id)
+        if (!s || !p) return ['Không tìm thấy người này.']
+        if (id === s.hostId) return [`${p.name} đang là host — chuyển host cho người khác trước.`]
+        if (s.games.some((g) => findOpenIn(g)?.participants.includes(id)))
+          return [`${p.name} đang trong ván chưa kết thúc — kết thúc hoặc hủy ván đó trước.`]
+        const used = isPlayerUsed(s, id)
         mutate((s) => ({
           ...s,
-          players: s.players.filter((p) => p.id !== id),
+          // Đã chơi thì chỉ ẩn khỏi phòng để lời/lỗ và lịch sử vẫn đúng
+          players: used
+            ? s.players.map((x) => (x.id === id ? { ...x, removed: true, active: false } : x))
+            : s.players.filter((x) => x.id !== id),
+          requests: s.requests.filter((r) => r.from !== id && r.to !== id),
+          undos: s.undos.filter((u) => u.by !== id),
           hostVotes: Object.fromEntries(Object.entries(s.hostVotes).filter(([v, c]) => v !== id && c !== id)),
         }))
-        return true
+        return []
       },
 
       addGame(type) {

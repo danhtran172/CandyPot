@@ -34,11 +34,22 @@ describe('appStore — buổi & người chơi', () => {
     expect(session().games.map((g) => g.name)).toEqual(['Tiến lên', 'Tiến lên 2'])
   })
 
-  it('không xóa được người đã chơi', () => {
+  it('xóa người: chưa chơi thì xóa hẳn; đã chơi thì ẩn, giữ lời/lỗ; thêm lại tên cũ thì quay về', () => {
     const g = s().addGame('tienlen')
     s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
-    expect(s().removePlayer(a)).toBe(false)
-    expect(s().removePlayer(c)).toBe(true)
+    expect(s().removePlayer(b)).toEqual(['Bình đang trong ván chưa kết thúc — kết thúc hoặc hủy ván đó trước.'])
+    expect(s().removePlayer(a)).toEqual(['An đang là host — chuyển host cho người khác trước.'])
+    expect(s().removePlayer(c)).toEqual([])
+    expect(session().players.map((p) => p.id)).toEqual([a, b])
+    s().addMove(g, b, a, 2, '')
+    s().closeRound(g)
+    expect(s().removePlayer(b)).toEqual([])
+    const bp = session().players.find((p) => p.id === b)!
+    expect([bp.removed, bp.active]).toEqual([true, false])
+    expect(netOf(session())[b]).toBe(-2)
+    s().addPlayer('bình', '🐶')
+    expect(session().players.find((p) => p.id === b)).toMatchObject({ removed: false, active: true })
+    expect(session().players).toHaveLength(2)
   })
 
   it('mở lại buổi từ repo', () => {

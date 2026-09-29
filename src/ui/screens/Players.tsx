@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
@@ -18,11 +18,17 @@ export function Players() {
 
   const [me, setMe] = useMe(session)
 
+  const inRoom = session.players.filter((p) => !p.removed)
+  const [swiped, setSwiped] = useState<string | null>(null)
+
   const add = () => {
-    if (session.players.length >= MAX_PLAYERS) return setErrors([`Tối đa ${MAX_PLAYERS} người một buổi.`])
+    if (inRoom.length >= MAX_PLAYERS) return setErrors([`Tối đa ${MAX_PLAYERS} người một buổi.`])
     if (!name.trim()) return setErrors(['Nhập tên người chơi.'])
-    if (nameTaken(name)) return setErrors(['Tên này đã có trong buổi.'])
+    // Tên của người đã xóa khỏi phòng → thêm lại chính người đó (giữ lời/lỗ cũ)
+    const back = session.players.find((p) => p.removed && p.name.toLowerCase() === name.trim().toLowerCase())
+    if (!back && nameTaken(name)) return setErrors(['Tên này đã có trong buổi.'])
     actions().addPlayer(name, EMOJIS[session.players.length % EMOJIS.length])
+    if (back) void tell(`${back.name} đã trở lại phòng`, { icon: '👋', message: 'Lời/lỗ cũ vẫn giữ nguyên.' })
     setName('')
     setErrors([])
   }
@@ -45,8 +51,21 @@ export function Players() {
     else if (elected) await tell(`${playerName} là host mới!`, { icon: '🛎️', message: `Đủ ${needed} phiếu bầu.` })
   }
 
+  /** Vuốt phải → Xóa: chưa chơi thì xóa hẳn; đã chơi thì ẩn khỏi phòng, lời/lỗ vẫn giữ. */
   const remove = async (id: string, playerName: string) => {
-    if (await ask(`Bỏ ${playerName} khỏi buổi?`, { icon: '👋', okLabel: 'Bỏ', danger: true })) actions().removePlayer(id)
+    setSwiped(null)
+    const used = isPlayerUsed(session, id)
+    const ok = await ask(`Xóa ${playerName} khỏi phòng?`, {
+      icon: '🗑️',
+      message: used
+        ? 'Lời/lỗ và lịch sử vẫn giữ để tính trả kẹo. Thêm lại đúng tên này để đưa người đó trở lại.'
+        : `${playerName} chưa chơi ván nào — xóa hẳn.`,
+      okLabel: 'Xóa',
+      danger: true,
+    })
+    if (!ok) return
+    const errors = actions().removePlayer(id)
+    if (errors.length) await tell(errors[0], { icon: '⚠️' })
   }
 
   return (
@@ -57,7 +76,10 @@ export function Players() {
           <b className="text-cream">Chạm avatar</b> để chọn bạn (🙋) — chỗ của bạn luôn ở dưới cùng bàn · <b className="text-cream">giữ</b> để đổi biểu tượng.
         </li>
         <li>
-          🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — người đã chơi không xóa được, lời/lỗ vẫn giữ.
+          🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
+        </li>
+        <li>
+          👉 <b className="text-cream">Vuốt phải</b> một dòng để xóa người khỏi phòng.
         </li>
       </ul>
 
@@ -87,8 +109,15 @@ export function Players() {
 
       <Card className="p-2">
         <ul>
-          {session.players.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 px-2 py-2">
+          {inRoom.map((p) => (
+            <SwipeRow
+              key={p.id}
+              open={swiped === p.id}
+              onOpen={() => setSwiped(p.id)}
+              onClose={() => setSwiped((x) => (x === p.id ? null : x))}
+              onDelete={() => remove(p.id, p.name)}
+              deleteLabel={`Xóa ${p.name} khỏi phòng`}
+            >
               <Avatar
                 emoji={p.emoji}
                 isMe={me === p.id}
@@ -125,18 +154,14 @@ export function Players() {
                 badge={tally[p.id] ? `${tally[p.id]}/${needed}` : undefined}
                 marked={myVote === p.id}
               />
-              {isPlayerUsed(session, p.id) ? (
-                <IconToggle
-                  on={!p.active}
-                  icon="💤"
-                  label={p.active ? `Cho ${p.name} tạm nghỉ` : `${p.name} đang nghỉ — bấm để chơi lại`}
-                  onClick={() => actions().updatePlayer(p.id, { active: !p.active })}
-                  onClass="bg-grape/30 border-grape"
-                />
-              ) : (
-                <IconToggle icon="✕" label={`Bỏ ${p.name} khỏi buổi`} onClick={() => remove(p.id, p.name)} onClass="" />
-              )}
-            </li>
+              <IconToggle
+                on={!p.active}
+                icon="💤"
+                label={p.active ? `Cho ${p.name} tạm nghỉ` : `${p.name} đang nghỉ — bấm để chơi lại`}
+                onClick={() => actions().updatePlayer(p.id, { active: !p.active })}
+                onClass="bg-grape/30 border-grape"
+              />
+            </SwipeRow>
           ))}
         </ul>
       </Card>
@@ -166,6 +191,99 @@ export function Players() {
   )
 }
 
+const DELETE_W = 84
+
+/** Dòng vuốt được: vuốt sang phải để lộ nút Xóa ở mép trái; chạm vào dòng đang mở thì đóng lại. */
+function SwipeRow({
+  open,
+  onOpen,
+  onClose,
+  onDelete,
+  deleteLabel,
+  children,
+}: {
+  open: boolean
+  onOpen: () => void
+  onClose: () => void
+  onDelete: () => void
+  deleteLabel: string
+  children: ReactNode
+}) {
+  const [drag, setDrag] = useState<number | null>(null)
+  const gesture = useRef<{ x: number; y: number; base: number; swiping: boolean; at: number } | null>(null)
+  const suppressClick = useRef(false)
+  const offset = drag ?? (open ? DELETE_W : 0)
+
+  const down = (e: ReactPointerEvent) => {
+    if (e.button !== 0) return
+    const base = open ? DELETE_W : 0
+    gesture.current = { x: e.clientX, y: e.clientY, base, swiping: false, at: base }
+    suppressClick.current = false
+  }
+  const move = (e: ReactPointerEvent) => {
+    const g = gesture.current
+    if (!g) return
+    const dx = e.clientX - g.x
+    const dy = e.clientY - g.y
+    if (!g.swiping) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) gesture.current = null // cuộn dọc
+      else if (Math.abs(dx) > 10) {
+        g.swiping = true
+        e.currentTarget.setPointerCapture(e.pointerId)
+      }
+      if (!g.swiping) return
+    }
+    g.at = Math.min(DELETE_W * 1.25, Math.max(0, g.base + dx))
+    setDrag(g.at)
+  }
+  const up = () => {
+    const g = gesture.current
+    gesture.current = null
+    if (!g?.swiping) return
+    suppressClick.current = true
+    if (g.at > DELETE_W / 2) onOpen()
+    else onClose()
+    setDrag(null)
+  }
+
+  return (
+    <li className="relative overflow-hidden rounded-2xl">
+      <button
+        type="button"
+        aria-label={deleteLabel}
+        tabIndex={open ? 0 : -1}
+        onClick={onDelete}
+        className="absolute inset-y-0 left-0 flex flex-col items-center justify-center gap-0.5 bg-berry text-sm font-bold text-night"
+        style={{ width: DELETE_W, visibility: offset > 0 ? 'visible' : 'hidden' }}
+      >
+        <span aria-hidden className="text-xl leading-none">
+          🗑️
+        </span>
+        Xóa
+      </button>
+      <div
+        onPointerDown={down}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+        onClickCapture={(e) => {
+          // Vừa vuốt, hoặc dòng đang mở → chạm chỉ để đóng, không bấm nút bên trong
+          if (suppressClick.current || open) {
+            e.stopPropagation()
+            e.preventDefault()
+            suppressClick.current = false
+            if (open) onClose()
+          }
+        }}
+        style={{ transform: `translateX(${offset}px)` }}
+        className={`relative flex touch-pan-y items-center gap-2 bg-plum px-2 py-2 ${drag === null ? 'transition-transform duration-200' : ''}`}
+      >
+        {children}
+      </div>
+    </li>
+  )
+}
+
 /** Avatar người chơi: chạm = chọn là mình (gắn 🙋), giữ ~0,5 giây = đổi biểu tượng. */
 function Avatar({
   emoji,
@@ -182,8 +300,10 @@ function Avatar({
 }) {
   const timer = useRef<number | undefined>(undefined)
   const held = useRef(false)
-  const start = () => {
+  const from = useRef({ x: 0, y: 0 })
+  const start = (e: ReactPointerEvent) => {
     held.current = false
+    from.current = { x: e.clientX, y: e.clientY }
     timer.current = window.setTimeout(() => {
       held.current = true
       onHold()
@@ -197,6 +317,7 @@ function Avatar({
       aria-pressed={isMe}
       onPointerDown={start}
       onPointerUp={stop}
+      onPointerMove={(e) => Math.hypot(e.clientX - from.current.x, e.clientY - from.current.y) > 8 && stop()}
       onPointerLeave={stop}
       onPointerCancel={stop}
       onContextMenu={(e) => e.preventDefault()}
