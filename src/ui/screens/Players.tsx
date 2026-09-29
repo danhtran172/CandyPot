@@ -45,7 +45,8 @@ export function Players() {
   /** 🛎️: host chuyển host ngay; người khác bỏ phiếu bầu (bấm lại để rút). */
   const pickHost = async (id: string, playerName: string) => {
     if (id === session.hostId) return
-    if (isHost || !me) {
+    if (!me) return tell('Chưa chọn bạn là ai', { icon: '🙋', message: 'Chọn tên của bạn trong bàn trước đã.' })
+    if (isHost) {
       if (await ask(`Chuyển host cho ${playerName}?`, { icon: '🛎️', okLabel: 'Chuyển' })) actions().setHost(id)
       return
     }

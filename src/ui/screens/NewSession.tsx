@@ -9,8 +9,8 @@ import hostIcon from '../../assets/rules/host.webp'
 import groupIcon from '../../assets/rules/group.webp'
 
 const MODES = [
-  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
   { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
+  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
 ] as const
 
 interface Draft {
@@ -22,7 +22,7 @@ export function NewSession() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [defaultName] = useState(() => `Bàn ${new Date().toLocaleDateString('vi-VN')}`)
-  const [mode, setMode] = useState<'solo' | 'multi'>('solo')
+  const [mode, setMode] = useState<'solo' | 'multi'>('multi')
   const [players, setPlayers] = useState<Draft[]>([
     { name: '', emoji: EMOJIS[0] },
     { name: '', emoji: EMOJIS[1] },

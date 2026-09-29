@@ -72,6 +72,8 @@ export function Table() {
   const players = playerMap(session)
   const net = netOf(session)
   const [me] = useMe(session)
+  /** Điều khiển ván (mở / chốt / hủy / đổi game…): bàn một máy thì máy này; bàn nhiều người thì chỉ host. */
+  const canHost = session.mode !== 'multi' || (!!me && me === session.hostId)
   const base = `/s/${session.id}`
 
   const flash = (text: string, bad = false) => {
@@ -84,6 +86,8 @@ export function Table() {
 
   /** Chọn 1 trong 3 loại game: chưa có thì tạo. */
   const pickType = (type: GameType) => {
+    // Bàn nhiều người: đổi game là việc của host (đổi cho cả bàn)
+    if (!canHost) return flash(`Chỉ host (${players[session.hostId ?? '']?.name ?? 'host'}) mới đổi game được.`, true)
     const id = gameOf(type)?.id ?? actions().addGame(type)
     actions().setCurrentGame(id)
     setParams({}, { replace: true })
@@ -211,6 +215,12 @@ export function Table() {
 
   const onTransfer = (from: ID, to: ID) => {
     if (!game) return
+    // Bàn nhiều người, không phải host: chỉ trả kẹo của mình hoặc đòi về mình (không làm thay người khác)
+    if (!canHost && from !== me && !(to === me && from !== POT && from !== DEALER)) {
+      if (from === POT) return flash(`Chờ ${hostName} trao pot.`, true)
+      if (from === DEALER) return flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
+      return flash('Chỉ trả kẹo của mình — muốn đòi thì kéo người đó về chỗ mình.', true)
+    }
     if (hand && (to === POT || from === POT)) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
     if (isFree && (to === POT || from === POT)) {
       // Tự do: cược vào Pot (chưa có ván thì tự mở), kéo Pot để trao thưởng
@@ -253,11 +263,11 @@ export function Table() {
   const onTap = (id: ID) => {
     if (!game || !me) return
     if (id === me) return setShowLog(true)
-    if (id === DEALER) return setPicker('dealer')
+    if (id === DEALER) return canHost ? setPicker('dealer') : flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
     if (id === POT) {
       if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
       // Tự do đã chốt cược: bấm Pot = chọn người thắng để trao
-      if (isFree && round?.phase === 'playing') return setPicker('award')
+      if (isFree && round?.phase === 'playing') return canHost ? setPicker('award') : flash(`Chờ ${hostName} trao pot.`, true)
       if (isLoto && round?.phase === 'playing') {
         if (me !== session.hostId) return flash(`Chờ ${hostName} trao pot cho người thắng.`, true)
         return setPicker('award')
@@ -406,11 +416,11 @@ export function Table() {
   // Lần đầu làm host / lần đầu chơi một game trên máy này → tự mở hướng dẫn
   const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
   useEffect(() => {
-    if (!game || guide) return
+    if (!game || guide || !me) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
     if (guideSeen(game.type, role)) return
     const t = window.setTimeout(() => setGuide({ game: game.type, role }), 400)
     return () => window.clearTimeout(t)
-  }, [game?.type, role, guide]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [game?.type, role, guide, me]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const closeGuide = () => {
     if (guide) markGuideSeen(guide.game, guide.role)
@@ -599,11 +609,14 @@ export function Table() {
           />
 
 
-
-
-
           <div data-guide="actions" className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {GAMES[game.type].soon ? null : game.type === 'free' ? (
+            {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
+              // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
+              <div className="flex flex-1 items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-night/90 px-3 py-2 text-center text-sm text-muted">
+                🛎️ <b className="text-cream">{hostName}</b> điều khiển ván
+                {hand && actor && hand.street !== 'done' ? ` · lượt ${players[actor]?.name}` : ''}
+              </div>
+            ) : game.type === 'free' ? (
               round ? (
                 <>
                   {round.phase === 'betting' ? (

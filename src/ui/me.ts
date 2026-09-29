@@ -48,12 +48,16 @@ export function writeMeHere(sessionId: ID, playerId: ID): void {
   else writeMe(sessionId, playerId)
 }
 
-/** Người chơi của cửa sổ/máy này; mặc định là người đầu tiên đang chơi. */
+/**
+ * Người chơi của cửa sổ/máy này. Bàn nhiều người: chưa chọn (vừa join) thì chưa là ai — không mặc định
+ * thành host. Bàn một máy: mặc định là host (người cầm máy ghi hộ cả bàn).
+ */
 export function useMe(session: Session | null | undefined): [ID | undefined, (id: ID) => void] {
   const [, rerender] = useState(0)
   const stored = session ? readMe(session.id) : null
   const valid = session?.players.find((p) => p.id === stored)
-  const me = valid?.id ?? session?.players.find((p) => p.active)?.id
+  const me =
+    valid?.id ?? (session?.mode === 'multi' ? undefined : (session?.hostId ?? session?.players.find((p) => p.active)?.id))
   const set = (id: ID) => {
     if (!session) return
     writeMeHere(session.id, id)
