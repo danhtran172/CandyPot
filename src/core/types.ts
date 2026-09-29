@@ -47,6 +47,36 @@ export interface Tag {
   playerId: ID
 }
 
+/** Poker: các vòng cược của một tay bài; done = đã trao hết pot. */
+export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'showdown' | 'done'
+
+/** Trạng thái một tay Poker (vòng cược, lượt, bỏ bài, all-in). Chip thật nằm trong `moves` (người → POT). */
+export interface PokerHand {
+  street: Street
+  /** Thứ tự chỗ ngồi của người trong tay bài. */
+  order: ID[]
+  /** Nút D (người chia). */
+  button: ID
+  sb: number
+  /** Tổng tối đa một người bỏ vào một tay (all-in). */
+  cap: number
+  folded: ID[]
+  allIn: ID[]
+  /** Người đang tới lượt; null khi hết vòng cược. */
+  toAct: ID | null
+  /** Người đã hành động từ lần tố gần nhất trong vòng này. */
+  acted: ID[]
+  /** Kẹo mỗi người đã bỏ trong vòng hiện tại (chip trên bàn). */
+  streetBets: Record<ID, number>
+  currentBet: number
+  /** Mức tố tối thiểu (cộng thêm trên cược hiện tại). */
+  minRaise: number
+  /** Chỉ số các pot đã trao ở showdown. */
+  awarded: number[]
+  /** Ảnh chụp để hoàn tác thao tác cuối. */
+  undo: { hand: Omit<PokerHand, 'undo'>; moves: number }[]
+}
+
 export interface Round {
   id: ID
   at: number
@@ -67,6 +97,8 @@ export interface Round {
    */
   phase?: 'betting' | 'playing'
   moves: Move[]
+  /** Poker có luật đầy đủ: blind, vòng cược, lượt, side pot. */
+  poker?: PokerHand
   /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]
@@ -81,6 +113,8 @@ export interface Game {
   bets?: { bet: number; bet2: number }
   /** Lô tô: giá mỗi tờ host đặt ở ô Price. */
   price?: number
+  /** Poker: small blind và mức all-in (tổng tối đa mỗi người một tay). */
+  pokerSettings?: { sb: number; cap: number }
 }
 
 /** Đòi kẹo: `to` đòi `from` trả `amount` kẹo, chờ `from` bấm OK. */

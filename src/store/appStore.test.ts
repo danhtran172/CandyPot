@@ -172,14 +172,40 @@ describe('appStore — Xì dách', () => {
 })
 
 describe('appStore — Poker', () => {
-  it('cược mở ván vào pot, chia pot rồi mới chốt được', () => {
+  it('blind tự bỏ, theo lượt, bỏ bài hết thì người còn lại ăn pot; chưa xong thì không chốt được', () => {
     const g = s().addGame('poker')
-    s().openRound(g, { participants: [a, b, c], bet: 2, stakes: { [a]: 2, [b]: 2, [c]: 0 }, dealer: null })
-    s().addMove(g, c, POT, 2, 'Theo')
-    expect(s().closeRound(g)).toEqual(['Pot còn 6 kẹo — kéo pot cho người thắng trước khi chốt.'])
-    s().addMove(g, POT, b, 6, 'Cả pot')
+    expect(s().setPokerSettings(g, 1, 10)).toEqual([])
+    expect(s().quickOpen(g)).toEqual([])
+    const hand = () => openRound(session(), g)!.poker!
+    // 3 người, nút D = An → SB Bình, BB Cường, An nói trước
+    expect([hand().button, hand().toAct]).toEqual([a, a])
+    expect(s().addMove(g, a, POT, 2, '')).toEqual(['Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.'])
+    expect(s().closeRound(g)).toEqual(['Tay bài chưa xong — chơi hết các vòng và trao pot trước.'])
+    expect(s().pokerAct(g, b, { type: 'call' })).toEqual(['Chưa tới lượt người này.'])
+    s().pokerAct(g, a, { type: 'raise', to: 4 })
+    s().pokerAct(g, b, { type: 'fold' })
+    s().pokerAct(g, c, { type: 'fold' })
+    expect(hand().street).toBe('done')
     expect(s().closeRound(g)).toEqual([])
-    expect(netOf(session())).toEqual({ [a]: -2, [b]: 4, [c]: -2 })
+    expect(netOf(session())).toEqual({ [a]: 3, [b]: -1, [c]: -2 })
+    // Tay sau: nút D xoay sang Bình
+    s().quickOpen(g)
+    expect(hand().button).toBe(b)
+  })
+
+  it('↩ hoàn tác thao tác cuối; đang chơi thì không hoàn tác lẻ từng lượt', () => {
+    const g = s().addGame('poker')
+    s().quickOpen(g)
+    s().pokerAct(g, a, { type: 'call' })
+    const r = openRound(session(), g)!
+    expect(s().undoMove(g, r.id, r.moves[2].id)).toEqual(['Poker: dùng nút ↩ trên bàn để hoàn tác thao tác cuối.'])
+    expect(s().pokerUndo(g)).toEqual([])
+    expect([openRound(session(), g)!.moves.length, openRound(session(), g)!.poker!.toAct]).toEqual([2, a])
+  })
+
+  it('cài đặt: all-in ít nhất bằng big blind', () => {
+    const g = s().addGame('poker')
+    expect(s().setPokerSettings(g, 5, 8)).toEqual(['Mức all-in phải ít nhất bằng big blind (10).'])
   })
 })
 
@@ -268,8 +294,9 @@ describe('appStore — hoàn tác cần host', () => {
 
   it('không hoàn tác được lượt pot làm lệch ván Poker đã kết thúc', () => {
     const g = s().addGame('poker')
-    s().openRound(g, { participants: [a, b], bet: 2, stakes: { [a]: 2, [b]: 2 }, dealer: null })
-    s().addMove(g, POT, a, 4, '')
+    s().quickOpen(g)
+    s().pokerAct(g, a, { type: 'fold' })
+    s().pokerAct(g, b, { type: 'fold' })
     s().closeRound(g)
     const r = session().games[0].rounds[0]
     const win = r.moves.find((m) => m.from === POT)!

@@ -7,6 +7,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - **Lịch sử trả/nhận** của riêng bạn (nút 📜 góc bàn); hoàn tác cần **host** xác nhận
 - **Bấm là xong:** bấm một người để đưa kẹo cho họ (⇄ để đòi), bấm Pot để bỏ kẹo / mua tờ / (host) trao pot, bấm Bet để cược, bấm 🎩 để đổi cái, bấm chính mình để xem Trả/nhận. Kéo thả vẫn dùng được.
 - **Đòi kẹo:** kéo gói kẹo của người khác về chỗ mình → người đó nhận thông báo, bấm OK mới chuyển
+- **Poker như game thật:** nút D xoay vòng, tự bỏ SB/BB, các vòng Preflop → Flop → Turn → River → Showdown theo lượt; nút Bỏ bài / Theo / Tố / All-in (all-in mặc định 10 × SB); chip trên bàn; tự chia pot chính / pot phụ khi all-in thiếu; host trao pot (chia đều được); ↩ hoàn tác; ⚙ (host) chỉnh small blind và mức all-in.
 - **Lô tô:** host đặt **Giá** (mỗi tờ) giữa bàn → mọi người kéo mình vào 💰 Pot, chọn số tờ (app tự tính kẹo) → **Chốt** → host kéo Pot vào người thắng, xác nhận → **Ván mới**.
 - **Bầu host:** host vắng thì mọi người bấm 🛎️ ở màn Người chơi để bầu host mới — đủ 2 phiếu là thành host. Host thì chuyển host thẳng, không cần vote.
 - **Nút Host và Yêu cầu** (góc phải dưới bàn chơi, ai cũng có, có số đếm): *Host* — host duyệt yêu cầu hoàn tác (từng cái hoặc OK tất cả) và theo dõi lời đòi giữa mọi người; người khác xem yêu cầu hoàn tác của mình đang chờ và rút lại được. *Yêu cầu* — ai đang đòi bạn (Không/OK, OK tất cả) và bạn đang đòi ai. Thông báo trên cùng có "Để sau" để không bị che bàn.

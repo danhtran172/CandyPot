@@ -1,13 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ID, Player } from '../../core/types'
 
-/** Popup chọn một người (chọn nhà cái, người thắng pot…). */
+/** Popup chọn một người (chọn nhà cái, người thắng pot…); `onPickMany` = chọn nhiều người rồi xác nhận. */
 export function PlayerPicker({
   title,
   hint,
   players,
   current,
   onPick,
+  onPickMany,
   onClose,
 }: {
   title: string
@@ -15,9 +16,13 @@ export function PlayerPicker({
   players: Player[]
   /** Người đang được chọn sẵn (vd nhà cái hiện tại) — tô đậm. */
   current?: ID | null
-  onPick: (id: ID) => void
+  onPick?: (id: ID) => void
+  /** Chọn được nhiều người (vd chia pot) — có nút xác nhận. */
+  onPickMany?: (ids: ID[]) => void
   onClose: () => void
 }) {
+  const [chosen, setChosen] = useState<ID[]>([])
+  const multi = !!onPickMany
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -36,9 +41,14 @@ export function PlayerPicker({
             <li key={p.id}>
               <button
                 type="button"
-                onClick={() => onPick(p.id)}
+                aria-pressed={multi ? chosen.includes(p.id) : undefined}
+                onClick={() =>
+                  multi
+                    ? setChosen((c) => (c.includes(p.id) ? c.filter((x) => x !== p.id) : [...c, p.id]))
+                    : onPick?.(p.id)
+                }
                 className={`flex w-full flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 active:scale-95 ${
-                  p.id === current ? 'border-lemon bg-lemon/15' : 'border-line bg-night/50'
+                  (multi ? chosen.includes(p.id) : p.id === current) ? 'border-lemon bg-lemon/15' : 'border-line bg-night/50'
                 }`}
               >
                 <span aria-hidden className="text-3xl leading-none">
@@ -49,6 +59,16 @@ export function PlayerPicker({
             </li>
           ))}
         </ul>
+        {multi && (
+          <button
+            type="button"
+            disabled={!chosen.length}
+            onClick={() => onPickMany?.(chosen)}
+            className="font-display mt-3 w-full rounded-2xl bg-lemon py-2.5 text-lg font-bold text-night shadow-[inset_0_-4px_0_rgb(0_0_0/0.18)] disabled:opacity-40"
+          >
+            {chosen.length > 1 ? `Chia đều cho ${chosen.length} người` : chosen.length ? 'Trao pot' : 'Chọn người thắng'}
+          </button>
+        )}
       </div>
     </div>
   )

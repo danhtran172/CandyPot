@@ -18,6 +18,10 @@ export interface Seat {
   /** Cược lấy từ ván trước (chưa mở ván) — hiện mờ. */
   stakeDim?: boolean
   isMe?: boolean
+  /** Đang tới lượt (Poker) — viền sáng. */
+  highlight?: boolean
+  /** Đã bỏ bài (Poker) — mờ đi. */
+  dim?: boolean
 }
 
 interface Drag {
@@ -57,6 +61,7 @@ export function Board({
   center,
   corner,
   cornerRight,
+  cornerTop,
   pot,
   potAfterCenter,
   betBox,
@@ -76,6 +81,8 @@ export function Board({
   corner?: ReactNode
   /** Nút ở góc dưới bên phải bàn. */
   cornerRight?: ReactNode
+  /** Nút ở góc trên bên phải bàn (vd ⚙ cài đặt Poker). */
+  cornerTop?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   /** Đặt ô Pot bên dưới nội dung giữa bàn (Lô tô: Giá ở trên, Pot ở dưới). */
@@ -168,7 +175,9 @@ export function Board({
         : ''
 
   // "Tôi" ở dưới cùng, những người khác xếp đều theo chiều kim đồng hồ
-  const ordered = [...seats.filter((s) => s.isMe), ...seats.filter((s) => !s.isMe)]
+  // Giữ đúng thứ tự ngồi (chiều kim đồng hồ), xoay để "tôi" ở dưới cùng
+  const meAt = Math.max(0, seats.findIndex((s) => s.isMe))
+  const ordered = [...seats.slice(meAt), ...seats.slice(0, meAt)]
   const n = ordered.length
   const size = sizeFor(n)
   const square = shape === 'square'
@@ -283,13 +292,17 @@ export function Board({
                 aria-label={s.isMe ? `${s.player.name} (bạn)` : `Đưa kẹo cho ${s.player.name}`}
                 style={{ left: `${left}%`, top: `${top}%` }}
                 className={`absolute flex -translate-x-1/2 cursor-pointer -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
-                  s.player.active ? '' : 'opacity-60'
+                  s.dim ? 'opacity-35' : s.player.active ? '' : 'opacity-60'
                 }`}
               >
                 {side === 'below' && stake}
                 <span
                   className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
-                    s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
+                    s.highlight
+                      ? 'border-mint ring-4 ring-mint/40 shadow-[0_0_22px_rgb(61_220_151/0.55)]'
+                      : s.isMe
+                        ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]'
+                        : 'border-line'
                   } ${ring(s.player.id)}`}
                 >
                   <span aria-hidden className="leading-none">
@@ -318,6 +331,7 @@ export function Board({
 
         {corner && <div className="absolute bottom-1 left-3 z-10">{corner}</div>}
         {cornerRight && <div className="absolute right-3 bottom-1 z-10 flex gap-1.5">{cornerRight}</div>}
+        {cornerTop && <div className="absolute top-1 right-3 z-10">{cornerTop}</div>}
       </div>
 
       {drag?.moved && (

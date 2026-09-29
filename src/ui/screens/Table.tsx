@@ -2,17 +2,29 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ORDER, GAMES } from '../../core/games'
 import { lotoPrice } from '../../core/games/loto'
+import {
+  blindsOf,
+  pots as handPotsOf,
+  raiseOptions,
+  remaining,
+  STREET_LABEL,
+  STREETS,
+  toCall,
+  type PokerAction,
+} from '../../core/games/pokerHand'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { scaledOptions } from '../../core/games/options'
 import { suggestOptions, tienlenBets } from '../../core/suggest'
-import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
+import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
 import { actions } from '../../store'
+import { pokerSettingsOf } from '../../store/appStore'
 import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
 import { PlayerPicker } from '../components/PlayerPicker'
+import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
@@ -29,6 +41,7 @@ export function Table() {
   const [params, setParams] = useSearchParams()
   const [pending, setPending] = useState<{ from: ID; to: ID; tapped?: boolean } | null>(null)
   const [picker, setPicker] = useState<'dealer' | 'award' | null>(null)
+  const [pokerSheet, setPokerSheet] = useState<'raise' | 'allin' | 'settings' | null>(null)
   const [showLog, setShowLog] = useState(false)
   const [editBets, setEditBets] = useState(false)
   const [editPrice, setEditPrice] = useState(false)
@@ -66,7 +79,7 @@ export function Table() {
    */
   const openNext = () => {
     if (!game) return false
-    if (!hasPrev && game.type !== 'xidach' && game.type !== 'loto') {
+    if (!hasPrev && game.type === 'tienlen') {
       navigate(`${base}/g/${game.id}/open`)
       return false
     }
@@ -80,6 +93,57 @@ export function Table() {
 
   const isLoto = game?.type === 'loto'
   const hostName = players[session.hostId ?? '']?.name ?? '?'
+
+  /** Poker: tay bài đang chơi (luật đầy đủ). */
+  const hand = round?.poker
+  const handState = hand && round ? { hand, moves: round.moves } : undefined
+  const handPots = handState ? handPotsOf(handState) : []
+  const actor = hand?.toAct ?? null
+  const nextPot = hand ? handPots.findIndex((_, i) => !hand.awarded.includes(i)) : -1
+
+  /** Người đang tới lượt Bỏ bài / Xem / Theo / Tố / All-in; báo khi sang vòng mới. */
+  const pokerDo = (action: PokerAction) => {
+    if (!game || !actor || !hand) return
+    const errors = actions().pokerAct(game.id, actor, action)
+    if (errors.length) return flash(errors[0], true)
+    const after = openRound(actions().session!, game.id)?.poker
+    if (!after || after.street === hand.street) return
+    if (after.street === 'done') {
+      const won = openRound(actions().session!, game.id)?.moves.filter((m) => m.from === POT)
+      flash(`${won?.map((m) => players[m.to]?.name).join(', ')} ăn pot! Bấm Tay mới để chơi tiếp.`)
+    } else if (after.street === 'showdown') flash(`Showdown — ${hostName} trao pot cho người thắng.`)
+    else flash(`Sang ${STREET_LABEL[after.street]}.`)
+  }
+
+  const pokerUndo = () => {
+    if (!game) return
+    const errors = actions().pokerUndo(game.id)
+    if (errors.length) flash(errors[0], true)
+  }
+
+  /** Showdown: host trao pot kế tiếp cho một hoặc nhiều người (chia đều). */
+  const awardNextPot = (winners: ID[]) => {
+    setPicker(null)
+    if (!game) return
+    const errors = actions().pokerAward(game.id, nextPot, winners)
+    if (errors.length) return flash(errors[0], true)
+    const done = openRound(actions().session!, game.id)?.poker?.street === 'done'
+    flash(`${winners.map((w) => players[w]?.name).join(', ')} ăn ${handPots[nextPot].amount} kẹo${done ? ' — bấm Tay mới.' : '.'}`)
+  }
+
+  const openPokerSettings = () => {
+    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới chỉnh cài đặt Poker.`, true)
+    setPokerSheet('settings')
+  }
+
+  const pokerBadge = (id: ID): string | undefined => {
+    if (!hand) return undefined
+    const { sb, bb } = blindsOf(hand)
+    const tags = [id === hand.button && 'D', id === sb && 'SB', id === bb && 'BB'].filter(Boolean) as string[]
+    if (hand.folded.includes(id)) tags.push('Bỏ bài')
+    else if (hand.allIn.includes(id)) tags.push('All-in')
+    return tags.join(' · ') || undefined
+  }
 
   /** Lô tô: host kéo Pot vào người thắng → xác nhận → trao cả pot và kết thúc ván. */
   const awardPot = async (to: ID) => {
@@ -105,6 +169,7 @@ export function Table() {
 
   const onTransfer = (from: ID, to: ID) => {
     if (!game) return
+    if (hand && (to === POT || from === POT)) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
     if (isLoto && (to === POT || from === POT)) {
       if (from === POT) return void awardPot(to)
       if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
@@ -139,6 +204,7 @@ export function Table() {
     if (id === me) return setShowLog(true)
     if (id === DEALER) return setPicker('dealer')
     if (id === POT) {
+      if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
       if (isLoto && round?.phase === 'playing') {
         if (me !== session.hostId) return flash(`Chờ ${hostName} trao pot cho người thắng.`, true)
         return setPicker('award')
@@ -222,7 +288,10 @@ export function Table() {
     }
     const errors = actions().nextRound(game.id)
     if (errors.length) flash(errors[0], true)
-    else flash('Đã kết thúc ván — ván mới, đặt cược nào!')
+    else if (game.type === 'poker') {
+      const next = openRound(actions().session!, game.id)?.poker
+      flash(`Tay mới — nút D: ${players[next?.button ?? '']?.name}.`)
+    } else flash('Đã kết thúc ván — ván mới, đặt cược nào!')
   }
 
   const closeRound = () => {
@@ -253,9 +322,11 @@ export function Table() {
     isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
-    badge: round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
-    stake: game?.type === 'xidach' ? (round ?? lastPlay)?.stakes[p.id] : undefined,
+    badge: hand ? pokerBadge(p.id) : round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
+    stake: hand ? hand.streetBets[p.id] || undefined : game?.type === 'xidach' ? (round ?? lastPlay)?.stakes[p.id] : undefined,
     stakeDim: !round,
+    highlight: !!hand && hand.toAct === p.id,
+    dim: !!hand?.folded.includes(p.id),
   }))
 
   return (
@@ -291,8 +362,10 @@ export function Table() {
             {round ? (
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
-                Ván {roundNumber(game, round)}{' '}
-                {game.type === 'loto'
+                {round.poker ? 'Tay' : 'Ván'} {roundNumber(game, round)}{' '}
+                {round.poker
+                  ? `· ${STREET_LABEL[round.poker.street]}`
+                  : game.type === 'loto'
                   ? round.phase === 'betting'
                     ? 'đang mua tờ'
                     : 'đã chốt — host trao pot'
@@ -325,7 +398,19 @@ export function Table() {
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
-            center={<TableCenter game={game} round={round} onEditBets={openBets} onEditPrice={openPrice} />}
+            center={<TableCenter game={game} round={round} players={players} onEditBets={openBets} onEditPrice={openPrice} />}
+            cornerTop={
+              game.type === 'poker' ? (
+                <button
+                  type="button"
+                  aria-label="Cài đặt Poker"
+                  onClick={openPokerSettings}
+                  className="grid size-9 place-items-center rounded-full border border-line/60 bg-night/70 text-lg"
+                >
+                  ⚙
+                </button>
+              ) : undefined
+            }
             corner={
               <button
                 type="button"
@@ -355,7 +440,68 @@ export function Table() {
 
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {GAMES[game.type].soon ? null : game.type === 'loto' ? (
+            {GAMES[game.type].soon ? null : game.type === 'poker' && (hand || !round) ? (
+              !hand ? (
+                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
+                  Tay mới
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    aria-label="Hoàn tác thao tác cuối"
+                    disabled={!hand.undo.length}
+                    className="bg-night/90 px-2.5 py-1.5 text-sm"
+                    onClick={pokerUndo}
+                  >
+                    ↩
+                  </Button>
+                  {hand.street === 'done' ? (
+                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
+                      Tay mới
+                    </Button>
+                  ) : hand.street === 'showdown' ? (
+                    <Button
+                      variant="primary"
+                      className="font-display flex-1 py-1.5 text-base"
+                      onClick={() =>
+                        me === session.hostId ? setPicker('award') : flash(`Chờ ${hostName} trao pot.`, true)
+                      }
+                    >
+                      🏆 Trao {nextPot === 0 ? 'pot chính' : `pot phụ ${nextPot}`} ({handPots[nextPot]?.amount ?? 0})
+                    </Button>
+                  ) : actor && handState ? (
+                    <>
+                      <Button variant="danger" className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
+                        Bỏ bài
+                      </Button>
+                      <Button
+                        variant="primary"
+                        className="flex-1 px-2 py-1.5 text-sm whitespace-nowrap"
+                        onClick={() => pokerDo(toCall(hand, actor) ? { type: 'call' } : { type: 'check' })}
+                      >
+                        {toCall(hand, actor)
+                          ? `Theo ${Math.min(toCall(hand, actor), remaining(handState, actor))}${toCall(hand, actor) >= remaining(handState, actor) ? ' (all-in)' : ''}`
+                          : 'Xem bài'}
+                      </Button>
+                      <Button
+                        className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap"
+                        disabled={!raiseOptions(handState, actor).length}
+                        onClick={() => setPokerSheet('raise')}
+                      >
+                        Tố
+                      </Button>
+                      <Button
+                        className="bg-night/90 px-2.5 py-1.5 text-sm whitespace-nowrap text-berry"
+                        disabled={!remaining(handState, actor)}
+                        onClick={() => setPokerSheet('allin')}
+                      >
+                        All-in
+                      </Button>
+                    </>
+                  ) : null}
+                </>
+              )
+            ) : game.type === 'loto' ? (
               round ? (
                 <>
                   <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
@@ -457,7 +603,59 @@ export function Table() {
         />
       )}
 
-      {picker && game && (
+      {pokerSheet === 'settings' && game && (
+        <PokerSettingsSheet
+          initial={pokerSettingsOf(game)}
+          onSave={(sb, cap) => {
+            const errors = actions().setPokerSettings(game.id, sb, cap)
+            if (!errors.length) flash(`Small blind ${sb} · all-in ${cap} — áp dụng từ tay sau.`)
+            return errors
+          }}
+          onClose={() => setPokerSheet(null)}
+        />
+      )}
+
+      {pokerSheet === 'raise' && handState && actor && (
+        <PokerRaiseSheet
+          player={players[actor]}
+          options={raiseOptions(handState, actor)}
+          streetBet={handState.hand.streetBets[actor] ?? 0}
+          min={handState.hand.currentBet + handState.hand.minRaise}
+          max={(handState.hand.streetBets[actor] ?? 0) + remaining(handState, actor)}
+          onPick={(to) => {
+            setPokerSheet(null)
+            pokerDo({ type: 'raise', to })
+          }}
+          onClose={() => setPokerSheet(null)}
+        />
+      )}
+
+      {pokerSheet === 'allin' && handState && actor && (
+        <PriceSheet
+          title={`${players[actor]?.name} all-in`}
+          hint={`Mặc định bỏ nốt ${remaining(handState, actor)} kẹo (mức all-in ${handState.hand.cap}). Không đủ thì sửa số nhỏ hơn.`}
+          unit="kẹo"
+          initial={remaining(handState, actor)}
+          onSave={(v) => {
+            if (v > remaining(handState, actor)) return [`Tối đa ${remaining(handState, actor)} kẹo.`]
+            pokerDo({ type: 'allin', amount: v })
+            return []
+          }}
+          onClose={() => setPokerSheet(null)}
+        />
+      )}
+
+      {picker === 'award' && hand && handPots[nextPot] && (
+        <PlayerPicker
+          title={`🏆 Ai ăn ${nextPot === 0 ? 'pot chính' : `pot phụ ${nextPot}`} (${handPots[nextPot].amount} kẹo)?`}
+          hint="Chọn một người, hoặc nhiều người để chia đều."
+          players={session.players.filter((p) => handPots[nextPot].eligible.includes(p.id))}
+          onPickMany={awardNextPot}
+          onClose={() => setPicker(null)}
+        />
+      )}
+
+      {picker && game && !(picker === 'award' && hand) && (
         <PlayerPicker
           title={picker === 'dealer' ? '🎩 Ai làm nhà cái?' : '🏆 Ai thắng?'}
           hint={
@@ -538,14 +736,57 @@ function CornerLink({ to, icon, label, count }: { to: string; icon: string; labe
 function TableCenter({
   game,
   round,
+  players,
   onEditBets,
   onEditPrice,
 }: {
   game: Game
   round?: Round
+  players: Record<ID, Player>
   onEditBets: () => void
   onEditPrice: () => void
 }) {
+  if (round?.poker) {
+    const h = round.poker
+    const state = { hand: h, moves: round.moves }
+    const list = handPotsOf(state)
+    const need = h.toAct ? toCall(h, h.toAct) : 0
+    return (
+      <>
+        <div className="flex flex-wrap justify-center gap-0.5 text-[10px] font-semibold">
+          {STREETS.map((st) => (
+            <span
+              key={st}
+              className={st === h.street ? 'rounded-full bg-lemon px-1.5 text-night' : 'px-0.5 text-muted'}
+            >
+              {STREET_LABEL[st]}
+            </span>
+          ))}
+        </div>
+        {h.toAct ? (
+          <>
+            <span className="text-xs">
+              Lượt <b className="text-sky">{players[h.toAct]?.name}</b>
+              {need > 0 ? ` · theo ${need}` : ''}
+            </span>
+            <span className="text-[11px] text-muted">
+              Cược vòng: {h.currentBet} · all-in {h.cap}
+            </span>
+          </>
+        ) : h.street === 'done' ? (
+          <span className="text-xs text-mint">Xong tay — bấm Tay mới</span>
+        ) : (
+          <ul className="space-y-0.5 text-[11px]">
+            {list.map((p, i) => (
+              <li key={i} className={h.awarded.includes(i) ? 'text-muted line-through' : ''}>
+                <b>{i === 0 ? 'Pot chính' : `Pot phụ ${i}`} {p.amount}</b> · {p.eligible.map((id) => players[id]?.name).join(', ')}
+              </li>
+            ))}
+          </ul>
+        )}
+      </>
+    )
+  }
   if (game.type === 'loto') {
     const price = lotoPrice(game)
     return (

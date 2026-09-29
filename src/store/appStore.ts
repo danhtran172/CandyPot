@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { lotoPrice } from '../core/games/loto'
+import { act, ALL_IN_MULTIPLIER, award, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
@@ -37,8 +38,8 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
-  // Lô tô: không bỏ kẹo vào pot lúc mở ván — mua tờ bằng cách kéo vào Pot
-  const stakes = game.type === 'loto' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
+  // Lô tô / Poker: không bỏ kẹo vào pot lúc mở ván (mua tờ / blind tự tính)
+  const stakes = game.type === 'loto' || game.type === 'poker' ? {} : Object.fromEntries(active.map((id) => [id, prev?.stakes[id] ?? bet]))
   return { participants, bet, bet2, stakes, dealer }
 }
 
@@ -67,6 +68,14 @@ export interface AppState {
   setDealer(gameId: ID, playerId: ID): string[]
   /** Xì dách: chốt cược để chia bài và trả kẹo. */
   lockBets(gameId: ID): string[]
+  /** Poker: người đang tới lượt Bỏ bài / Xem / Theo / Tố / All-in. */
+  pokerAct(gameId: ID, playerId: ID, action: PokerAction): string[]
+  /** Poker (showdown): trao pot thứ `index` cho người thắng (nhiều người thì chia đều). */
+  pokerAward(gameId: ID, index: number, winners: ID[]): string[]
+  /** Poker: hoàn tác thao tác cuối trong tay bài. */
+  pokerUndo(gameId: ID): string[]
+  /** Poker: small blind và mức all-in (áp dụng từ tay sau). */
+  setPokerSettings(gameId: ID, sb: number, cap: number): string[]
   /** Lô tô: host đặt giá mỗi tờ (ván đang mở chưa ai mua + mặc định cho ván sau). */
   setLotoPrice(gameId: ID, price: number): string[]
   /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
@@ -127,6 +136,11 @@ function validateOpen(game: Game, d: OpenDraft): string[] {
     errors.push('Số kẹo bỏ vào pot phải là số nguyên ≥ 0.')
   }
   return errors
+}
+
+/** Poker: small blind + mức all-in của game (mặc định 1 và 10 × SB). */
+export function pokerSettingsOf(game: Game): { sb: number; cap: number } {
+  return game.pokerSettings ?? { sb: DEFAULT_SB, cap: DEFAULT_SB * ALL_IN_MULTIPLIER }
 }
 
 function findOpenIn(game: Game): Round | undefined {
@@ -309,6 +323,15 @@ export function createAppStore(repo: SessionRepo) {
           transfers: [],
           tags: [],
         }
+        if (g.type === 'poker') {
+          // Poker: xoay nút D, tự bỏ SB/BB; chip trong tay bài đi qua pokerAct
+          const { sb, cap } = pokerSettingsOf(g)
+          const seat = new Map((get().session?.players ?? []).map((p, i) => [p.id, i]))
+          const order = [...draft.participants].sort((x, y) => (seat.get(x) ?? 0) - (seat.get(y) ?? 0))
+          const prev = [...g.rounds].reverse().find((r) => r.poker)?.poker
+          const hand = startHand(order, nextButton(order, prev?.order, prev?.button), sb, cap, newId)
+          Object.assign(round, { participants: order, bet: 2 * sb, stakes: {}, moves: hand.moves, poker: hand.hand })
+        }
         mapGame(gameId, (g) => ({
           ...g,
           rounds: [...g.rounds, round],
@@ -342,6 +365,41 @@ export function createAppStore(repo: SessionRepo) {
           price,
           rounds: x.rounds.map((r) => (r.id === open?.id ? { ...r, bet: price } : r)),
         }))
+        return []
+      },
+
+      pokerAct(gameId, playerId, action) {
+        const open = openOf(gameId)
+        if (!open?.poker) return ['Chưa có tay bài nào đang chơi.']
+        const r = act({ hand: open.poker, moves: open.moves }, playerId, action, newId)
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => ({ ...x, poker: r.hand, moves: r.moves }))
+        return []
+      },
+
+      pokerAward(gameId, index, winners) {
+        const open = openOf(gameId)
+        if (!open?.poker) return ['Chưa có tay bài nào đang chơi.']
+        const r = award({ hand: open.poker, moves: open.moves }, index, winners, newId)
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => ({ ...x, poker: r.hand, moves: r.moves }))
+        return []
+      },
+
+      pokerUndo(gameId) {
+        const open = openOf(gameId)
+        if (!open?.poker) return ['Chưa có tay bài nào đang chơi.']
+        const r = undoLast({ hand: open.poker, moves: open.moves })
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => ({ ...x, poker: r.hand, moves: r.moves }))
+        return []
+      },
+
+      setPokerSettings(gameId, sb, cap) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        if (![sb, cap].every((v) => Number.isInteger(v) && v > 0)) return ['Small blind và mức all-in phải là số nguyên lớn hơn 0.']
+        if (cap < 2 * sb) return [`Mức all-in phải ít nhất bằng big blind (${2 * sb}).`]
+        mapGame(gameId, (g) => ({ ...g, pokerSettings: { sb, cap } }))
         return []
       },
 
@@ -398,6 +456,7 @@ export function createAppStore(repo: SessionRepo) {
         if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
         const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
         const open = findOpenIn(g)
+        if (open?.poker && (from === POT || to === POT)) return ['Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.']
         if (g.type === 'loto' && open) {
           if (open.phase === 'betting' && to !== POT) return ['Đang mua tờ — bấm Chốt rồi host mới trao pot.']
           if (open.phase === 'playing' && to === POT) return ['Đã chốt — không mua thêm tờ được nữa.']
@@ -438,6 +497,7 @@ export function createAppStore(repo: SessionRepo) {
       closeRound(gameId) {
         const open = openOf(gameId)
         if (!open) return ['Không có ván nào đang mở.']
+        if (open.poker && open.poker.street !== 'done') return ['Tay bài chưa xong — chơi hết các vòng và trao pot trước.']
         let transfers
         try {
           transfers = closeTransfers(open)
@@ -521,6 +581,7 @@ export function createAppStore(repo: SessionRepo) {
       undoMove(gameId, roundId, moveId) {
         const round = game(gameId)?.rounds.find((r) => r.id === roundId)
         if (!round?.moves.some((m) => m.id === moveId)) return ['Lượt này không còn nữa.']
+        if (round.status === 'open' && round.poker) return ['Poker: dùng nút ↩ trên bàn để hoàn tác thao tác cuối.']
         const moves = round.moves.filter((m) => m.id !== moveId)
         const dropPending = (s: Session) => ({ ...s, undos: s.undos.filter((u) => u.moveId !== moveId) })
         if (round.status === 'open') {
