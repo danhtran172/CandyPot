@@ -38,7 +38,7 @@ export function GameSettings() {
       </Card>
 
       <p className="mt-3 text-sm text-muted">
-        Khi kéo hũ kẹo, app gợi ý 3 mức: cược × 1, × 1,5 và × 2 (Xì dách lấy cược của người con, Poker lấy số kẹo cần theo).
+        Khi trả kẹo, app gợi ý 3 mức: cược × 1, × 1,5 và × 2 (Xì dách lấy cược của người con, Poker lấy số kẹo cần theo).
       </p>
 
       <Button variant="danger" className="mt-6 w-full" onClick={removeGame}>

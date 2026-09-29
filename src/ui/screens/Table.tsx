@@ -12,6 +12,7 @@ import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
+import { PlayerPicker } from '../components/PlayerPicker'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
@@ -26,7 +27,8 @@ export function Table() {
   const session = useSession()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [pending, setPending] = useState<{ from: ID; to: ID } | null>(null)
+  const [pending, setPending] = useState<{ from: ID; to: ID; tapped?: boolean } | null>(null)
+  const [picker, setPicker] = useState<'dealer' | 'award' | null>(null)
   const [showLog, setShowLog] = useState(false)
   const [editBets, setEditBets] = useState(false)
   const [editPrice, setEditPrice] = useState(false)
@@ -128,6 +130,37 @@ export function Table() {
   /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
   const isRequest = (p: { from: ID; to: ID }) => p.to === me && p.from !== me && p.from !== POT
 
+  /**
+   * Bấm thay cho kéo — người làm luôn là mình: bấm người khác = đưa kẹo (đổi sang đòi được),
+   * bấm mình = xem Trả/nhận, bấm Pot = bỏ kẹo / mua tờ / (host) trao pot, bấm Bet = đặt cược, bấm 🎩 = chọn cái.
+   */
+  const onTap = (id: ID) => {
+    if (!game || !me) return
+    if (id === me) return setShowLog(true)
+    if (id === DEALER) return setPicker('dealer')
+    if (id === POT) {
+      if (isLoto && round?.phase === 'playing') {
+        if (me !== session.hostId) return flash(`Chờ ${hostName} trao pot cho người thắng.`, true)
+        return setPicker('award')
+      }
+      if (game.type === 'poker' && !round) return flash('Chưa mở ván — bấm + Mở ván trước.', true)
+    }
+    onTransfer(me, id)
+    // Đánh dấu mở từ thao tác bấm để popup có nút ⇄ Đưa/Đòi
+    setPending((p) => (p && p.from === me && p.to === id ? { ...p, tapped: true } : p))
+  }
+
+  /** Chọn xong người trong popup (nhà cái / người thắng pot). */
+  const onPicked = (id: ID) => {
+    const kind = picker
+    setPicker(null)
+    if (kind === 'dealer') onTransfer(DEALER, id)
+    else if (kind === 'award') {
+      if (isLoto) void awardPot(id)
+      else onTransfer(POT, id)
+    }
+  }
+
   const pick = (o: Option) => {
     if (!game || !pending) return
     if (pending.to === BET) {
@@ -164,10 +197,10 @@ export function Table() {
   /** Xì dách / Lô tô: khóa cược (mua tờ) để chơi và trả kẹo. */
   const lockBets = () => {
     if (!game) return
-    if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — kéo mình vào 💰 Pot để mua.', true)
+    if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — bấm 💰 Pot để mua.', true)
     const errors = actions().lockBets(game.id)
     if (errors.length) flash(errors[0], true)
-    else flash(isLoto ? `Đã chốt — ${hostName} kéo 💰 Pot cho người thắng.` : 'Đã chốt cược — chia bài rồi kéo để trả kẹo.')
+    else flash(isLoto ? `Đã chốt — ${hostName} bấm 💰 Pot để trao cho người thắng.` : 'Đã chốt cược — chia bài rồi bấm vào người để trả kẹo.')
   }
 
   /** Xì dách: host nhấn giữ ô Bet để bỏ chốt cược. */
@@ -277,7 +310,7 @@ export function Table() {
                 )}
               </span>
             ) : GAMES[game.type].soon ? (
-              <span className="text-muted">Chưa có luật tính — kéo kẹo để chuyển tay</span>
+              <span className="text-muted">Chưa có luật tính — bấm vào người để chuyển kẹo</span>
             ) : (
               <span className="text-muted">{playCount(game) ? `Đã chốt ${playCount(game)} ván` : 'Chưa có ván nào'}</span>
             )}
@@ -314,6 +347,7 @@ export function Table() {
               </>
             }
             onTransfer={onTransfer}
+            onTap={onTap}
           />
 
 
@@ -333,7 +367,7 @@ export function Table() {
                     </Button>
                   ) : (
                     <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 text-center text-sm font-semibold text-lemon">
-                      {me === session.hostId ? 'Kéo 💰 Pot vào người thắng' : `Chờ ${hostName} trao pot`}
+                      {me === session.hostId ? 'Bấm 💰 Pot để trao cho người thắng' : `Chờ ${hostName} trao pot`}
                     </div>
                   )}
                 </>
@@ -423,6 +457,21 @@ export function Table() {
         />
       )}
 
+      {picker && game && (
+        <PlayerPicker
+          title={picker === 'dealer' ? '🎩 Ai làm nhà cái?' : '🏆 Ai thắng?'}
+          hint={
+            picker === 'dealer'
+              ? 'Chỉ đổi được khi chưa chốt cược.'
+              : `Trao pot ${round ? potOf(round) : 0} kẹo${isLoto ? ' và kết thúc ván' : ''}.`
+          }
+          players={session.players.filter((p) => (round ? round.participants.includes(p.id) : p.active))}
+          current={picker === 'dealer' ? dealerNow : null}
+          onPick={onPicked}
+          onClose={() => setPicker(null)}
+        />
+      )}
+
       {showLog && game && <HistorySheet session={session} game={game} me={me} onClose={() => setShowLog(false)} />}
 
       {pending && game && (
@@ -439,6 +488,25 @@ export function Table() {
           mode={isLoto && pending.to === POT ? 'buy' : pending.to === BET ? 'bet' : isRequest(pending) ? 'request' : 'pay'}
           unit={isLoto && pending.to === POT ? { name: 'tờ', price: lotoPrice(game) } : undefined}
           onPick={pick}
+          onSwap={
+            pending.tapped && pending.from !== POT && pending.to !== POT && pending.to !== BET
+              ? () => setPending({ from: pending.to, to: pending.from, tapped: true })
+              : undefined
+          }
+          extra={
+            game.type === 'poker' && pending.to === POT && round && potOf(round) > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setPending(null)
+                  setPicker('award')
+                }}
+                className="mt-2 w-full rounded-2xl border border-dashed border-lemon/60 py-2 text-sm font-semibold text-lemon"
+              >
+                🏆 Trao pot {potOf(round)} kẹo cho người thắng…
+              </button>
+            ) : undefined
+          }
           onClose={() => setPending(null)}
         />
       )}
@@ -531,14 +599,14 @@ function TableCenter({
       <>
         <GameIcon type={game.type} className="size-9" />
         <span className="font-display text-lg leading-tight font-bold">{GAMES[game.type].label}</span>
-        <span className="text-xs text-muted">{soon ? 'Sắp có · kéo kẹo để chuyển tay' : 'Chưa mở ván'}</span>
+        <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : 'Chưa mở ván'}</span>
       </>
     )
   }
   if (game.type === 'xidach') {
     return (
       <>
-        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · kéo 🎩 để đổi cái</span>
+        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · bấm 🎩 để đổi cái</span>
       </>
     )
   }

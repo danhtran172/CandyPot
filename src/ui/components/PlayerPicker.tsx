@@ -1,0 +1,55 @@
+import { useEffect } from 'react'
+import type { ID, Player } from '../../core/types'
+
+/** Popup chọn một người (chọn nhà cái, người thắng pot…). */
+export function PlayerPicker({
+  title,
+  hint,
+  players,
+  current,
+  onPick,
+  onClose,
+}: {
+  title: string
+  hint?: string
+  players: Player[]
+  /** Người đang được chọn sẵn (vd nhà cái hiện tại) — tô đậm. */
+  current?: ID | null
+  onPick: (id: ID) => void
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}>
+      <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="pop relative w-full max-w-lg rounded-t-[2rem] border-t border-line bg-plum px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
+        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
+        <h2 className="font-display text-center text-xl font-bold">{title}</h2>
+        {hint && <p className="text-center text-xs text-muted">{hint}</p>}
+        <ul className="mt-4 grid grid-cols-3 gap-2">
+          {players.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => onPick(p.id)}
+                className={`flex w-full flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 active:scale-95 ${
+                  p.id === current ? 'border-lemon bg-lemon/15' : 'border-line bg-night/50'
+                }`}
+              >
+                <span aria-hidden className="text-3xl leading-none">
+                  {p.emoji}
+                </span>
+                <span className="w-full truncate text-center text-sm font-semibold">{p.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}

@@ -94,7 +94,7 @@ export function OpenRound() {
               onChange={({ bet, bet2 }) => setDraft({ ...draft, bet, bet2 })}
             />
             <p className="mt-3 border-t border-line/60 pt-3 text-xs text-muted">
-              Kéo hũ kẹo sẽ gợi ý: cược Nhì, cược Nhất, Nhất × 1,5 và Nhất × 2.
+              Khi trả kẹo, app gợi ý: cược Nhì, cược Nhất, Nhất × 1,5 và Nhất × 2.
             </p>
           </>
         ) : (

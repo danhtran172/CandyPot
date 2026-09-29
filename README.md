@@ -5,6 +5,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - Game: **Tiến lên miền Nam**, **Xì dách** (có nhà cái), **Poker** (có pot, tính side pot)
 - Bàn oval tối đa 10 người, bạn ngồi dưới cùng: mở ván đặt cược → **kéo gói kẹo** thả vào người nhận (popup 3 số: cược × 1 / × 1,5 / × 2) → chốt ván
 - **Lịch sử trả/nhận** của riêng bạn (nút 📜 góc bàn); hoàn tác cần **host** xác nhận
+- **Bấm là xong:** bấm một người để đưa kẹo cho họ (⇄ để đòi), bấm Pot để bỏ kẹo / mua tờ / (host) trao pot, bấm Bet để cược, bấm 🎩 để đổi cái, bấm chính mình để xem Trả/nhận. Kéo thả vẫn dùng được.
 - **Đòi kẹo:** kéo gói kẹo của người khác về chỗ mình → người đó nhận thông báo, bấm OK mới chuyển
 - **Lô tô:** host đặt **Giá** (mỗi tờ) giữa bàn → mọi người kéo mình vào 💰 Pot, chọn số tờ (app tự tính kẹo) → **Chốt** → host kéo Pot vào người thắng, xác nhận → **Ván mới**.
 - **Bầu host:** host vắng thì mọi người bấm 🛎️ ở màn Người chơi để bầu host mới — đủ 2 phiếu là thành host. Host thì chuyển host thẳng, không cần vote.

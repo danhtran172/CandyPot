@@ -31,7 +31,7 @@ export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: 
         <h2 className="font-display text-center text-xl font-bold">
           <span className="text-sky">Rule</span> · Tiến lên
         </h2>
-        <p className="mt-1 text-center text-xs text-muted">Số gợi ý khi kéo trả kẹo: Nhì, Nhất, Nhất × 1,5, Nhất × 2.</p>
+        <p className="mt-1 text-center text-xs text-muted">Số gợi ý khi trả kẹo: Nhì, Nhất, Nhất × 1,5, Nhất × 2.</p>
         <div className="mt-4">
           <TienlenBetInputs
             bet={bet}

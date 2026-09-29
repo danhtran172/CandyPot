@@ -65,6 +65,7 @@ export function Board({
   hat,
   shape = 'oval',
   onTransfer,
+  onTap,
 }: {
   seats: Seat[]
   /** Hình bàn: oval (mặc định) hoặc vuông — 4 người ngồi 4 cạnh. */
@@ -88,6 +89,8 @@ export function Board({
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   onTransfer: (from: ID, to: ID) => void
+  /** Bấm (không kéo) vào một người / pot / ô Bet / mũ nhà cái. */
+  onTap?: (id: ID) => void
 }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [hover, setHover] = useState<ID | null>(null)
@@ -95,13 +98,16 @@ export function Board({
   const dragging = drag !== null
   const holdTimer = useRef<number | undefined>(undefined)
   const [holding, setHolding] = useState(false)
+  const held = useRef(false)
 
   /** Nhấn giữ ~0,6 giây trên ô Bet đã chốt. */
   const startHold = (e: ReactPointerEvent) => {
+    held.current = false
     if (!betLocked || !onBetHold || e.button !== 0) return
     setHolding(true)
     holdTimer.current = window.setTimeout(() => {
       setHolding(false)
+      held.current = true
       onBetHold()
     }, 600)
   }
@@ -134,8 +140,7 @@ export function Board({
       if (d.moved) {
         const to = targetAt(e.clientX, e.clientY)
         if (to && to !== d.from) onTransfer(d.from, to)
-        return
-      }
+      } else onTap?.(d.from)
     }
 
     window.addEventListener('pointermove', move)
@@ -146,7 +151,7 @@ export function Board({
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [dragging, onTransfer])
+  }, [dragging, onTransfer, onTap])
 
   const start = (id: ID) => (e: ReactPointerEvent) => {
     if (e.button !== 0) return
@@ -172,8 +177,11 @@ export function Board({
     <div
       data-drop={POT}
       onPointerDown={start(POT)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onTap?.(POT)}
       aria-label={`Pot: ${pot} kẹo`}
-      className={`relative flex min-w-28 touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 pt-7 pb-2 transition select-none ${ring(POT)}`}
+      className={`relative flex cursor-pointer min-w-28 touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 pt-7 pb-2 transition select-none ${ring(POT)}`}
     >
       <span className="absolute top-1.5 left-2.5 flex items-center gap-1 text-xs font-bold text-lemon">
         <img src={potIcon} alt="" draggable={false} className="size-5" />
@@ -212,12 +220,19 @@ export function Board({
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
                 onPointerCancel={stopHold}
-                className={`flex touch-none flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
+                onClick={() => {
+                  if (held.current) held.current = false
+                  else onTap?.(BET)
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={betLocked ? 'Bet đã chốt — host giữ để bỏ chốt' : 'Bet — bấm để đặt cược'}
+                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
                   betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
                 } ${holding ? 'scale-95 opacity-100 ring-4 ring-lemon/60' : ''} ${ring(BET)}`}
               >
                 <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
-                <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'thả vào để đặt cược'}</span>
+                <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'bấm để đặt cược'}</span>
               </div>
             )}
             {hat && (
@@ -227,7 +242,7 @@ export function Board({
                 className={`flex touch-none items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs select-none ${
                   drag?.moved && drag.from === DEALER ? 'ring-2 ring-lemon' : ''
                 }`}
-                aria-label={`Nhà cái: ${hat}. Kéo mũ sang người khác để đổi cái`}
+                aria-label={`Nhà cái: ${hat}. Bấm để chọn cái khác`}
               >
                 <span aria-hidden className="text-base leading-none">
                   🎩
@@ -262,8 +277,12 @@ export function Board({
                 key={s.player.id}
                 data-drop={s.player.id}
                 onPointerDown={start(s.player.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onTap?.(s.player.id)}
+                aria-label={s.isMe ? `${s.player.name} (bạn)` : `Đưa kẹo cho ${s.player.name}`}
                 style={{ left: `${left}%`, top: `${top}%` }}
-                className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
+                className={`absolute flex -translate-x-1/2 cursor-pointer -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
                   s.player.active ? '' : 'opacity-60'
                 }`}
               >

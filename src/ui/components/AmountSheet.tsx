@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { Option, Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
 
@@ -11,6 +11,8 @@ export function AmountSheet({
   options,
   mode = 'pay',
   unit,
+  onSwap,
+  extra,
   onPick,
   onClose,
 }: {
@@ -20,6 +22,10 @@ export function AmountSheet({
   mode?: 'pay' | 'request' | 'bet' | 'buy'
   /** Chọn theo đơn vị (vd "tờ" giá 5 kẹo): nút ghi số tờ, số kẹo = số tờ × giá. */
   unit?: { name: string; price: number }
+  /** Đổi chiều (Đưa ⇄ Đòi) — hiện khi bấm vào một người. */
+  onSwap?: () => void
+  /** Nút phụ dưới cùng (vd "Trao pot…"). */
+  extra?: ReactNode
   options: { amount: number; label: string }[]
   onPick: (option: Option) => void
   onClose: () => void
@@ -71,6 +77,14 @@ export function AmountSheet({
           </div>
         )}
 
+        {onSwap && (mode === 'pay' || mode === 'request') && (
+          <div className="mt-2 flex justify-center">
+            <button type="button" onClick={onSwap} className="rounded-full bg-night/60 px-3 py-1 text-xs font-semibold text-sky">
+              ⇄ {mode === 'pay' ? `Đòi ${to.name} thay vì đưa` : `Đưa ${from.name} thay vì đòi`}
+            </button>
+          </div>
+        )}
+
         <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(options.length, 4)}, minmax(0, 1fr))` }}>
           {options.slice(0, 4).map((o) => (
             <button
@@ -110,6 +124,7 @@ export function AmountSheet({
             {VERB[mode]}
           </Button>
         </div>
+        {extra}
       </div>
     </div>
   )

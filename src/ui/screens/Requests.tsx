@@ -52,7 +52,7 @@ export function Requests() {
       <SectionTitle>Bạn đang đòi</SectionTitle>
       {outgoing.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-line p-5 text-center text-sm text-muted">
-          Kéo một người vào mình trên bàn chơi để đòi kẹo.
+          Bấm một người trên bàn chơi → ⇄ Đòi (hoặc kéo người đó vào mình) để đòi kẹo.
         </p>
       ) : (
         <ul className="rounded-2xl bg-plum">
