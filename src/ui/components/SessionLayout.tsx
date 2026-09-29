@@ -1,7 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { actions, useApp } from '../../store'
 import { RequestInbox } from './RequestInbox'
+import { WhoAmI } from './WhoAmI'
+import { readMe } from '../me'
 
 const TABS = [
   { to: '', label: 'Bàn chơi', icon: '🃏' },
@@ -15,6 +17,8 @@ export function SessionLayout() {
   const { sid } = useParams()
   const session = useApp((s) => s.session)
   const error = useApp((s) => s.error)
+  const online = useApp((s) => s.online)
+  const [, setPicked] = useState(0)
   const { pathname } = useLocation()
   const loaded = session?.id === sid
   const navigate = useNavigate()
@@ -45,8 +49,18 @@ export function SessionLayout() {
   }
 
   const showNav = !/\/g\//.test(pathname) && !pathname.endsWith('/players')
+  const multi = session.mode === 'multi' && !!session.code
+  // Bàn nhiều người, máy này chưa chọn mình là ai (vừa join) → hỏi trước
+  const me = readMe(session.id)
+  const needWho = multi && !session.players.some((p) => p.id === me && !p.removed)
   return (
     <>
+      {multi && online === false && (
+        <div role="status" className="mt-3 rounded-2xl border border-lemon/50 bg-lemon/10 p-2.5 text-center text-xs font-semibold text-lemon">
+          📡 Mất kết nối — đang hiện dữ liệu cũ, thay đổi sẽ gửi khi có mạng lại.
+        </div>
+      )}
+      {needWho && <WhoAmI session={session} onDone={() => setPicked((n) => n + 1)} />}
       {error && (
         <div role="alert" className="mt-3 rounded-2xl border border-berry/50 bg-berry/15 p-3 text-sm text-berry">
           {error}

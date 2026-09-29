@@ -37,6 +37,17 @@ export function writeWindowMe(sessionId: ID, playerId: ID): void {
   safeSet(() => sessionStorage, windowKey(sessionId), playerId)
 }
 
+/** Cửa sổ này đóng vai một máy riêng (join bàn giả lập trên cùng máy) — chưa chọn là ai. */
+export function claimWindow(sessionId: ID): void {
+  safeSet(() => sessionStorage, windowKey(sessionId), '')
+}
+
+/** Lưu "tôi là ai" đúng chỗ: cửa sổ đang đóng vai riêng thì lưu cho cửa sổ, không thì cho cả máy. */
+export function writeMeHere(sessionId: ID, playerId: ID): void {
+  if (safeGet(() => sessionStorage, windowKey(sessionId)) !== null) writeWindowMe(sessionId, playerId)
+  else writeMe(sessionId, playerId)
+}
+
 /** Người chơi của cửa sổ/máy này; mặc định là người đầu tiên đang chơi. */
 export function useMe(session: Session | null | undefined): [ID | undefined, (id: ID) => void] {
   const [, rerender] = useState(0)
@@ -45,8 +56,7 @@ export function useMe(session: Session | null | undefined): [ID | undefined, (id
   const me = valid?.id ?? session?.players.find((p) => p.active)?.id
   const set = (id: ID) => {
     if (!session) return
-    if (safeGet(() => sessionStorage, windowKey(session.id))) writeWindowMe(session.id, id)
-    else writeMe(session.id, id)
+    writeMeHere(session.id, id)
     rerender((n) => n + 1)
   }
   return [me, set]

@@ -1,0 +1,11 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "$code.matches(/^[0-9]{5}$/) && (!newData.exists() || (newData.child('sessionId').isString() && newData.child('updatedAt').isNumber() && newData.child('data').isString() && newData.child('data').val().length < 1000000))"
+      }
+    }
+  }
+}

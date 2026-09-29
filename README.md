@@ -12,7 +12,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - **Tự do:** một 💰 Pot để cược (luôn hiện mỗi người đã cược bao nhiêu), kéo Pot vào người thắng để trao thưởng, gửi kẹo cho nhau thoải mái.
 - **Rule ? và ⚙:** giữa bàn có nút hồng **Rule ?** để ai cũng xem luật; host bấm ⚙ góc bàn để chỉnh — Tiến lên: Nhất / Nhì / heo đỏ / heo đen; Lô tô: giá + tối đa số tờ; Xì dách: min / max cược; Poker: small blind + all-in.
 - **Hướng dẫn:** nút **?** cạnh Người chơi → chọn Người chơi / Host → tour chỉ thẳng vào từng nút trên bàn theo mode đang chơi. Lần đầu chơi (hoặc lần đầu làm host) một mode thì tự hiện.
-- **Tạo bàn / Join bàn:** tạo bàn kiểu **Một máy** (host ghi hết) hoặc **Nhiều người join** (có mã 5 số). Join bàn bằng mã 5 số — join qua mạng từ máy khác sẽ có ở giai đoạn 2.
+- **Tạo bàn / Join bàn:** tạo bàn kiểu **Một máy** (host ghi hết) hoặc **Nhiều người join** (mã 5 số + mã QR / link). Người khác bấm **Join bàn** nhập mã (hoặc quét QR) → chọn "Bạn là ai?" → mọi thao tác đồng bộ tức thì giữa các điện thoại (Firebase). Mất mạng thì hiện banner, thay đổi gửi khi có mạng lại.
 - **Quay lại ván trước:** host bấm ⏮ cạnh nút chính để mở lại ván vừa chốt và sửa.
 - **Bầu host:** host vắng thì mọi người bấm 🛎️ ở màn Người chơi để bầu host mới — đủ 2 phiếu là thành host. Host thì chuyển host thẳng, không cần vote.
 - **Nút Host và Yêu cầu** (góc phải dưới bàn chơi, ai cũng có, có số đếm): *Host* — host duyệt yêu cầu hoàn tác (từng cái hoặc OK tất cả) và theo dõi lời đòi giữa mọi người; người khác xem yêu cầu hoàn tác của mình đang chờ và rút lại được. *Yêu cầu* — ai đang đòi bạn (Không/OK, OK tất cả) và bạn đang đòi ai. Thông báo trên cùng có "Để sau" để không bị che bàn.
@@ -42,11 +42,30 @@ Tạo 3 shortcut trên Desktop: **CandyPot** (app), **CandyPot Demo 6 nguoi** (b
 
 Shortcut Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu chưa chạy) và mở app bằng Edge ở chế độ app, khung 400×880. Sửa code là app tự cập nhật (hot reload). Dữ liệu của cửa sổ này nằm trong profile riêng `%LOCALAPPDATA%\CandyPot\browser-profile`.
 
+## Chơi nhiều máy (Firebase)
+
+Chưa cấu hình thì app vẫn chạy: bàn "Nhiều người join" giả lập trên chính máy đó (các tab thấy nhau). Để join qua mạng:
+
+1. [Firebase console](https://console.firebase.google.com) → tạo dự án → **Build › Realtime Database** (chọn vùng Singapore `asia-southeast1`) và **Build › Authentication › Sign-in method › Anonymous** → bật.
+2. **Project settings › Your apps › Web (`</>`)** → lấy config, chép `.env.example` thành `.env.local` rồi điền.
+3. Deploy (lần đầu cần đăng nhập Google):
+
+```bash
+npx firebase-tools login
+```
+
+```bash
+npm run build && npx firebase-tools deploy --only hosting,database --project <project-id>
+```
+
+Security rules ở `database.rules.json` (phòng `rooms/{mã 5 số}`, phải đăng nhập ẩn danh mới đọc/ghi).
+
 ## Cấu trúc
 
 | Thư mục | Nội dung |
 |---|---|
 | `src/core/` | Luật game, sổ cái, thuật toán trả kẹo, danh hiệu — thuần TypeScript, có test |
 | `src/storage/` | Lưu trữ (`LocalRepo` = localStorage) |
+| `src/sync/` | Phòng chơi nhiều máy: `FirebaseRoomBackend` (Realtime Database) / `LocalRoomBackend` (giả lập trên máy khi chưa có config) |
 | `src/store/` | State app (Zustand) |
 | `src/ui/` | Màn hình và form nhập ván |

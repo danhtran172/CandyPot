@@ -10,11 +10,19 @@ import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
+import type { RoomBackend } from '../sync/RoomBackend'
 
 export const EMOJIS = ['🐱', '🐶', '🐸', '🐼', '🦊', '🐯', '🐵', '🐰', '🐨', '🐷', '🐮', '🐙', '🦄', '🐔', '🐧', '🐢']
 
+/** Ghi lại / phát lại id đã sinh: chạy lại một thay đổi trên bản của phòng phải ra đúng các id như trên máy mình. */
+let recordIds: ID[] | null = null
+let replayIds: ID[] | null = null
+
 export function newId(): ID {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+  if (replayIds?.length) return replayIds.shift()!
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+  recordIds?.push(id)
+  return id
 }
 
 export interface OpenDraft {
@@ -56,6 +64,12 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
 export interface AppState {
   session: Session | null
   error: string | null
+  /** Kết nối tới phòng (bàn nhiều người): null = chưa biết. */
+  online: boolean | null
+  /** Nơi đặt phòng: qua mạng (firebase) hay giả lập trên máy (local); không có = chỉ một máy. */
+  roomKind: RoomBackend['kind'] | null
+  /** Join bàn bằng mã 5 số: tải bàn từ phòng về máy này. Trả về id bàn, hoặc lỗi. */
+  joinRoom(code: string): Promise<{ id?: ID; error?: string }>
   /** Tạo bàn: solo = một máy host ghi hết; multi = có mã 5 số để người khác join (giai đoạn 2). */
   createSession(name: string, players: { name: string; emoji: string }[], mode?: 'solo' | 'multi'): ID
   openSession(id: ID): boolean
@@ -180,13 +194,85 @@ function findOpenIn(game: Game): Round | undefined {
   return game.rounds.find((r) => r.status === 'open')
 }
 
-export function createAppStore(repo: SessionRepo) {
+export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
   return createStore<AppState>()((set, get) => {
-    /** Áp dụng thay đổi lên buổi hiện tại, kiểm tra tổng = 0 rồi lưu. */
+    /** Mã phòng nếu bàn này đồng bộ nhiều máy. */
+    const roomOf = (s: Session | null | undefined) => (rooms && s?.mode === 'multi' && s.code) || null
+    let unwatch: (() => void) | null = null
+    let watching: string | null = null
+
+    /** Nhận bản mới từ phòng (máy khác vừa sửa, hoặc chính mình ghi xong). */
+    const receive = (remote: Session) => {
+      const next = normalizeSession(remote)
+      if (JSON.stringify(next) === JSON.stringify(get().session)) return
+      try {
+        repo.save(next)
+      } catch {
+        // Bộ nhớ máy đầy — vẫn hiện bản mới trên màn hình
+      }
+      set({ session: next })
+    }
+
+    /** Mã phòng đã thuộc bàn khác → đổi sang mã mới còn trống. */
+    const rehome = async (s: Session) => {
+      for (let i = 0; i < 8 && rooms; i++) {
+        const code = tableCode()
+        if (await rooms.claim(code, { ...s, code })) {
+          const next = { ...s, code }
+          repo.save(next)
+          if (get().session?.id === s.id) set({ session: next })
+          connect(next)
+          return
+        }
+      }
+    }
+
+    /** Theo dõi phòng của bàn đang mở; phòng chưa có thì đưa bàn lên. */
+    const connect = (s: Session) => {
+      const code = roomOf(s)
+      const key = code && `${s.id}:${code}`
+      if (key === watching) return
+      unwatch?.()
+      unwatch = null
+      watching = key
+      if (!rooms || !code) return
+      unwatch = rooms.watch(code, (remote) => {
+        const current = get().session
+        if (!current || current.id !== s.id || current.code !== code) return
+        if (remote?.id === s.id) receive(remote)
+        else if (!remote) void rooms.claim(code, current)
+        else void rehome(current)
+      })
+    }
+
+    rooms?.onConnection((online) => set({ online }))
+
+    /** Áp dụng thay đổi lên buổi hiện tại, kiểm tra tổng = 0 rồi lưu (bàn nhiều người: ghi cả lên phòng). */
     const mutate = (fn: (s: Session) => Session) => {
       const current = get().session
       if (!current) return
-      const next = { ...fn(current), updatedAt: Date.now() }
+      const ids: ID[] = []
+      recordIds = ids
+      let next: Session
+      try {
+        next = { ...fn(current), updatedAt: Date.now() }
+      } finally {
+        recordIds = null
+      }
+      const code = roomOf(current)
+      if (rooms && code) {
+        // Chạy lại đúng thay đổi này (cùng các id) trên bản mới nhất của phòng — máy khác ghi cùng lúc không bị mất
+        rooms
+          .update(code, (remote) => {
+            replayIds = [...ids]
+            try {
+              return { ...fn(normalizeSession(remote)), updatedAt: Date.now() }
+            } finally {
+              replayIds = null
+            }
+          })
+          .catch(() => set({ error: 'Chưa gửi được thay đổi lên phòng — kiểm tra mạng rồi thao tác lại.' }))
+      }
       let error: string | null = null
       try {
         assertZeroSum(netOf(next))
@@ -216,6 +302,21 @@ export function createAppStore(repo: SessionRepo) {
     return {
       session: null,
       error: null,
+      online: null,
+      roomKind: rooms?.kind ?? null,
+
+      async joinRoom(code) {
+        if (!rooms) return { error: 'Máy này chưa bật chơi nhiều máy.' }
+        let remote: Session | null
+        try {
+          remote = await rooms.fetch(code)
+        } catch {
+          return { error: 'Không kết nối được — kiểm tra mạng rồi thử lại.' }
+        }
+        if (!remote) return { error: `Không có bàn nào mã ${code}.` }
+        repo.save(normalizeSession(remote))
+        return { id: remote.id }
+      },
 
       createSession(name, players, mode = 'solo') {
         const now = Date.now()
@@ -238,16 +339,22 @@ export function createAppStore(repo: SessionRepo) {
         session.hostId = session.players[0]?.id ?? null
         repo.save(session)
         set({ session, error: null })
+        connect(session)
         return session.id
       },
 
       openSession(id) {
         const raw = repo.load(id)
-        set({ session: raw && normalizeSession(raw), error: null })
+        const session = raw && normalizeSession(raw)
+        set({ session, error: null })
+        if (session) connect(session)
         return raw !== null
       },
 
       closeSession() {
+        unwatch?.()
+        unwatch = null
+        watching = null
         set({ session: null, error: null })
       },
 

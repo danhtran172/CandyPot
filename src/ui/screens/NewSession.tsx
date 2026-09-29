@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS } from '../../store/appStore'
+import { writeMe } from '../me'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 import hostIcon from '../../assets/rules/host.webp'
 import groupIcon from '../../assets/rules/group.webp'
@@ -44,6 +45,9 @@ export function NewSession() {
     setErrors(errs)
     if (errs.length) return
     const id = actions().createSession(name || defaultName, named, mode)
+    // Máy tạo bàn là host
+    const host = actions().session?.players[0]
+    if (host) writeMe(id, host.id)
     navigate(`/s/${id}`, { replace: true })
   }
 
@@ -75,8 +79,7 @@ export function NewSession() {
       </div>
       {mode === 'multi' && (
         <p className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-xs">
-          Bàn sẽ có <b>mã 5 số</b> để mọi người join từ máy mình. Kết nối nhiều máy sẽ có ở <b>giai đoạn 2</b> — hiện tại vẫn ghi
-          trên máy này.
+          Bàn sẽ có <b>mã 5 số</b> (và mã QR) để mọi người join từ điện thoại của mình — ai cũng tự trả / đòi kẹo được.
         </p>
       )}
 
