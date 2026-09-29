@@ -56,8 +56,12 @@ export interface AppState {
   openRound(gameId: ID, draft: OpenDraft): string[]
   /** Mở ván ngay với cài đặt của ván trước (người chơi, nhà cái, mức cược). */
   quickOpen(gameId: ID): string[]
-  /** Xì dách: đổi nhà cái của ván đang mở. */
+  /** Xì dách: đổi nhà cái của ván đang mở (chỉ khi đang đặt cược). */
   setDealer(gameId: ID, playerId: ID): string[]
+  /** Xì dách: chốt cược để chia bài và trả kẹo. */
+  lockBets(gameId: ID): string[]
+  /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
+  nextRound(gameId: ID): string[]
   /** Kéo kẹo. Có ván đang mở thì ghi vào ván, không thì ghi thành chuyển tay. */
   addMove(gameId: ID, from: ID, to: ID, amount: number, label: string): string[]
   removeMove(gameId: ID, roundId: ID, moveId: ID): void
@@ -247,6 +251,7 @@ export function createAppStore(repo: SessionRepo) {
           bet2: mode === 'common' ? draft.bet2 : undefined,
           stakes,
           dealer: mode === 'dealer' ? draft.dealer : null,
+          phase: mode === 'dealer' ? 'betting' : undefined,
           moves:
             mode === 'pot'
               ? Object.entries(stakes)
@@ -271,6 +276,7 @@ export function createAppStore(repo: SessionRepo) {
         const open = openOf(gameId)
         if (!open) return ['Chưa có ván nào đang mở.']
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
+        if (open.phase === 'playing') return ['Đã chốt cược — đổi cái ở ván sau.']
         if (open.dealer === playerId) return []
         const old = open.dealer
         mapRound(gameId, open.id, (r) => {
@@ -283,6 +289,19 @@ export function createAppStore(repo: SessionRepo) {
         return []
       },
 
+      lockBets(gameId) {
+        const open = openOf(gameId)
+        if (!open) return ['Chưa có ván nào đang mở.']
+        if (open.phase !== 'betting') return []
+        mapRound(gameId, open.id, (r) => ({ ...r, phase: 'playing' }))
+        return []
+      },
+
+      nextRound(gameId) {
+        const errors = get().closeRound(gameId)
+        return errors.length ? errors : get().quickOpen(gameId)
+      },
+
       addMove(gameId, from, to, amount, label) {
         const g = game(gameId)
         if (!g) return ['Không tìm thấy game.']
@@ -290,6 +309,7 @@ export function createAppStore(repo: SessionRepo) {
         if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
         const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
         const open = findOpenIn(g)
+        if (open?.phase === 'betting') return ['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.']
         if (open) {
           const inRound = (id: ID) => id === POT || open.participants.includes(id)
           if (!inRound(from) || !inRound(to)) return ['Chỉ kéo kẹo giữa những người trong ván.']
@@ -372,6 +392,7 @@ export function createAppStore(repo: SessionRepo) {
         const open = openOf(gameId)
         if (!open) return ['Chưa có ván nào đang mở.']
         if (open.dealer === playerId) return ['Nhà cái không đặt cược.']
+        if (open.phase === 'playing') return ['Đã chốt cược — bấm Ván mới để cược lại.']
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (!Number.isInteger(amount) || amount <= 0) return ['Tiền cược phải là số nguyên lớn hơn 0.']
         mapRound(gameId, open.id, (r) => ({ ...r, stakes: { ...r.stakes, [playerId]: amount } }))

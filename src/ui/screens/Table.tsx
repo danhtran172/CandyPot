@@ -71,7 +71,10 @@ export function Table() {
     }
     if (to === BET) {
       if (from === POT || from === dealerNow) return flash('Nhà cái không đặt cược.', true)
+      if (round?.phase === 'playing') return flash('Đã chốt cược — bấm Ván mới để cược lại.', true)
       if (!round && !openNext()) return
+    } else if (round?.phase === 'betting') {
+      return flash('Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.', true)
     }
     setPending({ from, to })
   }
@@ -98,6 +101,26 @@ export function Table() {
   }
 
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
+
+  /** Xì dách: khóa cược để chia bài và trả kẹo. */
+  const lockBets = () => {
+    if (!game) return
+    const errors = actions().lockBets(game.id)
+    if (errors.length) flash(errors[0], true)
+    else flash('Đã chốt cược — chia bài rồi kéo để trả kẹo.')
+  }
+
+  /** Xì dách: tính ván này vào lời/lỗ và mở ngay ván sau với cược cũ. */
+  const nextRound = () => {
+    if (!game) return
+    if (!round) {
+      openNext()
+      return
+    }
+    const errors = actions().nextRound(game.id)
+    if (errors.length) flash(errors[0], true)
+    else flash('Ván mới — đặt cược nào!')
+  }
 
   const closeRound = () => {
     if (!game) return
@@ -189,7 +212,8 @@ export function Table() {
             {round ? (
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
-                Ván {roundNumber(game, round)} đang chơi
+                Ván {roundNumber(game, round)}{' '}
+                {round.phase === 'betting' ? 'đang đặt cược' : round.phase === 'playing' ? 'đã chốt cược' : 'đang chơi'}
                 {game.type === 'tienlen' && (
                   <span className="text-muted">
                     {' '}
@@ -212,6 +236,7 @@ export function Table() {
             betBox={
               game.type === 'xidach' ? Object.values((round ?? lastPlay)?.stakes ?? {}).reduce((a, b) => a + b, 0) : undefined
             }
+            betLocked={round?.phase === 'playing'}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             center={<TableCenter game={game} round={round} />}
             onTransfer={onTransfer}
@@ -267,7 +292,27 @@ export function Table() {
           )}
 
           <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {round ? (
+            {game.type === 'xidach' ? (
+              <>
+                {!round && (
+                  <Button
+                    aria-label="Tùy chỉnh ván mới"
+                    className="bg-night/90 px-3 py-1.5 text-sm"
+                    onClick={() => navigate(`${base}/g/${game.id}/open`)}
+                  >
+                    ⚙
+                  </Button>
+                )}
+                {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Ván mới */}
+                <Button
+                  variant="primary"
+                  className="font-display flex-1 py-1.5 text-lg"
+                  onClick={round?.phase === 'betting' ? lockBets : nextRound}
+                >
+                  {round?.phase === 'betting' ? 'Chốt cược' : 'Ván mới'}
+                </Button>
+              </>
+            ) : round ? (
               <>
                 <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                   Hủy ván
@@ -278,7 +323,7 @@ export function Table() {
               </>
             ) : (
               <>
-                {(hasPrev || game.type === 'xidach') && (
+                {hasPrev && (
                   <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/g/${game.id}/open`)}>
                     ⚙ Tùy chỉnh
                   </Button>

@@ -95,9 +95,24 @@ describe('appStore — ván Tiến lên', () => {
 })
 
 describe('appStore — Xì dách', () => {
+  it('đặt cược → chốt → trả kẹo → ván mới giữ cược cũ, gắn tag làm cái', () => {
+    const g = s().addGame('xidach')
+    s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })
+    expect(openRound(session(), g)!.phase).toBe('betting')
+    expect(s().addMove(g, b, a, 10, '')).toEqual(['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.'])
+    expect(s().lockBets(g)).toEqual([])
+    expect(s().setStake(g, b, 20)).toEqual(['Đã chốt cược — bấm Ván mới để cược lại.'])
+    expect(s().setDealer(g, b)).not.toEqual([])
+    expect(s().addMove(g, b, a, 10, '')).toEqual([])
+    expect(s().nextRound(g)).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 10, [b]: -10, [c]: 0 })
+    expect(openRound(session(), g)).toMatchObject({ phase: 'betting', dealer: a, stakes: { [b]: 5, [c]: 10 } })
+  })
+
   it('chốt ván Xì dách gắn tag làm cái', () => {
     const g = s().addGame('xidach')
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })
+    s().lockBets(g)
     s().addMove(g, b, a, 10, '')
     s().closeRound(g)
     expect(netOf(session())).toEqual({ [a]: 10, [b]: -10, [c]: 0 })

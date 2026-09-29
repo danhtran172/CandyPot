@@ -59,6 +59,11 @@ export interface Round {
   /** Cược riêng từng người: tiền cược của con (Xì dách), số kẹo bỏ vào pot lúc mở ván (Poker). */
   stakes: Record<ID, number>
   dealer: ID | null
+  /**
+   * Xì dách: betting = đang đặt cược (chưa được trả kẹo); playing = đã chốt cược, chia bài, trả kẹo.
+   * Không có = playing (các game khác, dữ liệu cũ).
+   */
+  phase?: 'betting' | 'playing'
   moves: Move[]
   /** Tính khi chốt ván. */
   transfers: Transfer[]

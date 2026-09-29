@@ -54,6 +54,7 @@ export function Board({
   center,
   pot,
   betBox,
+  betLocked,
   hat,
   onTransfer,
 }: {
@@ -64,6 +65,8 @@ export function Board({
   pot?: number
   /** Ô Bet giữa bàn (Xì dách): thả vào để đặt cược; giá trị = tổng cược đang đặt. */
   betBox?: number
+  /** Đã chốt cược: ô Bet chỉ hiển thị, không nhận đặt cược nữa. */
+  betLocked?: boolean
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   onTransfer: (from: ID, to: ID) => void
@@ -152,11 +155,13 @@ export function Board({
           {betBox !== undefined && (
             <div
               data-drop={BET}
-              className={`flex flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-4 py-2 transition select-none ${ring(BET)}`}
+              className={`flex flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
+                betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
+              } ${ring(BET)}`}
             >
-              <span className="font-display text-lg leading-none font-bold text-sky">Bet</span>
+              <span className="font-display text-lg leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
               <span className="candy num mt-1 text-lg">{betBox}</span>
-              <span className="text-[10px] text-muted">thả vào để đặt cược</span>
+              <span className="text-[10px] text-muted">{betLocked ? 'đã chốt cược' : 'thả vào để đặt cược'}</span>
             </div>
           )}
           {hat && (
