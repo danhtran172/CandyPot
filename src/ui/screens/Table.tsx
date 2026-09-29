@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
+import { pileUnit } from '../../core/pile'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { suggestOptions } from '../../core/suggest'
 import { POT, type Game, type GameType, type ID, type Option, type Round } from '../../core/types'
@@ -80,6 +81,7 @@ export function Table() {
     isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
+    pile: net[p.id] + (roundDelta[p.id] ?? 0),
     badge:
       round?.dealer === p.id
         ? '🎩 Nhà cái'
@@ -170,6 +172,7 @@ export function Table() {
 
           <Board
             seats={seats}
+            unit={pileUnit(game)}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             center={<TableCenter game={game} round={round} dealerName={round?.dealer ? players[round.dealer]?.name : undefined} />}
             onTransfer={onTransfer}

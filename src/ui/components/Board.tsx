@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, ty
 import { POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
+import { CandyPile } from './CandyPile'
 
 export interface Seat {
   player: Player
@@ -9,6 +10,8 @@ export interface Seat {
   total: number
   /** Được/mất trong ván đang mở; undefined = không có ván. */
   round?: number
+  /** Số kẹo vẽ thành đống trước chỗ ngồi (âm = đống 💩). */
+  pile: number
   /** Dòng phụ: "cược 5", "Nhà cái"… */
   badge?: string
   isMe?: boolean
@@ -27,9 +30,9 @@ const THRESHOLD = 8
 
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
 function sizeFor(n: number) {
-  if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
-  if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl' }
-  return { seat: 'w-[60px]', avatar: 'size-10 text-2xl' }
+  if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl', icon: 19 }
+  if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl', icon: 16 }
+  return { seat: 'w-[60px]', avatar: 'size-10 text-2xl', icon: 14 }
 }
 
 /**
@@ -39,11 +42,14 @@ function sizeFor(n: number) {
  */
 export function Board({
   seats,
+  unit,
   center,
   pot,
   onTransfer,
 }: {
   seats: Seat[]
+  /** Bao nhiêu kẹo thì vẽ 1 icon trong đống. */
+  unit: number
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
@@ -143,6 +149,20 @@ export function Board({
           )}
           {center}
         </div>
+
+        {/* Đống kẹo của mỗi người, đặt trên mặt bàn trước chỗ ngồi */}
+        {ordered.map((s, i) => {
+          const angle = Math.PI / 2 + (2 * Math.PI * i) / n
+          return (
+            <div
+              key={`pile-${s.player.id}`}
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${50 + 21 * Math.cos(angle)}%`, top: `${47 + 19 * Math.sin(angle)}%` }}
+            >
+              <CandyPile amount={s.pile} unit={unit} seed={s.player.id} size={size.icon} />
+            </div>
+          )
+        })}
 
         {ordered.map((s, i) => {
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n
