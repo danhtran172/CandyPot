@@ -3,6 +3,7 @@ import { BET, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { CandyJar } from './CandyJar'
 import { candyFor } from '../candyIcons'
+import potIcon from '../../assets/pot.webp'
 
 export interface Seat {
   player: Player
@@ -171,13 +172,14 @@ export function Board({
     <div
       data-drop={POT}
       onPointerDown={start(POT)}
-      className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
+      aria-label={`Pot: ${pot} kẹo`}
+      className={`relative flex min-w-28 touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 pt-7 pb-2 transition select-none ${ring(POT)}`}
     >
-      <span aria-hidden className="text-3xl leading-none">
-        💰
+      <span className="absolute top-1.5 left-2.5 flex items-center gap-1 text-xs font-bold text-lemon">
+        <img src={potIcon} alt="" draggable={false} className="size-5" />
+        Pot
       </span>
-      <span className="candy num mt-1 text-lg">{pot}</span>
-      <span className="text-[11px] text-muted">Pot</span>
+      <span className="candy num text-lg">{pot}</span>
     </div>
   )
 

@@ -487,14 +487,11 @@ function TableCenter({
           type="button"
           onClick={onEditPrice}
           aria-label={`Price: ${price} kẹo mỗi tờ — host bấm để đổi`}
-          className="flex flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-4 py-1.5 transition active:scale-95"
+          className="flex items-center gap-1.5 rounded-2xl border-2 border-dashed border-sky/70 bg-night/50 py-1 pr-3 pl-2.5 transition active:scale-95"
         >
-          <span className="font-display text-xl leading-none font-bold text-sky">Price</span>
-          <span className="mt-1 flex items-center gap-1">
-            <span className="candy num text-base">{price}</span>
-            <span className="text-xs text-muted">/ tờ</span>
-          </span>
-          <span className="mt-0.5 text-[10px] text-muted">host bấm để đổi</span>
+          <span className="font-display text-sm font-bold text-sky">Price</span>
+          <span className="candy num text-sm">{price}</span>
+          <span className="text-xs text-muted">/ tờ</span>
         </button>
       </>
     )
