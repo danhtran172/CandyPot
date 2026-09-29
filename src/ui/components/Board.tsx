@@ -49,6 +49,9 @@ const STAKE_POS = {
 } as const
 
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
+/** Bàn vuông: cạnh cho từng người theo số người (0 = dưới, 1 = trái, 2 = trên, 3 = phải — chiều kim đồng hồ). */
+const SQUARE_SIDES: Record<number, number[]> = { 1: [0], 2: [0, 2], 3: [0, 1, 3], 4: [0, 1, 2, 3] }
+
 function sizeFor(n: number) {
   if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
   if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl' }
@@ -272,8 +275,10 @@ export function Board({
           </div>
 
           {ordered.map((s, i) => {
-            const angle = Math.PI / 2 + (2 * Math.PI * i) / n
-            // Bàn vuông: chiếu hướng ngồi lên cạnh hình vuông (4 người = giữa 4 cạnh, tôi ở cạnh dưới)
+            // Bàn vuông ≤ 4 người: mỗi người một cạnh (tôi cạnh dưới; 3 người = dưới, trái, phải; 2 người = dưới, trên)
+            const sideSlots = square && n <= 4 ? SQUARE_SIDES[n] : undefined
+            const angle = sideSlots ? (Math.PI / 2) * sideSlots[i] + Math.PI / 2 : Math.PI / 2 + (2 * Math.PI * i) / n
+            // Bàn vuông đông hơn 4 người: chiếu hướng ngồi lên cạnh hình vuông
             const edge = square ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
             const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
             const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)

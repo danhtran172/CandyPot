@@ -46,6 +46,9 @@ export function normalizeSession(session: Session): Session {
     requests: session.requests ?? [],
     undos: session.undos ?? [],
     hostVotes: session.hostVotes ?? {},
+    ...(session.mode && { mode: session.mode }),
+    ...(session.code && { code: session.code }),
+    ...(session.currentGameId && { currentGameId: session.currentGameId }),
     games: session.games.map((g) => ({
       ...g,
       rounds: g.rounds.map((r) => {

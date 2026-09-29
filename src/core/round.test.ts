@@ -61,4 +61,9 @@ describe('round', () => {
     expect(r).toMatchObject({ status: 'closed', stakes: {}, dealer: null, tags: [{ type: 'lam-cai', playerId: 'b' }] })
     expect(r.moves).toEqual([{ id: 'old-0', from: 'a', to: 'b', amount: 2, label: 'Bét trả Nhất' }])
   })
+
+  it('normalizeSession giữ kiểu bàn, mã bàn và game đang chơi', () => {
+    const s = { players: [], games: [], mode: 'multi', code: '12345', currentGameId: 'g1' } as unknown as Session
+    expect(normalizeSession(s)).toMatchObject({ mode: 'multi', code: '12345', currentGameId: 'g1' })
+  })
 })
