@@ -37,9 +37,10 @@ export function PlayerPicker({
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
         <h2 className="font-display text-center text-xl font-bold">{title}</h2>
         {hint && <p className="text-center text-xs text-muted">{hint}</p>}
-        <ul className="mt-4 grid grid-cols-3 gap-2">
+        {/* 3 cột, hàng thiếu (vd chỉ 2 lựa chọn) thì căn giữa */}
+        <ul className="mt-4 flex flex-wrap justify-center gap-2">
           {players.map((p) => (
-            <li key={p.id}>
+            <li key={p.id} className="w-[calc((100%-1rem)/3)]">
               <button
                 type="button"
                 aria-pressed={multi ? chosen.includes(p.id) : undefined}

@@ -104,6 +104,24 @@ describe('appStore — ván Tiến lên', () => {
     s().closeRound(g)
     expect(netOf(session())[a]).toBe(3)
   })
+
+  it('host quay lại ván trước: bỏ ván đang mở, mở lại ván vừa chốt', () => {
+    const g = s().addGame('tienlen')
+    expect(s().backRound(g)).toEqual(['Chưa có ván trước để quay lại.'])
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
+    s().addMove(g, b, a, 2, '')
+    s().closeRound(g)
+    s().addMove(g, c, a, 1, '') // chuyển tay — không phải ván để quay lại
+    s().openRound(g, { participants: [a, b], bet: 1, bet2: 1, stakes: {}, dealer: null })
+    s().addMove(g, a, b, 5, '')
+    expect(s().backRound(g)).toEqual([])
+    const rounds = session().games[0].rounds
+    expect(rounds).toHaveLength(2)
+    expect(openRound(session(), g)!.moves.map((m) => m.amount)).toEqual([2])
+    expect(netOf(session())[a]).toBe(1) // chỉ còn lượt chuyển tay được tính
+    s().closeRound(g)
+    expect(netOf(session())[a]).toBe(3)
+  })
 })
 
 describe('appStore — Xì dách', () => {

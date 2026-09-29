@@ -123,6 +123,8 @@ export interface AppState {
   setStake(gameId: ID, playerId: ID, amount: number): string[]
   closeRound(gameId: ID): string[]
   reopenRound(gameId: ID, roundId: ID): string[]
+  /** Host quay lại ván trước: bỏ ván đang mở (nếu có) rồi mở lại ván vừa chốt gần nhất. */
+  backRound(gameId: ID): string[]
   deleteRound(gameId: ID, roundId: ID): void
 
 }
@@ -165,6 +167,11 @@ export function pokerSettingsOf(game: Game): { sb: number; cap: number } {
 /** Mã bàn 5 số ngẫu nhiên (10000–99999). */
 function tableCode(): string {
   return String(10000 + Math.floor(Math.random() * 90000))
+}
+
+/** Ván chơi đã chốt gần nhất (không tính chuyển tay) — ván mà host có thể quay lại. */
+export function prevPlay(game: Game): Round | undefined {
+  return [...game.rounds].reverse().find((r) => r.kind === 'play' && r.status === 'closed')
 }
 
 function findOpenIn(game: Game): Round | undefined {
@@ -600,6 +607,29 @@ export function createAppStore(repo: SessionRepo) {
         if (!g) return ['Không tìm thấy game.']
         if (findOpenIn(g)) return ['Game này đang có ván chưa chốt. Chốt hoặc hủy ván đó trước.']
         mapRound(gameId, roundId, (r) => ({ ...r, status: 'open', transfers: [], tags: [] }))
+        return []
+      },
+
+      backRound(gameId) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        const prev = prevPlay(g)
+        if (!prev) return ['Chưa có ván trước để quay lại.']
+        const open = findOpenIn(g)
+        mutate((s) => ({
+          ...s,
+          games: s.games.map((x) =>
+            x.id === gameId
+              ? {
+                  ...x,
+                  rounds: x.rounds
+                    .filter((r) => r.id !== open?.id)
+                    .map((r) => (r.id === prev.id ? { ...r, status: 'open' as const, transfers: [], tags: [] } : r)),
+                }
+              : x,
+          ),
+          undos: s.undos.filter((u) => u.roundId !== open?.id),
+        }))
         return []
       },
 

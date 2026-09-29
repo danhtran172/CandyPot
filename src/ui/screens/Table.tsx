@@ -27,6 +27,7 @@ import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
 import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
+import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
@@ -361,6 +362,37 @@ export function Table() {
     if (ok) actions().deleteRound(game.id, round.id)
   }
 
+  /** Host quay lại ván vừa chốt để sửa: ván đang mở (nếu có) bị bỏ. */
+  const backRound = async () => {
+    if (!game || !lastPlay) return
+    const n = roundNumber(game, lastPlay)
+    const ok = await ask(`Quay lại ván ${n}?`, {
+      icon: '⏮️',
+      message: round
+        ? `Ván ${roundNumber(game, round)} đang mở sẽ bị bỏ${round.moves.length ? ' cùng các lượt kéo kẹo trong đó' : ''}. Ván ${n} mở lại để sửa, xong thì chốt lại.`
+        : `Ván ${n} mở lại để sửa, xong thì chốt lại.`,
+      okLabel: 'Quay lại',
+      danger: !!round?.moves.length,
+    })
+    if (!ok) return
+    const errors = actions().backRound(game.id)
+    if (errors.length) flash(errors[0], true)
+    else flash(`Đã quay lại ván ${n}.`)
+  }
+  // Nút quay lại ván trước — chỉ host, nằm bên trái nút chính
+  const backBtn =
+    lastPlay && me === session.hostId ? (
+      <Button
+        aria-label="Quay lại ván trước"
+        title="Quay lại ván trước"
+        data-guide="back"
+        className="grid shrink-0 place-items-center bg-night/90 px-2.5 py-1.5 text-cream"
+        onClick={backRound}
+      >
+        <PrevRoundIcon />
+      </Button>
+    ) : null
+
   // Lần đầu làm host / lần đầu chơi một game trên máy này → tự mở hướng dẫn
   const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
   useEffect(() => {
@@ -575,6 +607,7 @@ export function Table() {
                       <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                         Hủy ván
                       </Button>
+                      {backBtn}
                       <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
                         Chốt cược
                       </Button>
@@ -584,20 +617,27 @@ export function Table() {
                       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={unlockBets}>
                         Bỏ chốt
                       </Button>
+                      {backBtn}
                       <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
                         Kéo 💰 Pot vào người thắng
                       </div>
                     </>
                   )}
                 </>
-              ) : null
+              ) : (
+                backBtn
+              )
             ) : game.type === 'poker' && (hand || !round) ? (
               !hand ? (
-                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                  Tay mới
-                </Button>
+                <>
+                  {backBtn}
+                  <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
+                    Tay mới
+                  </Button>
+                </>
               ) : (
                 <>
+                  {hand.street === 'done' || hand.street === 'showdown' ? backBtn : null}
                   {hand.street === 'done' ? (
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
                       Tay mới
@@ -650,6 +690,7 @@ export function Table() {
                   <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                     Hủy ván
                   </Button>
+                  {backBtn}
                   {round.phase === 'betting' ? (
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
                       Chốt
@@ -661,9 +702,12 @@ export function Table() {
                   )}
                 </>
               ) : (
-                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                  Ván mới
-                </Button>
+                <>
+                  {backBtn}
+                  <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
+                    Ván mới
+                  </Button>
+                </>
               )
             ) : game.type === 'xidach' ? (
               <>
@@ -676,6 +720,7 @@ export function Table() {
                     ⚙
                   </Button>
                 )}
+                {backBtn}
                 {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Kết thúc (sang ván mới); chưa có ván → Ván mới */}
                 <Button
                   variant="primary"
@@ -690,12 +735,14 @@ export function Table() {
                 <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                   Hủy ván
                 </Button>
+                {backBtn}
                 <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={closeRound}>
                   Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
                 </Button>
               </>
             ) : (
               <>
+                {backBtn}
                 <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                   + Mở ván
                 </Button>

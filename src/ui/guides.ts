@@ -60,6 +60,7 @@ const HOST_START: GuideStep[] = [
 ]
 
 const HOST_END: GuideStep[] = [
+  { target: 'back', title: 'Quay lại ván trước', text: 'Chốt nhầm? Bấm nút ⏮ bên trái nút chính để mở lại ván vừa chốt (ván đang mở sẽ bị bỏ).' },
   { target: 'host', title: 'Duyệt yêu cầu', text: 'Ai xin hoàn tác sẽ hiện ở đây (có số đỏ) — duyệt từng cái hoặc OK tất cả.' },
   { title: 'Sẵn sàng!', text: 'Bấm ❓ → Người chơi để xem phần hướng dẫn chơi.' },
 ]

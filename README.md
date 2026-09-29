@@ -13,6 +13,7 @@ Sổ ghi kẹo cho nhóm bạn chơi bài ngoài đời: nhập kết quả mỗ
 - **Rule ? và ⚙:** giữa bàn có nút hồng **Rule ?** để ai cũng xem luật; host bấm ⚙ góc bàn để chỉnh — Tiến lên: Nhất / Nhì / heo đỏ / heo đen; Lô tô: giá + tối đa số tờ; Xì dách: min / max cược; Poker: small blind + all-in.
 - **Hướng dẫn:** nút **?** cạnh Người chơi → chọn Người chơi / Host → tour chỉ thẳng vào từng nút trên bàn theo mode đang chơi. Lần đầu chơi (hoặc lần đầu làm host) một mode thì tự hiện.
 - **Tạo bàn / Join bàn:** tạo bàn kiểu **Một máy** (host ghi hết) hoặc **Nhiều người join** (có mã 5 số). Join bàn bằng mã 5 số — join qua mạng từ máy khác sẽ có ở giai đoạn 2.
+- **Quay lại ván trước:** host bấm ⏮ cạnh nút chính để mở lại ván vừa chốt và sửa.
 - **Bầu host:** host vắng thì mọi người bấm 🛎️ ở màn Người chơi để bầu host mới — đủ 2 phiếu là thành host. Host thì chuyển host thẳng, không cần vote.
 - **Nút Host và Yêu cầu** (góc phải dưới bàn chơi, ai cũng có, có số đếm): *Host* — host duyệt yêu cầu hoàn tác (từng cái hoặc OK tất cả) và theo dõi lời đòi giữa mọi người; người khác xem yêu cầu hoàn tác của mình đang chờ và rút lại được. *Yêu cầu* — ai đang đòi bạn (Không/OK, OK tất cả) và bạn đang đòi ai. Thông báo trên cùng có "Để sau" để không bị che bàn.
 - **Tiến lên:** host bấm ô **Rule** giữa bàn để đặt mức Nhất/Nhì — đó là các số gợi ý khi kéo trả kẹo; nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì), vẫn sửa riêng được. Chọn game (Tiến lên / Xì dách / Poker / Lô tô / Tự do) ở ô chọn đầu bàn: đổi game chỉ là đổi cách tính, lời/lỗ của cả bàn vẫn cộng dồn.
