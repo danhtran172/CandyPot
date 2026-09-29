@@ -1,0 +1,85 @@
+import type { ID, Session } from '../core/types'
+import type { Preset, SessionMeta, SessionRepo } from './SessionRepo'
+
+type KV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+const INDEX = 'candypot:sessions'
+const PRESETS = 'candypot:presets'
+const sessionKey = (id: ID) => `candypot:session:${id}`
+
+export class LocalRepo implements SessionRepo {
+  private readonly kv: KV
+
+  constructor(kv: KV = localStorage) {
+    this.kv = kv
+  }
+
+  private read<T>(key: string, fallback: T): T {
+    const raw = this.kv.getItem(key)
+    if (!raw) return fallback
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return fallback
+    }
+  }
+
+  private write(key: string, value: unknown): void {
+    this.kv.setItem(key, JSON.stringify(value))
+  }
+
+  list(): SessionMeta[] {
+    return this.read<SessionMeta[]>(INDEX, []).sort((a, b) => b.updatedAt - a.updatedAt)
+  }
+
+  load(id: ID): Session | null {
+    return this.read<Session | null>(sessionKey(id), null)
+  }
+
+  save(session: Session): void {
+    this.write(sessionKey(session.id), session)
+    const meta: SessionMeta = {
+      id: session.id,
+      name: session.name,
+      updatedAt: session.updatedAt,
+      playerCount: session.players.length,
+    }
+    this.write(INDEX, [meta, ...this.list().filter((m) => m.id !== session.id)])
+  }
+
+  remove(id: ID): void {
+    this.kv.removeItem(sessionKey(id))
+    this.write(
+      INDEX,
+      this.list().filter((m) => m.id !== id),
+    )
+  }
+
+  listPresets(): Preset[] {
+    return this.read<Preset[]>(PRESETS, [])
+  }
+
+  savePreset(preset: Preset): void {
+    this.write(PRESETS, [...this.listPresets().filter((p) => p.id !== preset.id), preset])
+  }
+
+  removePreset(id: ID): void {
+    this.write(
+      PRESETS,
+      this.listPresets().filter((p) => p.id !== id),
+    )
+  }
+}
+
+export class MemoryKV implements KV {
+  private readonly map = new Map<string, string>()
+  getItem(key: string) {
+    return this.map.get(key) ?? null
+  }
+  setItem(key: string, value: string) {
+    this.map.set(key, value)
+  }
+  removeItem(key: string) {
+    this.map.delete(key)
+  }
+}
