@@ -45,11 +45,13 @@ Shortcut Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu c
 
 ## Chơi nhiều máy (Firebase)
 
+Bản đang chạy: **https://candypot-5888e.web.app** (dự án Firebase `candypot-5888e`).
+
 Chưa cấu hình thì app vẫn chạy: bàn "Nhiều người join" giả lập trên chính máy đó (các tab thấy nhau). Để join qua mạng:
 
 1. [Firebase console](https://console.firebase.google.com) → tạo dự án → **Build › Realtime Database** (chọn vùng Singapore `asia-southeast1`) và **Build › Authentication › Sign-in method › Anonymous** → bật.
 2. **Project settings › Your apps › Web (`</>`)** → lấy config, chép `.env.example` thành `.env.local` rồi điền.
-3. Deploy (lần đầu cần đăng nhập Google):
+3. Deploy (lần đầu cần đăng nhập Google; PowerShell chặn `npx.ps1` thì gõ `npx.cmd` thay cho `npx`):
 
 ```bash
 npx firebase-tools login
