@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ORDER, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
@@ -26,6 +26,7 @@ import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
 import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
+import { GuideTour } from '../components/GuideTour'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { GameIcon } from '../components/GameIcon'
@@ -35,6 +36,7 @@ import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
+import { guideSeen, guideSteps, markGuideSeen, type GuideRole } from '../guides'
 import { useMe } from '../me'
 import { hostTasks, incomingAsks } from '../tasks'
 
@@ -50,6 +52,8 @@ export function Table() {
   const [editPrice, setEditPrice] = useState(false)
   const [editLimits, setEditLimits] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const [guidePick, setGuidePick] = useState(false)
+  const [guide, setGuide] = useState<{ game: GameType; role: GuideRole } | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -349,6 +353,20 @@ export function Table() {
     if (ok) actions().deleteRound(game.id, round.id)
   }
 
+  // Lần đầu làm host / lần đầu chơi một game trên máy này → tự mở hướng dẫn
+  const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
+  useEffect(() => {
+    if (!game || guide) return
+    if (guideSeen(game.type, role)) return
+    const t = window.setTimeout(() => setGuide({ game: game.type, role }), 400)
+    return () => window.clearTimeout(t)
+  }, [game?.type, role, guide]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const closeGuide = () => {
+    if (guide) markGuideSeen(guide.game, guide.role)
+    setGuide(null)
+  }
+
   const roundDelta = round ? movesNet(round.moves) : {}
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không
   const visible = session.players.filter((p) => !p.removed && (!round || round.participants.includes(p.id) || !p.active))
@@ -374,6 +392,7 @@ export function Table() {
         <button
           type="button"
           aria-label="Hoàn tác thao tác cuối"
+          data-guide="undo"
           title="Hoàn tác thao tác cuối"
           disabled={!hand.undo.length}
           onClick={pokerUndo}
@@ -391,13 +410,25 @@ export function Table() {
         title={session.name}
         back="/"
         right={
-          <Link to={`${base}/players`} className="rounded-full bg-plum-2 px-3 py-1.5 text-sm font-semibold">
-            👥 Người chơi
-          </Link>
+          <>
+            <Link to={`${base}/players`} data-guide="players" className="rounded-full bg-plum-2 px-3 py-1.5 text-sm font-semibold">
+              👥 Người chơi
+            </Link>
+            <button
+              type="button"
+              aria-label="Hướng dẫn"
+              onClick={() => (game ? setGuidePick(true) : flash('Chọn một game trước đã.', true))}
+              className="grid size-8 place-items-center rounded-full bg-plum-2 text-sm font-bold text-lemon"
+            >
+              ?
+            </button>
+          </>
         }
       />
 
-      <GamePicker value={game?.type} onPick={pickType} />
+      <div data-guide="picker">
+        <GamePicker value={game?.type} onPick={pickType} />
+      </div>
 
       {!game ? (
         <Card className="mt-4 text-center">
@@ -460,6 +491,7 @@ export function Table() {
                   <button
                     type="button"
                     aria-label="Xem luật"
+                    data-guide="rule"
                     onClick={() => setShowRules(true)}
                     className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-0.5 text-sm font-bold text-berry transition active:scale-95"
                   >
@@ -474,6 +506,7 @@ export function Table() {
                 <button
                   type="button"
                   aria-label={`Cài đặt ${GAMES[game.type].label}`}
+                  data-guide="settings"
                   onClick={openSettings}
                   className="grid size-9 place-items-center rounded-full border border-line/60 bg-night/70 text-lg"
                 >
@@ -485,6 +518,7 @@ export function Table() {
               <button
                 type="button"
                 onClick={() => setShowLog(true)}
+                data-guide="log"
                 className="flex items-center gap-1.5 rounded-2xl border border-line/60 bg-night/70 px-2.5 py-1.5 text-xs font-semibold"
               >
                 📜 Trả/nhận
@@ -497,8 +531,8 @@ export function Table() {
             }
             cornerRight={
               <>
-                <CornerLink to={`${base}/host`} icon="🛎️" label="Host" count={hostTasks(session, me).length} />
-                <CornerLink to={`${base}/requests`} icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
+                <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
+                <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
               </>
             }
             onTransfer={onTransfer}
@@ -509,7 +543,7 @@ export function Table() {
 
 
 
-          <div className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
+          <div data-guide="actions" className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
             {GAMES[game.type].soon ? null : game.type === 'free' ? (
               round ? (
                 <>
@@ -661,6 +695,24 @@ export function Table() {
         />
       )}
 
+      {guidePick && game && (
+        <PlayerPicker
+          title={`❓ Hướng dẫn · ${GAMES[game.type].label}`}
+          hint="Chọn phần muốn xem."
+          players={[
+            { id: 'player', name: 'Người chơi', emoji: '🎮', active: true },
+            { id: 'host', name: 'Host', emoji: '🛎️', active: true },
+          ]}
+          onPick={(id) => {
+            setGuidePick(false)
+            setGuide({ game: game.type, role: id as GuideRole })
+          }}
+          onClose={() => setGuidePick(false)}
+        />
+      )}
+
+      {guide && <GuideTour key={`${guide.game}:${guide.role}`} steps={guideSteps(guide.game, guide.role)} onClose={closeGuide} />}
+
       {showRules && game && (
         <RulesSheet game={game} isHost={me === session.hostId} onEdit={openSettings} onClose={() => setShowRules(false)} />
       )}
@@ -797,10 +849,11 @@ export function Table() {
 }
 
 /** Nút nhỏ ở góc bàn (Host / Yêu cầu) với số việc đang chờ mình. */
-function CornerLink({ to, icon, label, count }: { to: string; icon: string; label: string; count: number }) {
+function CornerLink({ to, guide, icon, label, count }: { to: string; guide: string; icon: string; label: string; count: number }) {
   return (
     <Link
       to={to}
+      data-guide={guide}
       className={`relative flex items-center gap-1 rounded-2xl border bg-night/70 px-2.5 py-1.5 text-xs font-semibold ${
         count ? 'border-berry/70' : 'border-line/60'
       }`}

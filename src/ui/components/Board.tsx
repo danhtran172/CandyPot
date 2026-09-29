@@ -187,6 +187,7 @@ export function Board({
   const potBox = pot !== undefined && (
     <div
       data-drop={POT}
+      data-guide="pot"
       onPointerDown={start(POT)}
       role="button"
       tabIndex={0}
@@ -227,6 +228,7 @@ export function Board({
             {betBox && (
               <div
                 data-drop={BET}
+                data-guide="bet"
                 onPointerDown={startHold}
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
@@ -250,6 +252,7 @@ export function Board({
               <button
                 type="button"
                 onPointerDown={start(DEALER)}
+                data-guide="hat"
                 className={`flex touch-none items-center gap-1 rounded-full bg-night/60 px-2.5 py-1 text-xs select-none ${
                   drag?.moved && drag.from === DEALER ? 'ring-2 ring-lemon' : ''
                 }`}
@@ -287,6 +290,7 @@ export function Board({
               <div
                 key={s.player.id}
                 data-drop={s.player.id}
+                data-guide={s.isMe ? 'me' : undefined}
                 onPointerDown={start(s.player.id)}
                 role="button"
                 tabIndex={0}
