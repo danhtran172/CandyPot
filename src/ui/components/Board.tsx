@@ -314,7 +314,7 @@ export function Board({
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && onTap?.(s.player.id)}
-                aria-label={s.isMe ? `${s.player.name} (bạn)` : `Đưa kẹo cho ${s.player.name}`}
+                aria-label={s.isMe ? `${s.player.name} (bạn)` : `Trả kẹo cho ${s.player.name}`}
                 style={{ left: `${left}%`, top: `${top}%` }}
                 className={`absolute flex -translate-x-1/2 cursor-pointer -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
                   s.dim ? 'opacity-35' : ''

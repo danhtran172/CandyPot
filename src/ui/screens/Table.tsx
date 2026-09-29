@@ -908,6 +908,7 @@ export function Table() {
         <AmountSheet
           from={players[pending.from]}
           to={players[pending.to]}
+          me={me}
           options={
             isLoto && pending.to === POT
               ? [1, 2]

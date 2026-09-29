@@ -1,17 +1,18 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Option, Player } from '../../core/types'
+import { POT, type ID, type Option, type Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
 import { RuleIcon, type RuleIconName } from './RuleIcons'
 
 /** Nhãn gợi ý (Nhất / Nhì / Heo…) → biểu tượng hiện dưới số. */
 const OPTION_ICON: Record<string, RuleIconName> = { Nhất: 'first', Nhì: 'second', 'Heo đỏ': 'pigRed', 'Heo đen': 'pigBlack' }
 
-const VERB = { pay: 'Đưa', request: 'Đòi', bet: 'Đặt', buy: 'Mua' } as const
+const VERB = { pay: 'Trả', request: 'Đòi', bet: 'Bet', buy: 'Mua' } as const
 
 /** Popup chọn số kẹo sau khi kéo hũ kẹo: các mức gợi ý (chỉ ghi số) + số khác. */
 export function AmountSheet({
   from,
   to,
+  me,
   options,
   mode = 'pay',
   unit,
@@ -22,6 +23,8 @@ export function AmountSheet({
 }: {
   from: Player
   to: Player
+  /** Người dùng máy này — câu hỏi nói "Trả X…" (mình làm) hay "A trả X…" (ghi hộ người khác). */
+  me?: ID
   /** pay = trả ngay; request = đòi kẹo, chờ người kia bấm OK; bet = đặt cược (Xì dách); buy = mua tờ (Lô tô). */
   mode?: 'pay' | 'request' | 'bet' | 'buy'
   /** Chọn theo đơn vị (vd "tờ" giá 5 kẹo): nút ghi số tờ, số kẹo = số tờ × giá. */
@@ -35,6 +38,15 @@ export function AmountSheet({
   onClose: () => void
 }) {
   const per = unit?.price ?? 1
+  const mine = from.id === me
+  /** Tên hành động theo đúng việc: trả người khác / cược vào pot / trao pot. */
+  const verb = mode === 'pay' ? (from.id === POT ? 'Trao' : to.id === POT ? 'Cược' : 'Trả') : VERB[mode]
+  /** "A " trước động từ khi ghi hộ người khác. */
+  const who = mine ? null : (
+    <>
+      <PersonChip player={from} />{' '}
+    </>
+  )
   const [custom, setCustom] = useState(unit ? 1 : (options[0]?.amount ?? 1))
   const pickCustom = () =>
     onPick(unit ? { amount: custom * per, label: `${custom} ${unit.name}` } : { amount: custom, label: 'Tự nhập' })
@@ -53,7 +65,8 @@ export function AmountSheet({
         {mode === 'buy' && unit ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              <PersonChip player={from} /> mua mấy {unit.name}?
+              {who}
+              {mine ? 'Mua' : 'mua'} mấy {unit.name}?
             </div>
             <div className="text-xs text-muted">
               Giá <span className="font-semibold text-lemon">{unit.price} kẹo</span> / {unit.name} — app tự tính số kẹo bỏ vào Pot.
@@ -62,7 +75,8 @@ export function AmountSheet({
         ) : mode === 'bet' ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              <PersonChip player={from} /> đặt cược
+              {who}
+              {mine ? 'Bet' : 'bet'} bao nhiêu?
             </div>
             <div className="text-xs text-muted">Ván sau sẽ tự giữ mức cược này.</div>
           </div>
@@ -74,17 +88,29 @@ export function AmountSheet({
             <div className="text-xs text-muted"><span className="font-semibold text-sky">{from.name}</span> sẽ nhận thông báo và bấm OK để chuyển kẹo cho bạn.</div>
           </div>
         ) : (
-          <div className="font-display flex items-center justify-center gap-2 text-xl font-bold">
-            <PersonChip player={from} />
-            <span className="text-lemon">→</span>
-            <PersonChip player={to} />
+          <div className="font-display text-center text-xl font-bold">
+            {from.id === POT ? (
+              <>
+                Trao pot cho <PersonChip player={to} /> bao nhiêu?
+              </>
+            ) : to.id === POT ? (
+              <>
+                {who}
+                {mine ? 'Cược' : 'cược'} bao nhiêu vào Pot?
+              </>
+            ) : (
+              <>
+                {who}
+                {mine ? 'Trả' : 'trả'} <PersonChip player={to} /> bao nhiêu?
+              </>
+            )}
           </div>
         )}
 
         {onSwap && (mode === 'pay' || mode === 'request') && (
           <div className="mt-2 flex justify-center">
             <button type="button" onClick={onSwap} className="rounded-full bg-night/60 px-3 py-1 text-xs font-semibold text-sky">
-              ⇄ {mode === 'pay' ? `Đòi ${to.name} thay vì đưa` : `Đưa ${from.name} thay vì đòi`}
+              ⇄ {mode === 'pay' ? `Đòi ${to.name} thay vì trả` : `Trả ${from.name} thay vì đòi`}
             </button>
           </div>
         )}
@@ -94,7 +120,7 @@ export function AmountSheet({
             <button
               key={o.amount}
               type="button"
-              aria-label={unit ? `${VERB[mode]} ${o.amount / per} ${unit.name} (${o.amount} kẹo)` : `${VERB[mode]} ${o.amount} kẹo`}
+              aria-label={unit ? `${verb} ${o.amount / per} ${unit.name} (${o.amount} kẹo)` : `${verb} ${o.amount} kẹo`}
               onClick={() => onPick(o)}
               className="grid min-h-24 place-items-center rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
             >
@@ -128,7 +154,7 @@ export function AmountSheet({
           </span>
           <Stepper value={custom} min={1} onChange={setCustom} label={unit ? `số ${unit.name}` : 'số kẹo khác'} />
           <Button variant="primary" disabled={custom <= 0} onClick={pickCustom}>
-            {VERB[mode]}
+            {verb}
           </Button>
         </div>
         {extra}

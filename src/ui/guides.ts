@@ -17,7 +17,7 @@ const PLAYER_START: GuideStep[] = [
   {
     target: 'me',
     title: 'Đây là bạn',
-    text: 'Chỗ của bạn luôn ở dưới cùng. Bấm vào người khác để đưa kẹo cho họ; trong popup bấm ⇄ để đòi kẹo thay vì đưa.',
+    text: 'Chỗ của bạn luôn ở dưới cùng. Bấm vào người khác để trả kẹo cho họ; trong popup bấm ⇄ để đòi kẹo thay vì trả.',
   },
 ]
 
