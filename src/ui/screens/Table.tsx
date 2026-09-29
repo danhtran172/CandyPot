@@ -112,9 +112,9 @@ export function Table() {
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
   const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
-  /** Tiến lên: host bấm ô Bet để đặt mức Nhất/Nhì. */
+  /** Tiến lên: host bấm ô Rule để đặt mức Nhất/Nhì. */
   const openBets = () => {
-    if (me !== session.hostId) return flash(`Chỉ host (${players[session.hostId ?? '']?.name ?? '?'}) mới đổi mức cược được.`, true)
+    if (me !== session.hostId) return flash(`Chỉ host (${players[session.hostId ?? '']?.name ?? '?'}) mới đổi Rule được.`, true)
     setEditBets(true)
   }
 
@@ -342,7 +342,7 @@ export function Table() {
           game={game}
           onDone={(saved) => {
             setEditBets(false)
-            if (saved) flash('Đã đổi mức cược.')
+            if (saved) flash('Đã đổi Rule.')
           }}
         />
       )}
@@ -377,10 +377,10 @@ function TableCenter({ game, round, onEditBets }: { game: Game; round?: Round; o
         <button
           type="button"
           onClick={onEditBets}
-          aria-label={`Mức cược Nhất ${bet}${bet2 ? `, Nhì ${bet2}` : ''} — host bấm để đổi`}
+          aria-label={`Rule: Nhất ${bet}${bet2 ? `, Nhì ${bet2}` : ''} — host bấm để đổi`}
           className="flex max-w-full flex-col items-center rounded-3xl border-2 border-dashed border-sky/70 bg-night/50 px-3 py-1.5 transition active:scale-95"
         >
-          <span className="font-display text-2xl leading-none font-bold text-sky">Bet</span>
+          <span className="font-display text-2xl leading-none font-bold text-sky">Rule</span>
           <span className="mt-1.5 flex gap-2">
             <span className="flex flex-col items-center">
               <span className="candy num text-lg">{bet}</span>
