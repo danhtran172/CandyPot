@@ -4,6 +4,7 @@ import { signed, toneOf } from '../format'
 import { candyFor } from '../candyIcons'
 import potIcon from '../../assets/pot.webp'
 import dragCandy from '../../assets/drag-candy.webp'
+import bowtie from '../../assets/rules/bowtie.webp'
 
 export interface Seat {
   player: Player
@@ -22,6 +23,8 @@ export interface Seat {
   highlight?: boolean
   /** Đã bỏ bài (Poker) — mờ đi. */
   dim?: boolean
+  /** Nhà cái (Xì dách) — gắn nơ ở góc dưới bên phải avatar. */
+  dealer?: boolean
   /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
   action?: ReactNode
 }
@@ -314,6 +317,15 @@ export function Board({
                   <span aria-hidden className={`leading-none ${s.player.active ? '' : 'opacity-40'}`}>
                     {s.player.emoji}
                   </span>
+                  {s.dealer && (
+                    <img
+                      src={bowtie}
+                      alt="Nhà cái"
+                      title="Nhà cái"
+                      draggable={false}
+                      className="absolute -right-2.5 -bottom-1 size-7 max-w-none drop-shadow-[0_1px_2px_rgb(0_0_0/0.8)]"
+                    />
+                  )}
                   {!s.player.active && (
                     <span aria-label="Tạm nghỉ" className="absolute -top-1.5 -right-2 text-base leading-none">
                       💤

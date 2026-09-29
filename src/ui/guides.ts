@@ -34,7 +34,7 @@ const PLAYER_GAME: Record<GameType, GuideStep[]> = {
   ],
   xidach: [
     { target: 'bet', title: 'Đặt cược', text: 'Bấm ô Bet để đặt cược cho mình (trong khoảng min–max của Rule).' },
-    { target: 'hat', title: 'Nhà cái', text: '🎩 là nhà cái. Cái không đặt cược — cái trả/nhận kẹo với từng người con.' },
+    { target: 'hat', title: 'Nhà cái', text: 'Nhà cái có nơ vàng ở avatar (tên cũng hiện ở ô 🎩). Cái không đặt cược — cái trả/nhận kẹo với từng người con.' },
     { target: 'actions', title: 'Các bước', text: 'Chốt cược → chia bài ngoài đời → bấm vào người để trả kẹo → Kết thúc (ván sau giữ cược cũ).' },
   ],
   poker: [

@@ -376,7 +376,8 @@ export function Table() {
     isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
-    badge: hand ? pokerBadge(p.id) : round?.dealer === p.id ? '🎩 Nhà cái' : undefined,
+    badge: hand ? pokerBadge(p.id) : undefined,
+    dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
       ? hand.streetBets[p.id] || undefined
       : isFree
