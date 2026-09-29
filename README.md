@@ -61,7 +61,7 @@ npx firebase-tools login
 npm run build && npx firebase-tools deploy --only hosting,database --project <project-id>
 ```
 
-Security rules ở `database.rules.json` (phòng `rooms/{mã 5 số}`, phải đăng nhập ẩn danh mới đọc/ghi).
+Phòng lưu chia mẩu (mỗi lần bấm chỉ gửi mẩu vừa đổi, ~1–3 KB); máy ẩn / lâu không dùng tự tạm ngắt kết nối; phòng bỏ không quá 30 ngày tự được dọn. Security rules ở `database.rules.json` (phòng `rooms/{mã 5 số}`, phải đăng nhập ẩn danh mới đọc/ghi).
 
 ## Cấu trúc
 

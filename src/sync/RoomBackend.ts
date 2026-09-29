@@ -17,6 +17,13 @@ export interface RoomBackend {
   update(code: string, fn: (session: Session) => Session): Promise<void>
   /** Trạng thái kết nối. Trả về hàm hủy theo dõi. */
   onConnection(onChange: (online: boolean) => void): () => void
+  /** Đánh dấu phòng còn được dùng (mở bàn mà không ghi gì). */
+  touch?(code: string): Promise<void>
+  /** Dọn phòng bỏ không lâu ngày; trả về mã các phòng đã dọn. */
+  sweep?(): Promise<string[]>
+  /** Tạm ngắt / nối lại kết nối (app ẩn hoặc lâu không dùng). */
+  pause?(): void
+  resume?(): void
 }
 
 /** Dữ liệu một phòng: bàn lưu dạng chuỗi JSON (tránh việc cơ sở dữ liệu bỏ mảng rỗng / undefined). */

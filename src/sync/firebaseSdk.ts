@@ -1,4 +1,18 @@
 // Tách riêng để Firebase SDK chỉ tải khi có bàn nhiều người (bàn một máy không phải tải)
 export { initializeApp } from 'firebase/app'
 export { getAuth, signInAnonymously } from 'firebase/auth'
-export { connectDatabaseEmulator, get, getDatabase, onValue, ref, runTransaction } from 'firebase/database'
+export {
+  connectDatabaseEmulator,
+  endAt,
+  get,
+  getDatabase,
+  goOffline,
+  goOnline,
+  limitToFirst,
+  onValue,
+  orderByValue,
+  query,
+  ref,
+  runTransaction,
+  update,
+} from 'firebase/database'

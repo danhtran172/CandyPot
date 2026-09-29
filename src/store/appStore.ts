@@ -66,6 +66,8 @@ export interface AppState {
   error: string | null
   /** Kết nối tới phòng (bàn nhiều người): null = chưa biết. */
   online: boolean | null
+  /** Tạm ngắt kết nối vì app ẩn / lâu không dùng (chạm để nối lại). */
+  paused: boolean
   /** Nơi đặt phòng: qua mạng (firebase) hay giả lập trên máy (local); không có = chỉ một máy. */
   roomKind: RoomBackend['kind'] | null
   /** Join bàn bằng mã 5 số: tải bàn từ phòng về máy này. Trả về id bàn, hoặc lỗi. */
@@ -210,9 +212,32 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
     const roomOf = (s: Session | null | undefined) => (rooms && s?.mode === 'multi' && s.code) || null
     let unwatch: (() => void) | null = null
     let watching: string | null = null
+    /**
+     * Thay đổi của máy này gửi lên phòng lần lượt, đúng thứ tự bấm, sau khi phòng sẵn sàng.
+     * Trong lúc còn thay đổi chưa gửi xong thì giữ bản mới nhất từ phòng lại, gửi xong mới áp dụng —
+     * để bản cũ trên phòng không đè mất thao tác vừa bấm.
+     */
+    let queue: Promise<unknown> = Promise.resolve()
+    let pending = 0
+    let latest: Session | null = null
+    const enqueue = (work: () => Promise<unknown>, onFail: (e: unknown) => void) => {
+      pending++
+      queue = queue
+        .then(work)
+        .catch(onFail)
+        .finally(() => {
+          pending--
+          if (pending || !latest) return
+          const remote = latest
+          latest = null
+          if (get().session?.id === remote.id) receive(remote)
+        })
+    }
 
     /** Nhận bản mới từ phòng (máy khác vừa sửa, hoặc chính mình ghi xong). */
     const receive = (remote: Session) => {
+      // Nhận được bản từ phòng = kết nối lại được → bỏ thông báo lỗi phòng cũ
+      if (get().error?.includes('phòng')) set({ error: null })
       const next = normalizeSession(remote)
       if (JSON.stringify(next) === JSON.stringify(get().session)) return
       try {
@@ -245,19 +270,32 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       unwatch?.()
       unwatch = null
       watching = key
+      latest = null
       if (!rooms || !code) return
-      const failed = () => set({ error: 'Không kết nối được phòng chơi nhiều máy — bàn vẫn ghi trên máy này, kiểm tra mạng rồi mở lại bàn.' })
+      const failed = (e?: unknown) => {
+        console.warn('CandyPot: lỗi phòng', e)
+        set({ error: 'Không kết nối được phòng chơi nhiều máy — bàn vẫn ghi trên máy này, kiểm tra mạng rồi mở lại bàn.' })
+      }
+      // Đưa bàn lên phòng trước mọi thay đổi (phòng có sẵn của đúng bàn này thì không ghi gì)
+      enqueue(async () => {
+        if (!(await rooms.claim(code, s))) await rehome(get().session ?? s)
+      }, failed)
       unwatch = rooms.watch(
         code,
         (remote) => {
           const current = get().session
           if (!current || current.id !== s.id || current.code !== code) return
-          if (remote?.id === s.id) receive(remote)
-          else if (!remote) rooms.claim(code, current).catch(failed)
-          else rehome(current).catch(failed)
+          if (remote?.id === s.id) {
+            if (pending) latest = remote
+            else receive(remote)
+          } else if (!remote) enqueue(() => rooms.claim(code, get().session ?? current), failed) // phòng mất (bị dọn) → đưa lên lại
+          else enqueue(() => rehome(current), failed)
         },
         failed,
       )
+      // Mở bàn = phòng còn dùng; tiện thể dọn phòng bỏ không lâu ngày
+      rooms.touch?.(code).catch(() => {})
+      rooms.sweep?.().catch(() => {})
     }
 
     rooms?.onConnection((online) => set({ online }))
@@ -277,16 +315,21 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       const code = roomOf(current)
       if (rooms && code) {
         // Chạy lại đúng thay đổi này (cùng các id) trên bản mới nhất của phòng — máy khác ghi cùng lúc không bị mất
-        rooms
-          .update(code, (remote) => {
-            replayIds = [...ids]
-            try {
-              return { ...fn(normalizeSession(remote)), updatedAt: Date.now() }
-            } finally {
-              replayIds = null
-            }
-          })
-          .catch(() => set({ error: 'Chưa gửi được thay đổi lên phòng — kiểm tra mạng rồi thao tác lại.' }))
+        enqueue(
+          () =>
+            rooms.update(code, (remote) => {
+              replayIds = [...ids]
+              try {
+                return { ...fn(normalizeSession(remote)), updatedAt: Date.now() }
+              } finally {
+                replayIds = null
+              }
+            }),
+          (e) => {
+            console.warn('CandyPot: chưa gửi được thay đổi', e)
+            set({ error: 'Chưa gửi được thay đổi lên phòng — kiểm tra mạng rồi thao tác lại.' })
+          },
+        )
       }
       let error: string | null = null
       try {
@@ -318,6 +361,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       session: null,
       error: null,
       online: null,
+      paused: false,
       roomKind: rooms?.kind ?? null,
 
       async joinRoom(code) {
@@ -707,7 +751,8 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           return [(e as Error).message]
         }
         const tags: Tag[] = open.dealer ? [{ type: 'lam-cai', playerId: open.dealer }] : []
-        mapRound(gameId, open.id, (r) => ({ ...r, status: 'closed', transfers, tags }))
+        // Poker: bỏ các bản chụp hoàn tác khi chốt — tay đã xong, bớt dữ liệu lưu và gửi đi
+        mapRound(gameId, open.id, (r) => ({ ...r, status: 'closed', transfers, tags, ...(r.poker && { poker: { ...r.poker, undo: [] } }) }))
         return []
       },
 

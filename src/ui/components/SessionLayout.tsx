@@ -18,6 +18,7 @@ export function SessionLayout() {
   const session = useApp((s) => s.session)
   const error = useApp((s) => s.error)
   const online = useApp((s) => s.online)
+  const paused = useApp((s) => s.paused)
   const [, setPicked] = useState(0)
   const { pathname } = useLocation()
   const loaded = session?.id === sid
@@ -55,7 +56,12 @@ export function SessionLayout() {
   const needWho = multi && !session.players.some((p) => p.id === me && !p.removed)
   return (
     <>
-      {multi && online === false && (
+      {multi && paused && (
+        <div role="status" className="mt-3 rounded-2xl border border-sky/50 bg-sky/10 p-2.5 text-center text-xs font-semibold text-sky">
+          💤 Tạm ngắt kết nối vì lâu không dùng — chạm vào màn hình để nối lại.
+        </div>
+      )}
+      {multi && !paused && online === false && (
         <div role="status" className="mt-3 rounded-2xl border border-lemon/50 bg-lemon/10 p-2.5 text-center text-xs font-semibold text-lemon">
           📡 Mất kết nối — đang hiện dữ liệu cũ, thay đổi sẽ gửi khi có mạng lại.
         </div>

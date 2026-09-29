@@ -3,18 +3,28 @@ import { netOf } from '../core/ledger'
 import { LocalRepo, MemoryKV } from '../storage/LocalRepo'
 import { createAppStore } from '../store/appStore'
 import { LocalRoomBackend } from './LocalRoomBackend'
+import { PartsRoomBackend } from './PartsRoomBackend'
+import type { RoomBackend } from './RoomBackend'
+import { MemoryRoomDb } from './RoomDb'
 
-const tick = () => new Promise((r) => setTimeout(r, 0))
-
-/** Hai "máy": mỗi máy bộ nhớ riêng, chung một phòng. */
-function twoDevices() {
-  const rooms = new LocalRoomBackend(new MemoryKV(), null)
-  const host = createAppStore(new LocalRepo(new MemoryKV()), rooms)
-  const guest = createAppStore(new LocalRepo(new MemoryKV()), rooms)
-  return { rooms, host, guest }
+const tick = async () => {
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0))
 }
 
-describe('Bàn nhiều người — đồng bộ qua phòng', () => {
+const BACKENDS: [string, () => RoomBackend][] = [
+  ['giả lập trên máy', () => new LocalRoomBackend(new MemoryKV(), null)],
+  ['chia mẩu (như Firebase)', () => new PartsRoomBackend(new MemoryRoomDb())],
+]
+
+describe.each(BACKENDS)('Bàn nhiều người — đồng bộ qua phòng (%s)', (_, makeRooms) => {
+  /** Hai "máy": mỗi máy bộ nhớ riêng, chung một phòng. */
+  function twoDevices() {
+    const rooms = makeRooms()
+    const host = createAppStore(new LocalRepo(new MemoryKV()), rooms)
+    const guest = createAppStore(new LocalRepo(new MemoryKV()), rooms)
+    return { rooms, host, guest }
+  }
+
   it('máy khác join bằng mã, thêm mình vào bàn; host thấy ngay', async () => {
     const { host, guest } = twoDevices()
     host.getState().createSession('Tối thứ 7', [{ name: 'Tí', emoji: '🐱' }], 'multi')
@@ -82,5 +92,72 @@ describe('Bàn nhiều người — đồng bộ qua phòng', () => {
     expect(code).not.toBe(taken.code)
     expect((await rooms.fetch(code!))?.id).toBe(b.id)
     expect((await rooms.fetch(taken.code!))?.id).toBe(taken.id)
+  })
+})
+
+describe('Phòng chia mẩu — tiết kiệm dữ liệu', () => {
+  it('tách / ghép bàn giữ nguyên dữ liệu và thứ tự ván', async () => {
+    const { toParts, fromParts, diffParts } = await import('./parts')
+    const store = createAppStore(new LocalRepo(new MemoryKV()))
+    store.getState().createSession('Bàn', [{ name: 'Tí', emoji: '🐱' }, { name: 'Tèo', emoji: '🐶' }])
+    const [a, b] = store.getState().session!.players.map((p) => p.id)
+    const g = store.getState().addGame('free')
+    for (let i = 1; i <= 3; i++) store.getState().addMove(g, a, b, i, '')
+    const s = store.getState().session!
+    expect(fromParts(toParts(s), s.updatedAt)).toEqual(s)
+    // Thêm một lượt chuyển tay = thêm đúng 1 mẩu ván + mẩu phần chung (updatedAt)
+    store.getState().addMove(g, b, a, 1, '')
+    const changed = Object.keys(diffParts(toParts(s), toParts(store.getState().session!)))
+    // Lượt chuyển tay = 1 ván mới + danh sách ván của game; phần chung (người chơi…) không phải gửi lại
+    expect(changed).toHaveLength(2)
+    expect(changed).toContain(`g_${g}`)
+    expect(changed.filter((k) => k.startsWith('r_'))).toHaveLength(1)
+  })
+
+  it('bàn lớn: mỗi lần bấm chỉ gửi vài KB, không gửi lại cả bàn', async () => {
+    const db = new MemoryRoomDb()
+    const rooms = new PartsRoomBackend(db)
+    const host = createAppStore(new LocalRepo(new MemoryKV()), rooms)
+    host.getState().createSession('Bàn lớn', [{ name: 'Tí', emoji: '🐱' }], 'multi')
+    for (const n of ['Tèo', 'Bin', 'Na', 'Cò', 'Mít']) host.getState().addPlayer(n, '🐶')
+    await tick()
+    const ids = host.getState().session!.players.map((p) => p.id)
+    const g = host.getState().addGame('tienlen')
+    host.getState().setTienlenBets(g, 4, 2)
+    for (let i = 0; i < 40; i++) {
+      host.getState().updatePlayer(ids[4], { active: false })
+      host.getState().updatePlayer(ids[5], { active: false })
+      host.getState().quickOpen(g)
+      host.getState().addMove(g, ids[1], ids[0], 4, 'Nhất')
+      host.getState().addMove(g, ids[2], ids[3], 2, 'Nhì')
+      host.getState().closeRound(g)
+    }
+    await tick()
+    const whole = JSON.stringify(host.getState().session).length
+    const before = db.bytesWritten
+    host.getState().quickOpen(g)
+    await tick()
+    const perTap = db.bytesWritten - before
+    expect(whole).toBeGreaterThan(20_000)
+    expect(perTap).toBeLessThan(whole / 5)
+  })
+
+  it('dọn phòng bỏ không quá 30 ngày; phòng đang dùng thì giữ', async () => {
+    let now = 1_000_000_000_000
+    const db = new MemoryRoomDb()
+    const rooms = new PartsRoomBackend(db, 'firebase', () => now)
+    const store = createAppStore(new LocalRepo(new MemoryKV()), rooms)
+    store.getState().createSession('Cũ', [{ name: 'Tí', emoji: '🐱' }], 'multi')
+    await tick()
+    const old = store.getState().session!.code!
+    store.getState().closeSession()
+    now += 31 * 24 * 60 * 60 * 1000
+    store.getState().createSession('Mới', [{ name: 'Tèo', emoji: '🐶' }], 'multi')
+    await tick()
+    const fresh = store.getState().session!.code!
+    // Mở bàn mới là máy tự dọn giúp
+    expect(await rooms.fetch(old)).toBeNull()
+    expect(await rooms.sweep()).toEqual([])
+    expect(await rooms.fetch(fresh)).not.toBeNull()
   })
 })
