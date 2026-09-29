@@ -4,6 +4,7 @@ import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS } from '../../store/appStore'
 import { writeMe } from '../me'
+import { readProfile, saveProfile } from '../profile'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 import hostIcon from '../../assets/rules/host.webp'
 import groupIcon from '../../assets/rules/group.webp'
@@ -23,10 +24,15 @@ export function NewSession() {
   const [name, setName] = useState('')
   const [defaultName] = useState(() => `Bàn ${new Date().toLocaleDateString('vi-VN')}`)
   const [mode, setMode] = useState<'solo' | 'multi'>('multi')
-  const [players, setPlayers] = useState<Draft[]>([
-    { name: '', emoji: EMOJIS[0] },
-    { name: '', emoji: EMOJIS[1] },
-  ])
+  // Người đầu (host / bạn) tự điền tên đã dùng lần trước trên trình duyệt này
+  const [players, setPlayers] = useState<Draft[]>(() => {
+    const me = readProfile()
+    const second = EMOJIS.find((e) => e !== me?.emoji) ?? EMOJIS[1]
+    return [
+      { name: me?.name ?? '', emoji: me?.emoji ?? EMOJIS[0] },
+      { name: '', emoji: second },
+    ]
+  })
   const [errors, setErrors] = useState<string[]>([])
 
   const update = (i: number, patch: Partial<Draft>) =>
@@ -44,6 +50,7 @@ export function NewSession() {
     if (new Set(names).size !== names.length) errs.push('Hai người chơi đang trùng tên.')
     setErrors(errs)
     if (errs.length) return
+    saveProfile(named[0])
     const id = actions().createSession(name || defaultName, named, mode)
     // Máy tạo bàn là host
     const host = actions().session?.players[0]

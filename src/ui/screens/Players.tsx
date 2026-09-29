@@ -3,6 +3,7 @@ import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { canHostOf, useMe } from '../me'
+import { saveProfile } from '../profile'
 import { useSession } from '../components/useSession'
 import { ask, tell } from '../dialog'
 import { hostVoteTally, hostVotesNeeded } from '../../core/hostVote'
@@ -135,7 +136,15 @@ export function Players() {
                 isMe={me === p.id}
                 resting={!p.active}
                 name={p.name}
-                onTap={editable ? () => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) }) : undefined}
+                onTap={
+                  editable
+                    ? () => {
+                        const emoji = nextEmoji(p.emoji)
+                        actions().updatePlayer(p.id, { emoji })
+                        if (p.id === me) saveProfile({ name: p.name, emoji })
+                      }
+                    : undefined
+                }
               />
               <input
                 aria-label={`Tên ${p.name}`}
@@ -146,7 +155,10 @@ export function Players() {
                 readOnly={!editable}
                 onBlur={(e) => {
                   const v = e.target.value.trim()
-                  if (v && !nameTaken(v, p.id)) actions().updatePlayer(p.id, { name: v })
+                  if (v && !nameTaken(v, p.id)) {
+                    actions().updatePlayer(p.id, { name: v })
+                    if (p.id === me) saveProfile({ name: v, emoji: p.emoji })
+                  }
                   else e.target.value = p.name
                 }}
               />

@@ -4,18 +4,24 @@ import { MAX_PLAYERS } from '../../core/types'
 import { actions } from '../../store'
 import { EMOJIS } from '../../store/appStore'
 import { writeMeHere } from '../me'
+import { readProfile, saveProfile } from '../profile'
 
 /**
  * Vừa join bàn nhiều người: hỏi "Bạn là ai?" — chọn tên có sẵn (host đã thêm) hoặc thêm mình vào bàn.
  * Lựa chọn lưu trên máy này (đổi lại ở màn Người chơi).
  */
 export function WhoAmI({ session, onDone }: { session: Session; onDone: (id: ID) => void }) {
-  const [name, setName] = useState('')
-  const [emoji, setEmoji] = useState(EMOJIS[session.players.length % EMOJIS.length])
+  // Tự điền tên / biểu tượng đã dùng lần trước; trong bàn có sẵn đúng tên đó thì làm nổi ô tên ấy
+  const profile = readProfile()
+  const [name, setName] = useState(profile?.name ?? '')
+  const [emoji, setEmoji] = useState(profile?.emoji ?? EMOJIS[session.players.length % EMOJIS.length])
+  const likely = profile && session.players.find((p) => !p.removed && p.name.toLowerCase() === profile.name.toLowerCase())
   const [error, setError] = useState('')
   const inRoom = session.players.filter((p) => !p.removed)
 
   const pick = (id: ID) => {
+    const p = session.players.find((x) => x.id === id) ?? actions().session?.players.find((x) => x.id === id)
+    if (p) saveProfile({ name: p.name, emoji: p.emoji })
     writeMeHere(session.id, id)
     onDone(id)
   }
@@ -47,13 +53,16 @@ export function WhoAmI({ session, onDone }: { session: Session; onDone: (id: ID)
                 <button
                   type="button"
                   onClick={() => pick(p.id)}
-                  className="flex w-full flex-col items-center gap-1 rounded-2xl border border-line bg-night/50 px-1 py-2.5 active:scale-95"
+                  className={`flex w-full flex-col items-center gap-1 rounded-2xl border px-1 py-2.5 active:scale-95 ${
+                    likely?.id === p.id ? 'border-lemon bg-lemon/15' : 'border-line bg-night/50'
+                  }`}
                 >
                   <span aria-hidden className="text-3xl leading-none">
                     {p.emoji}
                   </span>
                   <span className="w-full truncate text-center text-sm font-semibold">{p.name}</span>
                   {p.id === session.hostId && <span className="text-[10px] font-bold text-lemon">host</span>}
+                  {likely?.id === p.id && p.id !== session.hostId && <span className="text-[10px] font-bold text-lemon">bạn?</span>}
                 </button>
               </li>
             ))}
