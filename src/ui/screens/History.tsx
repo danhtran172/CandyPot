@@ -77,7 +77,7 @@ export function History() {
 
       {entries.length === 0 && (
         <p className="rounded-3xl border border-dashed border-line p-6 text-center text-muted">
-          Chưa có ván nào. Về Bàn chơi và bấm “+ Ván mới”.
+          Chưa có ván nào. Về Bàn chơi và bấm “+ Mở ván”.
         </p>
       )}
 

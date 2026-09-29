@@ -71,7 +71,7 @@ export function Table() {
     }
     if (to === BET) {
       if (from === POT || from === dealerNow) return flash('Nhà cái không đặt cược.', true)
-      if (round?.phase === 'playing') return flash('Đã chốt cược — bấm Ván mới để cược lại.', true)
+      if (round?.phase === 'playing') return flash('Đã chốt cược — bấm Kết thúc để sang ván mới rồi cược lại.', true)
       if (!round && !openNext()) return
     } else if (round?.phase === 'betting') {
       return flash('Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.', true)
@@ -119,7 +119,7 @@ export function Table() {
     }
     const errors = actions().nextRound(game.id)
     if (errors.length) flash(errors[0], true)
-    else flash('Ván mới — đặt cược nào!')
+    else flash('Đã kết thúc ván — ván mới, đặt cược nào!')
   }
 
   const closeRound = () => {
@@ -233,9 +233,7 @@ export function Table() {
           <Board
             seats={seats}
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
-            betBox={
-              game.type === 'xidach' ? Object.values((round ?? lastPlay)?.stakes ?? {}).reduce((a, b) => a + b, 0) : undefined
-            }
+            betBox={game.type === 'xidach'}
             betLocked={round?.phase === 'playing'}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             center={<TableCenter game={game} round={round} />}
@@ -303,13 +301,13 @@ export function Table() {
                     ⚙
                   </Button>
                 )}
-                {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Ván mới */}
+                {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Kết thúc (sang ván mới); chưa có ván → Ván mới */}
                 <Button
                   variant="primary"
                   className="font-display flex-1 py-1.5 text-lg"
                   onClick={round?.phase === 'betting' ? lockBets : nextRound}
                 >
-                  {round?.phase === 'betting' ? 'Chốt cược' : 'Ván mới'}
+                  {round?.phase === 'betting' ? 'Chốt cược' : round ? 'Kết thúc' : 'Ván mới'}
                 </Button>
               </>
             ) : round ? (

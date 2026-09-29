@@ -63,8 +63,8 @@ export function Board({
   center?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
-  /** Ô Bet giữa bàn (Xì dách): thả vào để đặt cược; giá trị = tổng cược đang đặt. */
-  betBox?: number
+  /** Hiện ô Bet giữa bàn (Xì dách): thả vào để đặt cược. Không giữ kẹo, không cộng tổng. */
+  betBox?: boolean
   /** Đã chốt cược: ô Bet chỉ hiển thị, không nhận đặt cược nữa. */
   betLocked?: boolean
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
@@ -152,16 +152,15 @@ export function Board({
               <span className="text-[11px] text-muted">Pot</span>
             </div>
           )}
-          {betBox !== undefined && (
+          {betBox && (
             <div
               data-drop={BET}
               className={`flex flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
                 betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
               } ${ring(BET)}`}
             >
-              <span className="font-display text-lg leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
-              <span className="candy num mt-1 text-lg">{betBox}</span>
-              <span className="text-[10px] text-muted">{betLocked ? 'đã chốt cược' : 'thả vào để đặt cược'}</span>
+              <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
+              <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt cược' : 'thả vào để đặt cược'}</span>
             </div>
           )}
           {hat && (

@@ -392,7 +392,7 @@ export function createAppStore(repo: SessionRepo) {
         const open = openOf(gameId)
         if (!open) return ['Chưa có ván nào đang mở.']
         if (open.dealer === playerId) return ['Nhà cái không đặt cược.']
-        if (open.phase === 'playing') return ['Đã chốt cược — bấm Ván mới để cược lại.']
+        if (open.phase === 'playing') return ['Đã chốt cược — bấm Kết thúc để sang ván mới rồi cược lại.']
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (!Number.isInteger(amount) || amount <= 0) return ['Tiền cược phải là số nguyên lớn hơn 0.']
         mapRound(gameId, open.id, (r) => ({ ...r, stakes: { ...r.stakes, [playerId]: amount } }))

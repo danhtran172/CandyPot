@@ -101,7 +101,7 @@ describe('appStore — Xì dách', () => {
     expect(openRound(session(), g)!.phase).toBe('betting')
     expect(s().addMove(g, b, a, 10, '')).toEqual(['Đang đặt cược — bấm Chốt cược rồi mới trả kẹo.'])
     expect(s().lockBets(g)).toEqual([])
-    expect(s().setStake(g, b, 20)).toEqual(['Đã chốt cược — bấm Ván mới để cược lại.'])
+    expect(s().setStake(g, b, 20)).toEqual(['Đã chốt cược — bấm Kết thúc để sang ván mới rồi cược lại.'])
     expect(s().setDealer(g, b)).not.toEqual([])
     expect(s().addMove(g, b, a, 10, '')).toEqual([])
     expect(s().nextRound(g)).toEqual([])
