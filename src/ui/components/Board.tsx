@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { BET, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
-import { CandyJar } from './CandyJar'
 import { candyFor } from '../candyIcons'
 import potIcon from '../../assets/pot.webp'
+import dragCandy from '../../assets/drag-candy.webp'
 
 export interface Seat {
   player: Player
@@ -50,7 +50,7 @@ const HEIGHT = 'clamp(420px, calc(100dvh - 270px), 640px)'
 
 /**
  * Bàn oval (hoặc vuông với Tiến lên): mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
- * Kéo từ một người thả vào người khác (hoặc pot) để trả — hũ kẹo hiện ra theo tay khi kéo.
+ * Kéo từ một người thả vào người khác (hoặc pot) để trả — gói kẹo (drag-candy.webp) hiện ra theo tay khi kéo.
  */
 export function Board({
   seats,
@@ -307,7 +307,7 @@ export function Board({
           className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rotate-[-12deg] drop-shadow-[0_8px_12px_rgb(0_0_0/0.5)]"
           style={{ left: drag.x, top: drag.y }}
         >
-          {drag.from === DEALER ? <span className="text-5xl">🎩</span> : <CandyJar className="h-14 w-12" />}
+          {drag.from === DEALER ? <span className="text-5xl">🎩</span> : <img src={dragCandy} alt="" className="size-16" />}
         </div>
       )}
     </>
