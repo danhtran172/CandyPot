@@ -1,8 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
 import { XIDACH_MAX_MULTIPLIER, xidachLimits } from '../../core/games/xidach'
+import { tienlenBets, tienlenPigs } from '../../core/suggest'
 import type { Game } from '../../core/types'
 import { actions } from '../../store'
+import { pokerSettingsOf } from '../../store/appStore'
 import { Button, Stepper } from './kit'
 import { RuleIcon, type RuleIconName } from './RuleIcons'
 
@@ -152,5 +155,83 @@ export function XidachLimitsSheet({ game, onDone }: { game: Game; onDone: (saved
         }}
       />
     </SettingsModal>
+  )
+}
+
+/** Các dòng luật hiện hành của một game (để xem) — trống nếu game không có luật riêng. */
+function ruleRows(game: Game): { icon: RuleIconName; label: string; value: string }[] {
+  switch (game.type) {
+    case 'tienlen': {
+      const { bet, bet2 = bet } = tienlenBets(game)
+      const pigs = tienlenPigs(game, bet, bet2)
+      return [
+        { icon: 'first', label: 'Nhất', value: `${bet} kẹo` },
+        { icon: 'second', label: 'Nhì', value: `${bet2} kẹo` },
+        { icon: 'pigRed', label: 'Heo đỏ', value: `${pigs.red} kẹo` },
+        { icon: 'pigBlack', label: 'Heo đen', value: `${pigs.black} kẹo` },
+      ]
+    }
+    case 'loto':
+      return [
+        { icon: 'price', label: 'Giá', value: `${lotoPrice(game)} kẹo / tờ` },
+        { icon: 'max', label: 'Tối đa', value: `${lotoMax(game)} tờ mỗi người` },
+      ]
+    case 'xidach': {
+      const { min, max } = xidachLimits(game)
+      return [
+        { icon: 'min', label: 'Cược tối thiểu', value: `${min} kẹo` },
+        { icon: 'max', label: 'Cược tối đa', value: `${max} kẹo` },
+      ]
+    }
+    case 'poker': {
+      const { sb, cap } = pokerSettingsOf(game)
+      return [
+        { icon: 'min', label: 'Small blind', value: `${sb} kẹo` },
+        { icon: 'price', label: 'Big blind', value: `${2 * sb} kẹo` },
+        { icon: 'max', label: 'All-in', value: `${cap} kẹo` },
+      ]
+    }
+    default:
+      return []
+  }
+}
+
+/** Popup "Rule ?": ai cũng xem được luật hiện hành; host có nút ⚙ Chỉnh. */
+export function RulesSheet({ game, isHost, onEdit, onClose }: { game: Game; isHost: boolean; onEdit: () => void; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Luật" className="fixed inset-0 z-50 flex items-center justify-center px-6">
+      <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/75 backdrop-blur-sm" onClick={onClose} />
+      <div className="pop relative w-full max-w-sm rounded-3xl border-2 border-sky/70 bg-plum-2 p-5 shadow-2xl">
+        <h2 className="font-display text-center text-xl font-bold">
+          <span className="text-sky">Rule</span> · {GAMES[game.type].label}
+        </h2>
+        <ul className="mt-4 space-y-2">
+          {ruleRows(game).map((r) => (
+            <li key={r.label} className="flex items-center gap-2.5 rounded-2xl bg-night/40 px-3 py-2">
+              <RuleIcon name={r.icon} className="size-6" />
+              <span className="flex-1 font-semibold">{r.label}</span>
+              <span className="num font-display font-extrabold text-lemon">{r.value}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 flex gap-2">
+          <Button className="flex-1" onClick={onClose}>
+            Đóng
+          </Button>
+          {isHost ? (
+            <Button variant="primary" className="flex-1" onClick={onEdit}>
+              ⚙ Chỉnh
+            </Button>
+          ) : (
+            <span className="flex flex-1 items-center justify-center text-center text-xs text-muted">Chỉ host chỉnh được</span>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

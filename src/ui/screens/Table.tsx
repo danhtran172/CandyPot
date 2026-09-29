@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { GAME_ORDER, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
-import { xidachBetOptions, xidachLimits } from '../../core/games/xidach'
+import { xidachBetOptions } from '../../core/games/xidach'
 import {
   blindsOf,
   contenders,
@@ -16,7 +16,7 @@ import {
 } from '../../core/games/pokerHand'
 import { netOf } from '../../core/ledger'
 import { contributions, movesNet, openRound, potOf } from '../../core/round'
-import { suggestOptions, tienlenBets, tienlenPigs } from '../../core/suggest'
+import { suggestOptions } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { pokerSettingsOf } from '../../store/appStore'
@@ -24,8 +24,7 @@ import { AmountSheet } from '../components/AmountSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
-import { RuleIcon, type RuleIconName } from '../components/RuleIcons'
-import { LotoSettingsSheet, XidachLimitsSheet } from '../components/RuleSheets'
+import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
@@ -50,6 +49,7 @@ export function Table() {
   const [editBets, setEditBets] = useState(false)
   const [editPrice, setEditPrice] = useState(false)
   const [editLimits, setEditLimits] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
@@ -154,10 +154,18 @@ export function Table() {
     setPicker('award')
   }
 
-  const openPokerSettings = () => {
-    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới chỉnh cài đặt Poker.`, true)
-    setPokerSheet('settings')
+  /** ⚙ góc bàn: host chỉnh luật của mode đang chơi. */
+  const openSettings = () => {
+    if (!game) return
+    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới chỉnh được.`, true)
+    setShowRules(false)
+    if (game.type === 'poker') setPokerSheet('settings')
+    else if (game.type === 'tienlen') setEditBets(true)
+    else if (game.type === 'loto') setEditPrice(true)
+    else if (game.type === 'xidach') setEditLimits(true)
   }
+  /** Mode có luật để xem / chỉnh (Tự do và mode "sắp có" thì không). */
+  const withRules = !!game && game.type !== 'free' && !GAMES[game.type].soon
 
   const pokerBadge = (id: ID): string | undefined => {
     if (!hand) return undefined
@@ -286,23 +294,8 @@ export function Table() {
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
   const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
-  /** Tiến lên: host bấm ô Rule để đặt mức Nhất/Nhì. */
-  const openBets = () => {
-    if (me !== session.hostId) return flash(`Chỉ host (${players[session.hostId ?? '']?.name ?? '?'}) mới đổi Rule được.`, true)
-    setEditBets(true)
-  }
 
-  /** Xì dách: host bấm ô min/max để đặt khoảng cược. */
-  const openLimits = () => {
-    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới đổi mức cược được.`, true)
-    setEditLimits(true)
-  }
 
-  /** Lô tô: host bấm ô Giá để đặt giá mỗi tờ. */
-  const openPrice = () => {
-    if (me !== session.hostId) return flash(`Chỉ host (${hostName}) mới đổi giá được.`, true)
-    setEditPrice(true)
-  }
 
   /** Xì dách / Lô tô: khóa cược (mua tờ) để chơi và trả kẹo. */
   const lockBets = () => {
@@ -462,21 +455,26 @@ export function Table() {
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             center={
-              <TableCenter
-                game={game}
-                round={round}
-                players={players}
-                onEditBets={openBets}
-                onEditPrice={openPrice}
-                onEditLimits={openLimits}
-              />
+              <>
+                {withRules && (
+                  <button
+                    type="button"
+                    aria-label="Xem luật"
+                    onClick={() => setShowRules(true)}
+                    className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-0.5 text-sm font-bold text-berry transition active:scale-95"
+                  >
+                    Rule ?
+                  </button>
+                )}
+                <TableCenter game={game} round={round} players={players} />
+              </>
             }
             cornerTop={
-              game.type === 'poker' ? (
+              withRules ? (
                 <button
                   type="button"
-                  aria-label="Cài đặt Poker"
-                  onClick={openPokerSettings}
+                  aria-label={`Cài đặt ${GAMES[game.type].label}`}
+                  onClick={openSettings}
                   className="grid size-9 place-items-center rounded-full border border-line/60 bg-night/70 text-lg"
                 >
                   ⚙
@@ -663,6 +661,10 @@ export function Table() {
         />
       )}
 
+      {showRules && game && (
+        <RulesSheet game={game} isHost={me === session.hostId} onEdit={openSettings} onClose={() => setShowRules(false)} />
+      )}
+
       {editLimits && game && (
         <XidachLimitsSheet
           game={game}
@@ -814,48 +816,15 @@ function CornerLink({ to, icon, label, count }: { to: string; icon: string; labe
   )
 }
 
-/** Một mức trong ô luật: icon + số (kẹo) [+ đơn vị]. */
-function RuleChip({ icon, value, unit }: { icon: RuleIconName; value: number; unit?: string }) {
-  return (
-    <span className="flex items-center gap-1">
-      <RuleIcon name={icon} className="size-5" />
-      <span className="num font-display text-base leading-none font-extrabold text-lemon">{value}</span>
-      {unit && <span className="text-[11px] text-muted">{unit}</span>}
-    </span>
-  )
-}
-
-/** Xì dách: ô min / max cược — host bấm để đổi. */
-function LimitsButton({ game, onEdit }: { game: Game; onEdit: () => void }) {
-  const { min, max } = xidachLimits(game)
-  return (
-    <button
-      type="button"
-      onClick={onEdit}
-      aria-label={`Cược từ ${min} đến ${max} — host bấm để đổi`}
-      className="flex items-center gap-2.5 rounded-2xl border border-dashed border-sky/60 bg-night/50 px-2.5 py-0.5 transition active:scale-95"
-    >
-      <RuleChip icon="min" value={min} />
-      <RuleChip icon="max" value={max} />
-    </button>
-  )
-}
-
 /** Giữa bàn: thông tin riêng của từng game. */
 function TableCenter({
   game,
   round,
   players,
-  onEditBets,
-  onEditPrice,
-  onEditLimits,
 }: {
   game: Game
   round?: Round
   players: Record<ID, Player>
-  onEditBets: () => void
-  onEditPrice: () => void
-  onEditLimits: () => void
 }) {
   if (round?.poker) {
     const h = round.poker
@@ -898,51 +867,10 @@ function TableCenter({
       </>
     )
   }
-  if (game.type === 'loto') {
-    const price = lotoPrice(game)
-    return (
-      <>
-        <span className="text-xs text-muted">{round ? `Ván ${roundNumber(game, round)}` : 'Chưa mở ván'}</span>
-        <button
-          type="button"
-          onClick={onEditPrice}
-          aria-label={`Giá: ${price} kẹo mỗi tờ, tối đa ${lotoMax(game)} tờ mỗi người — host bấm để đổi`}
-          className="flex items-center gap-2.5 rounded-2xl border-2 border-dashed border-sky/70 bg-night/50 px-2.5 py-1 transition active:scale-95"
-        >
-          <RuleChip icon="price" value={price} unit="/tờ" />
-          <RuleChip icon="max" value={lotoMax(game)} unit="tờ" />
-        </button>
-      </>
-    )
-  }
-  if (game.type === 'tienlen') {
-    const { bet, bet2 } = round ?? tienlenBets(game)
-    const pigs = tienlenPigs(game, bet, bet2 ?? bet)
-    return (
-      <>
-        <span className="text-xs text-muted">{round ? `Ván ${roundNumber(game, round)}` : 'Chưa mở ván'}</span>
-        <button
-          type="button"
-          onClick={onEditBets}
-          aria-label={`Rule: Nhất ${bet}, Nhì ${bet2 ?? '-'}, heo đỏ ${pigs.red}, heo đen ${pigs.black} — host bấm để đổi`}
-          className="flex max-w-full flex-col items-center rounded-2xl border-2 border-dashed border-sky/70 bg-night/50 px-2.5 py-1 transition active:scale-95"
-        >
-          <span className="font-display text-sm leading-none font-bold text-sky">Rule</span>
-          <span className="mt-1 grid grid-cols-2 gap-x-2.5 gap-y-1">
-            <RuleChip icon="first" value={bet} />
-            <RuleChip icon="second" value={bet2 ?? bet} />
-            <RuleChip icon="pigRed" value={pigs.red} />
-            <RuleChip icon="pigBlack" value={pigs.black} />
-          </span>
-        </button>
-      </>
-    )
-  }
   if (!round) {
     const soon = GAMES[game.type].soon
     return (
       <>
-        {game.type === 'xidach' && <LimitsButton game={game} onEdit={onEditLimits} />}
         <GameIcon type={game.type} className="size-9" />
         <span className="font-display text-lg leading-tight font-bold">
           <GameName type={game.type} />
@@ -955,7 +883,6 @@ function TableCenter({
     return (
       <>
         <span className="text-xs text-muted">Ván {roundNumber(game, round)} · bấm 🎩 để đổi cái</span>
-        <LimitsButton game={game} onEdit={onEditLimits} />
       </>
     )
   }
