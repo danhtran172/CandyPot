@@ -359,6 +359,20 @@ export function Table() {
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
     highlight: !!hand && hand.toAct === p.id,
+    // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
+    action:
+      hand && p.id === me ? (
+        <button
+          type="button"
+          aria-label="Hoàn tác thao tác cuối"
+          title="Hoàn tác thao tác cuối"
+          disabled={!hand.undo.length}
+          onClick={pokerUndo}
+          className="grid size-9 place-items-center rounded-full border border-line bg-night/90 text-lg shadow-lg transition active:scale-90 disabled:opacity-35"
+        >
+          ↩
+        </button>
+      ) : undefined,
     dim: !!hand?.folded.includes(p.id),
   }))
 
@@ -491,14 +505,6 @@ export function Table() {
                 </Button>
               ) : (
                 <>
-                  <Button
-                    aria-label="Hoàn tác thao tác cuối"
-                    disabled={!hand.undo.length}
-                    className="shrink-0 bg-night/90 px-2 py-1.5 text-sm"
-                    onClick={pokerUndo}
-                  >
-                    ↩
-                  </Button>
                   {hand.street === 'done' ? (
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
                       Tay mới

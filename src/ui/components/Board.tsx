@@ -22,6 +22,8 @@ export interface Seat {
   highlight?: boolean
   /** Đã bỏ bài (Poker) — mờ đi. */
   dim?: boolean
+  /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
+  action?: ReactNode
 }
 
 interface Drag {
@@ -323,6 +325,12 @@ export function Board({
                   <span className="mt-0.5 rounded-full bg-night/70 px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-lemon">
                     {s.badge}
                   </span>
+                )}
+                {s.action && (
+                  // Không để nút bắt đầu thao tác kéo của ghế
+                  <div className="absolute top-12 left-[calc(100%-6px)]" onPointerDown={(e) => e.stopPropagation()}>
+                    {s.action}
+                  </div>
                 )}
               </div>
             )
