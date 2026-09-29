@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { useMe } from '../me'
 import { useSession } from '../components/useSession'
 import { ask } from '../dialog'
-import { Button, Card, Chip, Errors, SectionTitle, TopBar } from '../components/kit'
+import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 
 export function Players() {
   const session = useSession()
@@ -33,22 +33,26 @@ export function Players() {
   return (
     <main>
       <TopBar title="Người chơi" back={`/s/${session.id}`} />
-      <p className="mb-3 text-sm text-muted">
-        Bấm <b>Tôi</b> ở người của bạn: chỗ của bạn luôn nằm dưới cùng bàn. <b>Host</b> là người xác nhận các yêu cầu hoàn tác. Người đã chơi không xóa được, chỉ tạm nghỉ — lời/lỗ vẫn được giữ.
-      </p>
+      <ul className="mb-3 space-y-0.5 text-sm text-muted">
+        <li>
+          <b className="text-cream">Chạm avatar</b> để chọn bạn (🙋) — chỗ của bạn luôn ở dưới cùng bàn · <b className="text-cream">giữ</b> để đổi biểu tượng.
+        </li>
+        <li>
+          🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — người đã chơi không xóa được, lời/lỗ vẫn giữ.
+        </li>
+      </ul>
 
       <Card className="p-2">
         <ul>
           {session.players.map((p) => (
             <li key={p.id} className="flex items-center gap-2 px-2 py-2">
-              <button
-                type="button"
-                aria-label="Đổi biểu tượng"
-                className="grid size-10 shrink-0 place-items-center rounded-xl bg-plum-2 text-xl"
-                onClick={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
-              >
-                {p.emoji}
-              </button>
+              <Avatar
+                emoji={p.emoji}
+                isMe={me === p.id}
+                name={p.name}
+                onTap={() => setMe(p.id)}
+                onHold={() => actions().updatePlayer(p.id, { emoji: nextEmoji(p.emoji) })}
+              />
               <input
                 aria-label={`Tên ${p.name}`}
                 className={`min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-2 py-2 font-semibold outline-none focus:border-lemon ${
@@ -61,25 +65,23 @@ export function Players() {
                   else e.target.value = p.name
                 }}
               />
-              <Chip active={me === p.id} onClick={() => setMe(p.id)} aria-label={`${p.name} là tôi`}>
-                Tôi
-              </Chip>
-              <Chip
-                tone="mint"
-                active={session.hostId === p.id}
+              <IconToggle
+                on={session.hostId === p.id}
+                icon="🛎️"
+                label={session.hostId === p.id ? `${p.name} là host` : `Cho ${p.name} làm host`}
                 onClick={() => actions().setHost(p.id)}
-                aria-label={`${p.name} là host`}
-              >
-                Host
-              </Chip>
+                onClass="bg-mint/25 border-mint"
+              />
               {isPlayerUsed(session, p.id) ? (
-                <Chip active={!p.active} tone="grape" onClick={() => actions().updatePlayer(p.id, { active: !p.active })}>
-                  {p.active ? 'Tạm nghỉ' : 'Đang nghỉ'}
-                </Chip>
+                <IconToggle
+                  on={!p.active}
+                  icon="💤"
+                  label={p.active ? `Cho ${p.name} tạm nghỉ` : `${p.name} đang nghỉ — bấm để chơi lại`}
+                  onClick={() => actions().updatePlayer(p.id, { active: !p.active })}
+                  onClass="bg-grape/30 border-grape"
+                />
               ) : (
-                <button type="button" className="px-2 text-muted hover:text-berry" onClick={() => remove(p.id, p.name)}>
-                  ✕
-                </button>
+                <IconToggle icon="✕" label={`Bỏ ${p.name} khỏi buổi`} onClick={() => remove(p.id, p.name)} onClass="" />
               )}
             </li>
           ))}
@@ -108,5 +110,84 @@ export function Players() {
 
 
     </main>
+  )
+}
+
+/** Avatar người chơi: chạm = chọn là mình (gắn 🙋), giữ ~0,5 giây = đổi biểu tượng. */
+function Avatar({
+  emoji,
+  isMe,
+  name,
+  onTap,
+  onHold,
+}: {
+  emoji: string
+  isMe: boolean
+  name: string
+  onTap: () => void
+  onHold: () => void
+}) {
+  const timer = useRef<number | undefined>(undefined)
+  const held = useRef(false)
+  const start = () => {
+    held.current = false
+    timer.current = window.setTimeout(() => {
+      held.current = true
+      onHold()
+    }, 500)
+  }
+  const stop = () => window.clearTimeout(timer.current)
+  return (
+    <button
+      type="button"
+      aria-label={isMe ? `${name} là bạn — giữ để đổi biểu tượng` : `Chọn ${name} là bạn`}
+      aria-pressed={isMe}
+      onPointerDown={start}
+      onPointerUp={stop}
+      onPointerLeave={stop}
+      onPointerCancel={stop}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={() => !held.current && onTap()}
+      className={`relative grid size-11 shrink-0 touch-none place-items-center rounded-full border-2 bg-plum-2 text-2xl transition select-none active:scale-95 ${
+        isMe ? 'border-lemon shadow-[0_0_14px_rgb(255_210_63/0.35)]' : 'border-line'
+      }`}
+    >
+      {emoji}
+      {isMe && (
+        <span aria-hidden className="absolute -right-1.5 -bottom-1 grid size-5 place-items-center rounded-full bg-lemon text-[11px] leading-none">
+          🙋
+        </span>
+      )}
+    </button>
+  )
+}
+
+/** Nút icon bật/tắt (Host, Tạm nghỉ…). */
+function IconToggle({
+  on,
+  icon,
+  label,
+  onClick,
+  onClass,
+}: {
+  on?: boolean
+  icon: ReactNode
+  label: string
+  onClick: () => void
+  onClass: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={on}
+      title={label}
+      onClick={onClick}
+      className={`grid size-10 shrink-0 place-items-center rounded-full border text-lg transition ${
+        on ? onClass : 'border-line/60 text-muted opacity-45 grayscale hover:opacity-80'
+      }`}
+    >
+      {icon}
+    </button>
   )
 }

@@ -35,6 +35,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Chọn game bằng ô chọn (dropdown):** chỉ 3 lựa chọn Tiến lên / Xì dách / Poker (ghi "· đang chơi" nếu có ván mở); chọn loại nào thì dùng game loại đó trong buổi, chưa có thì tự tạo. Không còn nút "+ Game".
 - **Cược Tiến lên tự tính:** ở ô Rule và màn Mở ván, nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì, Nhì = Nhất ÷ 2 làm tròn); sửa tiếp ô vừa được tự tính là đặt riêng, bấm "Tự tính lại" để nối lại.
 - **Nút +/− nhảy theo hệ số:** mọi ô số (cược, "Số khác" khi trả/đòi/đặt kẹo…) có + nhảy ×1,5 → ×2 → ×3 của số gốc rồi lặp lại từ ×3 (4 → 6 → 8 → 12 → 18 → 24 → 36), − đi lùi đúng các bậc đó. Số gốc là số đang có hoặc số vừa gõ; muốn số khác thì gõ thẳng vào ô (số có gạch chân chấm).
+- **Màn Người chơi gọn lại:** bỏ nút "Tôi" — chạm avatar để chọn mình (avatar viền vàng + 🙋), giữ avatar để đổi biểu tượng; Host là icon 🛎️, Tạm nghỉ là icon 💤 (bật thì sáng màu, tắt thì mờ); người chưa chơi có ✕ để bỏ. Tên hiện đủ, không bị cắt.
 
 ## 1. Mục tiêu
 
