@@ -35,15 +35,15 @@ export function AmountSheet({
         {mode === 'request' ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
-              Đòi <Who player={from} /> bao nhiêu?
+              Đòi <Who player={from} className="text-sky" /> bao nhiêu?
             </div>
-            <div className="text-xs text-muted">{from.name} sẽ nhận thông báo và bấm OK để chuyển kẹo cho bạn.</div>
+            <div className="text-xs text-muted"><span className="font-semibold text-sky">{from.name}</span> sẽ nhận thông báo và bấm OK để chuyển kẹo cho bạn.</div>
           </div>
         ) : (
           <div className="font-display flex items-center justify-center gap-2 text-xl font-bold">
-            <Who player={from} />
+            <Who player={from} className="text-sky" />
             <span className="text-lemon">→</span>
-            <Who player={to} />
+            <Who player={to} className="text-sky" />
           </div>
         )}
 

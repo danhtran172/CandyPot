@@ -28,6 +28,14 @@ interface Drag {
 
 const THRESHOLD = 8
 
+/** Vị trí đống kẹo so với avatar (hoặc cả ô, với người ngồi trên cùng). */
+const PILE_POS = {
+  right: 'left-[calc(100%+12px)] bottom-0',
+  left: 'right-[calc(100%+6px)] bottom-0',
+  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2',
+  below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2',
+} as const
+
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
 function sizeFor(n: number) {
   if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl', icon: 19 }
@@ -150,24 +158,17 @@ export function Board({
           {center}
         </div>
 
-        {/* Đống kẹo của mỗi người, đặt trên mặt bàn trước chỗ ngồi */}
-        {ordered.map((s, i) => {
-          const angle = Math.PI / 2 + (2 * Math.PI * i) / n
-          return (
-            <div
-              key={`pile-${s.player.id}`}
-              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${50 + 21 * Math.cos(angle)}%`, top: `${47 + 19 * Math.sin(angle)}%` }}
-            >
-              <CandyPile amount={s.pile} unit={unit} seed={s.player.id} size={size.icon} />
-            </div>
-          )
-        })}
-
         {ordered.map((s, i) => {
           const angle = Math.PI / 2 + (2 * Math.PI * i) / n
           const left = 50 + 40 * Math.cos(angle)
           const top = 47 + 37 * Math.sin(angle)
+          // Đống kẹo đặt sát chỗ ngồi, về phía giữa bàn
+          const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
+          const pile = (
+            <div className={`pointer-events-none absolute ${PILE_POS[side]}`}>
+              <CandyPile amount={s.pile} unit={unit} seed={s.player.id} size={size.icon} />
+            </div>
+          )
           return (
             <div
               key={s.player.id}
@@ -178,6 +179,7 @@ export function Board({
                 s.player.active ? '' : 'opacity-60'
               }`}
             >
+              {side === 'below' && pile}
               <span
                 className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
                   s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
@@ -189,6 +191,7 @@ export function Board({
                 <CandyJar
                   className={`absolute -right-2.5 -bottom-1.5 h-7 w-6 drop-shadow transition ${dragFrom === s.player.id ? 'opacity-0' : ''}`}
                 />
+                {side !== 'below' && pile}
               </span>
               <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
                 {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
