@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router'
 import { SessionLayout } from './ui/components/SessionLayout'
+import { Demo } from './ui/screens/Demo'
 import { GameSettings } from './ui/screens/GameSettings'
 import { Home } from './ui/screens/Home'
 import { NewSession } from './ui/screens/NewSession'
@@ -20,6 +21,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new" element={<NewSession />} />
+          <Route path="/demo" element={<Demo />} />
           <Route path="/s/:sid" element={<SessionLayout />}>
             <Route index element={<Table />} />
             <Route path="summary" element={<Summary />} />

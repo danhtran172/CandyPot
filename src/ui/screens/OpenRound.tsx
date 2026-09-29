@@ -66,7 +66,7 @@ export function OpenRound() {
         <SectionTitle
           aside={
             <span className="text-xs text-muted">
-              {mod.maxPlayers < 99 ? `${mod.minPlayers}–${mod.maxPlayers} người` : `≥ ${mod.minPlayers} người`}
+              {mod.minPlayers}–{mod.maxPlayers} người
             </span>
           }
         >

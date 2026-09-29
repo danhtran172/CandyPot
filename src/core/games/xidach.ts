@@ -1,4 +1,4 @@
-import type { GameModule, Option } from '../types'
+import { MAX_PLAYERS, type GameModule, type Option } from '../types'
 import { multiplierOptions } from './options'
 
 export interface XiDachConfig {
@@ -9,7 +9,7 @@ export const xidach: GameModule<XiDachConfig> = {
   type: 'xidach',
   label: 'Xì dách',
   minPlayers: 2,
-  maxPlayers: 99,
+  maxPlayers: MAX_PLAYERS,
   stakeMode: 'dealer',
   defaultConfig: { multipliers: { xiban: 2, xidach: 2, ngulinh: 2 } },
 }

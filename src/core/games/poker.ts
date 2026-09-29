@@ -1,5 +1,5 @@
 import { contributions, potOf } from '../round'
-import type { GameModule, ID, Option, Round } from '../types'
+import { MAX_PLAYERS, type GameModule, type ID, type Option, type Round } from '../types'
 import { dedupe } from './options'
 
 export type PokerConfig = Record<string, never>
@@ -8,7 +8,7 @@ export const poker: GameModule<PokerConfig> = {
   type: 'poker',
   label: 'Poker',
   minPlayers: 2,
-  maxPlayers: 99,
+  maxPlayers: MAX_PLAYERS,
   stakeMode: 'pot',
   defaultConfig: {},
 }

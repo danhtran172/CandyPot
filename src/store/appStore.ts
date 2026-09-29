@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, normalizeSession } from '../core/round'
-import { POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
+import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { Preset, SessionRepo } from '../storage/SessionRepo'
 
 export const EMOJIS = ['🐱', '🐶', '🐸', '🐼', '🦊', '🐯', '🐵', '🐰', '🐨', '🐷', '🐮', '🐙', '🦄', '🐔', '🐧', '🐢']
@@ -62,11 +62,7 @@ function validateOpen(game: Game, d: OpenDraft): string[] {
   const errors: string[] = []
   const n = d.participants.length
   if (n < mod.minPlayers || n > mod.maxPlayers) {
-    errors.push(
-      mod.maxPlayers < 99
-        ? `${mod.label} cần ${mod.minPlayers}–${mod.maxPlayers} người chơi.`
-        : `${mod.label} cần ít nhất ${mod.minPlayers} người chơi.`,
-    )
+    errors.push(`${mod.label} cần ${mod.minPlayers}–${mod.maxPlayers} người chơi.`)
   }
   if (findOpenIn(game)) errors.push('Game này đang có ván chưa chốt.')
   const isInt = (v: number | undefined, min: number) => Number.isInteger(v) && (v as number) >= min
@@ -132,7 +128,9 @@ export function createAppStore(repo: SessionRepo) {
           name: name.trim() || 'Buổi chơi',
           createdAt: now,
           updatedAt: now,
-          players: players.map((p) => ({ id: newId(), name: p.name.trim(), emoji: p.emoji, active: true })),
+          players: players
+            .slice(0, MAX_PLAYERS)
+            .map((p) => ({ id: newId(), name: p.name.trim(), emoji: p.emoji, active: true })),
           games: [],
         }
         repo.save(session)
@@ -156,6 +154,7 @@ export function createAppStore(repo: SessionRepo) {
       },
 
       addPlayer(name, emoji) {
+        if ((get().session?.players.length ?? 0) >= MAX_PLAYERS) return
         mutate((s) => ({ ...s, players: [...s.players, { id: newId(), name: name.trim(), emoji, active: true }] }))
       },
 

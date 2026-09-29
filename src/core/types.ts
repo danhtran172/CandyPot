@@ -5,6 +5,9 @@ export type GameType = 'tienlen' | 'xidach' | 'poker'
 /** Id đặc biệt cho pot giữa bàn (Poker). */
 export const POT = 'pot'
 
+/** Số người tối đa hiển thị quanh bàn. */
+export const MAX_PLAYERS = 10
+
 export interface Player {
   id: ID
   name: string

@@ -4,13 +4,14 @@ import { GAME_ICONS, GAME_ORDER, GAMES } from '../../core/games'
 import { netOf } from '../../core/ledger'
 import { movesNet, openRound, potOf } from '../../core/round'
 import { suggestOptions } from '../../core/suggest'
-import type { GameType, ID, Option } from '../../core/types'
+import type { Game, GameType, ID, Option, Round } from '../../core/types'
 import { actions } from '../../store'
 import { AmountSheet } from '../components/AmountSheet'
 import { Board, flyCandy, type Seat } from '../components/Board'
 import { Button, Card, Chip, TopBar, Who } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
+import { useMe } from '../me'
 
 export function Table() {
   const session = useSession()
@@ -23,6 +24,7 @@ export function Table() {
   const round = game ? openRound(session, game.id) : undefined
   const players = playerMap(session)
   const net = netOf(session)
+  const [me] = useMe(session)
   const base = `/s/${session.id}`
 
   const flash = (text: string, bad = false) => {
@@ -64,6 +66,7 @@ export function Table() {
 
   const seats: Seat[] = visible.map((p) => ({
     player: p,
+    isMe: p.id === me,
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
     badge:
@@ -75,7 +78,7 @@ export function Table() {
   }))
 
   return (
-    <main className="pb-28">
+    <main className="pb-40">
       <TopBar
         title={session.name}
         back="/"
@@ -148,29 +151,33 @@ export function Table() {
             </Link>
           </div>
 
-          <Board seats={seats} pot={round && game.type === 'poker' ? potOf(round) : undefined} onTransfer={onTransfer} />
+          <Board
+            seats={seats}
+            pot={round && game.type === 'poker' ? potOf(round) : undefined}
+            center={<TableCenter game={game} round={round} dealerName={round?.dealer ? players[round.dealer]?.name : undefined} />}
+            onTransfer={onTransfer}
+          />
 
-          <p className="mt-2 text-center text-xs text-muted">
+          <p className="text-center text-xs text-muted">
             {round
-              ? 'Kéo túi kẹo của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
-              : 'Chưa mở ván: kéo kẹo giữa hai người sẽ được ghi là chuyển tay.'}
+              ? 'Kéo túi kẹo 🍬 của người trả thả vào người nhận — hoặc bấm người trả rồi bấm người nhận.'
+              : 'Chưa mở ván: kéo túi kẹo sang người khác sẽ được ghi là chuyển tay.'}
           </p>
 
           {round && game.type === 'xidach' && (
-            <Card className="mt-3">
-              <div className="grid grid-cols-2 gap-2">
-                {([1, 2] as const).map((m) => (
-                  <Button key={`eat${m}`} className="text-sm" onClick={() => actions().dealerAll(game.id, 'eat', m)}>
-                    Cái ăn cả bàn ×{m}
-                  </Button>
-                ))}
-                {([1, 2] as const).map((m) => (
-                  <Button key={`pay${m}`} className="text-sm" onClick={() => actions().dealerAll(game.id, 'pay', m)}>
-                    Cái đền cả bàn ×{m}
-                  </Button>
-                ))}
-              </div>
-            </Card>
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5 text-xs">
+              <span className="font-semibold text-muted">🎩 Cả bàn:</span>
+              {([1, 2] as const).map((m) => (
+                <Chip key={`eat${m}`} tone="mint" className="px-2.5 py-1 text-xs" onClick={() => actions().dealerAll(game.id, 'eat', m)}>
+                  Cái ăn ×{m}
+                </Chip>
+              ))}
+              {([1, 2] as const).map((m) => (
+                <Chip key={`pay${m}`} tone="berry" className="px-2.5 py-1 text-xs" onClick={() => actions().dealerAll(game.id, 'pay', m)}>
+                  Cái đền ×{m}
+                </Chip>
+              ))}
+            </div>
           )}
 
           {round && round.moves.length > 0 && (
@@ -247,4 +254,39 @@ export function Table() {
       )}
     </main>
   )
+}
+
+/** Giữa bàn: thông tin riêng của từng game. */
+function TableCenter({ game, round, dealerName }: { game: Game; round?: Round; dealerName?: string }) {
+  if (!round) {
+    return (
+      <>
+        <span aria-hidden className="text-3xl">
+          {GAME_ICONS[game.type]}
+        </span>
+        <span className="font-display text-lg leading-tight font-bold">{game.name}</span>
+        <span className="text-xs text-muted">Chưa mở ván</span>
+      </>
+    )
+  }
+  if (game.type === 'tienlen') {
+    return (
+      <>
+        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · cược chung</span>
+        <span className="candy num text-2xl">{round.bet}</span>
+      </>
+    )
+  }
+  if (game.type === 'xidach') {
+    return (
+      <>
+        <span aria-hidden className="text-3xl leading-none">
+          🎩
+        </span>
+        <span className="text-xs text-muted">Ván {roundNumber(game, round)} · nhà cái</span>
+        <span className="font-display max-w-full truncate text-lg leading-tight font-bold">{dealerName}</span>
+      </>
+    )
+  }
+  return <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
 }

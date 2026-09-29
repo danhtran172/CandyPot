@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { actions } from '../../store'
+import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
+import { useMe } from '../me'
 import { useSession } from '../components/useSession'
 import { Button, Card, Chip, Errors, SectionTitle, TopBar } from '../components/kit'
 
@@ -12,7 +14,10 @@ export function Players() {
   const nameTaken = (n: string, except?: string) =>
     session.players.some((p) => p.id !== except && p.name.toLowerCase() === n.trim().toLowerCase())
 
+  const [me, setMe] = useMe(session)
+
   const add = () => {
+    if (session.players.length >= MAX_PLAYERS) return setErrors([`Tối đa ${MAX_PLAYERS} người một buổi.`])
     if (!name.trim()) return setErrors(['Nhập tên người chơi.'])
     if (nameTaken(name)) return setErrors(['Tên này đã có trong buổi.'])
     actions().addPlayer(name, EMOJIS[session.players.length % EMOJIS.length])
@@ -28,7 +33,7 @@ export function Players() {
     <main>
       <TopBar title="Người chơi" back={`/s/${session.id}`} />
       <p className="mb-3 text-sm text-muted">
-        Người đã chơi không xóa được. Hãy tạm nghỉ họ; lời/lỗ của họ vẫn được giữ và tính khi trả kẹo.
+        Bấm <b>Tôi</b> ở người của bạn: chỗ của bạn luôn nằm dưới cùng bàn. Người đã chơi không xóa được, chỉ tạm nghỉ — lời/lỗ vẫn được giữ.
       </p>
 
       <Card className="p-2">
@@ -55,6 +60,9 @@ export function Players() {
                   else e.target.value = p.name
                 }}
               />
+              <Chip active={me === p.id} onClick={() => setMe(p.id)} aria-label={`${p.name} là tôi`}>
+                Tôi
+              </Chip>
               {isPlayerUsed(session, p.id) ? (
                 <Chip active={!p.active} tone="grape" onClick={() => actions().updatePlayer(p.id, { active: !p.active })}>
                   {p.active ? 'Tạm nghỉ' : 'Đang nghỉ'}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { actions } from '../../store'
+import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS } from '../../store/appStore'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 
@@ -88,9 +89,10 @@ export function NewSession() {
         </ul>
         <Button
           className="mt-3 w-full"
+          disabled={players.length >= MAX_PLAYERS}
           onClick={() => setPlayers((ps) => [...ps, { name: '', emoji: EMOJIS[ps.length % EMOJIS.length] }])}
         >
-          + Thêm người chơi
+          {players.length >= MAX_PLAYERS ? `Tối đa ${MAX_PLAYERS} người` : '+ Thêm người chơi'}
         </Button>
       </Card>
 

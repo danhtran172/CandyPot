@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 
@@ -10,6 +10,7 @@ export interface Seat {
   round?: number
   /** Dòng phụ: "cược 5", "Nhà cái"… */
   badge?: string
+  isMe?: boolean
 }
 
 interface Drag {
@@ -23,16 +24,27 @@ interface Drag {
 
 const THRESHOLD = 8
 
+/** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
+function sizeFor(n: number) {
+  if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
+  if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl' }
+  return { seat: 'w-[60px]', avatar: 'size-10 text-2xl' }
+}
+
 /**
- * Mặt bàn: kéo túi kẹo của một người thả vào người khác (hoặc pot).
- * Bấm người trả rồi bấm người nhận cũng được.
+ * Bàn oval: mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
+ * Kéo túi kẹo của một người thả vào người khác (hoặc pot) để trả;
+ * bấm người trả rồi bấm người nhận cũng được.
  */
 export function Board({
   seats,
+  center,
   pot,
   onTransfer,
 }: {
   seats: Seat[]
+  /** Nội dung giữa bàn (theo game). */
+  center?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
   onTransfer: (from: ID, to: ID) => void
@@ -98,56 +110,85 @@ export function Board({
 
   const ring = (id: ID) =>
     hover === id && drag?.from !== id
-      ? 'ring-4 ring-mint scale-[1.03]'
+      ? 'ring-4 ring-mint scale-110'
       : selected === id || (drag?.moved && drag.from === id)
         ? 'ring-4 ring-lemon'
         : ''
 
-  const seatEl = (s: Seat) => (
-    <div
-      key={s.player.id}
-      data-drop={s.player.id}
-      onPointerDown={start(s.player.id)}
-      className={`relative flex touch-none flex-col items-center rounded-3xl border border-line/60 bg-plum px-2 pt-3 pb-2.5 text-center transition select-none ${ring(
-        s.player.id,
-      )} ${s.player.active ? '' : 'opacity-60'}`}
-    >
-      <span aria-hidden className="text-4xl leading-none">
-        {s.player.emoji}
-      </span>
-      <span className="mt-1 max-w-full truncate font-semibold">{s.player.name}</span>
-      <span className={`num font-display text-3xl leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">
-        {signed(s.total)}
-      </span>
-      {s.round !== undefined && (
-        <span className="num text-xs text-muted">
-          ván này <b className={toneOf(s.round)}>{signed(s.round)}</b>
-        </span>
-      )}
-      {s.badge && <span className="mt-1 rounded-full bg-night/50 px-2 py-0.5 text-xs font-semibold text-lemon">{s.badge}</span>}
-    </div>
-  )
-
-  const half = Math.ceil(seats.length / 2 / 2) * 2
+  // "Tôi" ở dưới cùng, những người khác xếp đều theo chiều kim đồng hồ
+  const ordered = [...seats.filter((s) => s.isMe), ...seats.filter((s) => !s.isMe)]
+  const n = ordered.length
+  const size = sizeFor(n)
+  const dragFrom = drag?.moved ? drag.from : null
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
-        {seats.slice(0, pot === undefined ? seats.length : half).map(seatEl)}
-        {pot !== undefined && (
-          <div
-            data-drop={POT}
-            onPointerDown={start(POT)}
-            className={`col-span-2 flex touch-none items-center justify-center gap-3 rounded-full border-2 border-dashed border-lemon/60 bg-night/40 py-4 transition select-none ${ring(POT)}`}
-          >
-            <span aria-hidden className="text-3xl">
-              🫙
-            </span>
-            <span className="font-display text-lg font-bold">Pot</span>
-            <span className="candy num text-xl">{pot}</span>
-          </div>
-        )}
-        {pot !== undefined && seats.slice(half).map(seatEl)}
+      <div className="relative mx-auto w-full" style={{ height: 'clamp(380px, calc(100dvh - 340px), 540px)' }}>
+        {/* Mặt bàn */}
+        <div className="absolute inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] border-2 border-line bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)] shadow-[inset_0_0_40px_rgb(0_0_0/0.45)]" />
+        <div className="absolute inset-x-[22%] top-[23%] bottom-[29%] flex flex-col items-center justify-center gap-1 text-center">
+          {pot !== undefined && (
+            <div
+              data-drop={POT}
+              onPointerDown={start(POT)}
+              className={`flex touch-none flex-col items-center rounded-3xl border-2 border-dashed border-lemon/60 bg-night/50 px-4 py-2 transition select-none ${ring(POT)}`}
+            >
+              <span aria-hidden className="text-3xl leading-none">
+                🫙
+              </span>
+              <span className="candy num mt-1 text-lg">{pot}</span>
+              <span className="text-[11px] text-muted">Pot</span>
+            </div>
+          )}
+          {center}
+        </div>
+
+        {ordered.map((s, i) => {
+          const angle = Math.PI / 2 + (2 * Math.PI * i) / n
+          const left = 50 + 40 * Math.cos(angle)
+          const top = 47 + 37 * Math.sin(angle)
+          return (
+            <div
+              key={s.player.id}
+              data-drop={s.player.id}
+              onPointerDown={start(s.player.id)}
+              style={{ left: `${left}%`, top: `${top}%` }}
+              className={`absolute flex -translate-x-1/2 -translate-y-1/2 touch-none flex-col items-center text-center select-none ${size.seat} ${
+                s.player.active ? '' : 'opacity-60'
+              }`}
+            >
+              <span
+                className={`relative grid place-items-center rounded-full border-2 bg-plum transition ${size.avatar} ${
+                  s.isMe ? 'border-lemon shadow-[0_0_18px_rgb(255_210_63/0.35)]' : 'border-line'
+                } ${ring(s.player.id)}`}
+              >
+                <span aria-hidden className="leading-none">
+                  {s.player.emoji}
+                </span>
+                <span
+                  aria-hidden
+                  className={`absolute -right-1.5 -bottom-1 text-base transition ${dragFrom === s.player.id ? 'opacity-0' : ''}`}
+                >
+                  🍬
+                </span>
+              </span>
+              <span className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''}`}>
+                {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
+              </span>
+              <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả buổi">
+                {signed(s.total)}
+              </span>
+              {s.round !== undefined && s.round !== 0 && (
+                <span className={`num text-[11px] leading-tight font-bold ${toneOf(s.round)}`}>ván {signed(s.round)}</span>
+              )}
+              {s.badge && (
+                <span className="mt-0.5 rounded-full bg-night/70 px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-lemon">
+                  {s.badge}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {drag?.moved && (
@@ -163,7 +204,7 @@ export function Board({
   )
 }
 
-/** Hiệu ứng kẹo bay từ ô người trả sang ô người nhận. */
+/** Hiệu ứng kẹo bay từ người trả sang người nhận. */
 export function flyCandy(from: ID, to: ID, amount: number) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   const a = document.querySelector(`[data-drop="${from}"]`)?.getBoundingClientRect()

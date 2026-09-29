@@ -1,5 +1,8 @@
 # Open CandyPot in a phone-sized app window, backed by the Vite dev server (hot reload).
 # Starts the dev server if it is not already running on the port.
+# -Path opens a specific page, e.g. -Path /demo for the 6-player demo table.
+
+param([string]$Path = '/')
 
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
@@ -47,7 +50,7 @@ if (-not $browser) {
 # Separate profile so the window size is always applied and app data stays in one place.
 $profileDir = Join-Path $env:LOCALAPPDATA 'CandyPot\browser-profile'
 Start-Process -FilePath $browser -ArgumentList @(
-  "--app=$Url",
+  "--app=$Url$Path",
   "--window-size=$Width,$Height",
   "--user-data-dir=`"$profileDir`"",
   '--no-first-run',
