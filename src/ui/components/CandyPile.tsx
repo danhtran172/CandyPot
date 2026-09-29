@@ -51,7 +51,16 @@ export function CandyPile({ amount, unit, seed, size = 18 }: { amount: number; u
             alt=""
             draggable={false}
             className="absolute drop-shadow-[0_1px_1px_rgb(0_0_0/0.45)]"
-            style={{ left: x, top: y, width: size, height: size, rotate: `${rotate}deg`, zIndex: p.row * 10 + p.col }}
+            style={{
+              left: x,
+              top: y,
+              width: size,
+              height: size,
+              rotate: `${rotate}deg`,
+              // Hàng trước (đáy) nằm đè lên; hàng càng phía sau càng mờ để đống kẹo có chiều sâu
+              zIndex: (rows - p.row) * 10 + p.col,
+              opacity: Math.max(0.4, 1 - p.row * 0.18),
+            }}
           />
         )
       })}
