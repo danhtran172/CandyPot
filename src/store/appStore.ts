@@ -60,6 +60,8 @@ export interface AppState {
   setDealer(gameId: ID, playerId: ID): string[]
   /** Xì dách: chốt cược để chia bài và trả kẹo. */
   lockBets(gameId: ID): string[]
+  /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
+  unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
   nextRound(gameId: ID): string[]
   /** Kéo kẹo. Có ván đang mở thì ghi vào ván, không thì ghi thành chuyển tay. */
@@ -304,6 +306,15 @@ export function createAppStore(repo: SessionRepo) {
         if (!open) return ['Chưa có ván nào đang mở.']
         if (open.phase !== 'betting') return []
         mapRound(gameId, open.id, (r) => ({ ...r, phase: 'playing' }))
+        return []
+      },
+
+      unlockBets(gameId) {
+        const open = openOf(gameId)
+        if (!open) return ['Chưa có ván nào đang mở.']
+        if (open.phase !== 'playing') return []
+        if (open.moves.length) return ['Ván đã có lượt trả kẹo — hoàn tác hết rồi mới bỏ chốt được.']
+        mapRound(gameId, open.id, (r) => ({ ...r, phase: 'betting' }))
         return []
       },
 

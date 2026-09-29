@@ -109,6 +109,19 @@ describe('appStore — Xì dách', () => {
     expect(openRound(session(), g)).toMatchObject({ phase: 'betting', dealer: a, stakes: { [b]: 5, [c]: 10 } })
   })
 
+  it('bỏ chốt cược: được khi chưa trả kẹo, bị chặn khi đã có lượt', () => {
+    const g = s().addGame('xidach')
+    s().openRound(g, { participants: [a, b], bet: 1, stakes: { [b]: 5 }, dealer: a })
+    s().lockBets(g)
+    expect(s().unlockBets(g)).toEqual([])
+    expect(openRound(session(), g)!.phase).toBe('betting')
+    s().setStake(g, b, 8)
+    s().lockBets(g)
+    s().addMove(g, b, a, 8, '')
+    expect(s().unlockBets(g)).toEqual(['Ván đã có lượt trả kẹo — hoàn tác hết rồi mới bỏ chốt được.'])
+    expect(openRound(session(), g)!.phase).toBe('playing')
+  })
+
   it('chốt ván Xì dách gắn tag làm cái', () => {
     const g = s().addGame('xidach')
     s().openRound(g, { participants: [a, b, c], bet: 1, stakes: { [b]: 5, [c]: 10 }, dealer: a })

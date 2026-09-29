@@ -113,6 +113,16 @@ export function Table() {
     else flash('Đã chốt cược — chia bài rồi kéo để trả kẹo.')
   }
 
+  /** Xì dách: host nhấn giữ ô Bet để bỏ chốt cược. */
+  const unlockBets = () => {
+    if (!game) return
+    if (me !== session.hostId) return flash('Chỉ host mới bỏ chốt được.', true)
+    if (!confirm('Bỏ chốt cược để mọi người đặt lại?')) return
+    const errors = actions().unlockBets(game.id)
+    if (errors.length) flash(errors[0], true)
+    else flash('Đã bỏ chốt — đặt cược lại nào.')
+  }
+
   /** Xì dách: tính ván này vào lời/lỗ và mở ngay ván sau với cược cũ. */
   const nextRound = () => {
     if (!game) return
@@ -238,6 +248,7 @@ export function Table() {
             pot={round && game.type === 'poker' ? potOf(round) : undefined}
             betBox={game.type === 'xidach'}
             betLocked={round?.phase === 'playing'}
+            onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             center={<TableCenter game={game} round={round} />}
             corner={

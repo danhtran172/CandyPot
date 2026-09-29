@@ -56,6 +56,7 @@ export function Board({
   pot,
   betBox,
   betLocked,
+  onBetHold,
   hat,
   onTransfer,
 }: {
@@ -70,6 +71,8 @@ export function Board({
   betBox?: boolean
   /** Đã chốt cược: ô Bet chỉ hiển thị, không nhận đặt cược nữa. */
   betLocked?: boolean
+  /** Nhấn giữ ô Bet (khi đã chốt) — host bỏ chốt. */
+  onBetHold?: () => void
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   onTransfer: (from: ID, to: ID) => void
@@ -78,6 +81,22 @@ export function Board({
   const [hover, setHover] = useState<ID | null>(null)
   const dragRef = useRef<Drag | null>(null)
   const dragging = drag !== null
+  const holdTimer = useRef<number | undefined>(undefined)
+  const [holding, setHolding] = useState(false)
+
+  /** Nhấn giữ ~0,6 giây trên ô Bet đã chốt. */
+  const startHold = (e: ReactPointerEvent) => {
+    if (!betLocked || !onBetHold || e.button !== 0) return
+    setHolding(true)
+    holdTimer.current = window.setTimeout(() => {
+      setHolding(false)
+      onBetHold()
+    }, 600)
+  }
+  const stopHold = () => {
+    window.clearTimeout(holdTimer.current)
+    setHolding(false)
+  }
 
   useEffect(() => {
     if (!dragging) return
@@ -158,12 +177,16 @@ export function Board({
           {betBox && (
             <div
               data-drop={BET}
-              className={`flex flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
+              onPointerDown={startHold}
+              onPointerUp={stopHold}
+              onPointerLeave={stopHold}
+              onPointerCancel={stopHold}
+              className={`flex touch-none flex-col items-center rounded-3xl border-2 bg-night/50 px-4 py-2 transition select-none ${
                 betLocked ? 'border-line opacity-70' : 'border-dashed border-sky/70'
-              } ${ring(BET)}`}
+              } ${holding ? 'scale-95 opacity-100 ring-4 ring-lemon/60' : ''} ${ring(BET)}`}
             >
               <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
-              <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt cược' : 'thả vào để đặt cược'}</span>
+              <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'thả vào để đặt cược'}</span>
             </div>
           )}
           {hat && (
