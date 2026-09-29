@@ -58,8 +58,17 @@ export function Table() {
   const [guide, setGuide] = useState<{ game: GameType; role: GuideRole } | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
-  const game = session.games.find((g) => g.id === params.get('g')) ?? session.games[session.games.length - 1]
+  // ?g= (link cũ) → game đang chơi đã lưu → game mới nhất
+  const game =
+    session.games.find((g) => g.id === params.get('g')) ??
+    session.games.find((g) => g.id === session.currentGameId) ??
+    session.games[session.games.length - 1]
   const round = game ? openRound(session, game.id) : undefined
+  // Link có ?g= (Lịch sử, Mở ván, demo…) → lưu thành game đang chơi để quay lại vẫn giữ
+  const linked = params.get('g')
+  useEffect(() => {
+    if (linked && session.games.some((g) => g.id === linked)) actions().setCurrentGame(linked)
+  }, [linked]) // eslint-disable-line react-hooks/exhaustive-deps
   const players = playerMap(session)
   const net = netOf(session)
   const [me] = useMe(session)
@@ -76,7 +85,8 @@ export function Table() {
   /** Chọn 1 trong 3 loại game: chưa có thì tạo. */
   const pickType = (type: GameType) => {
     const id = gameOf(type)?.id ?? actions().addGame(type)
-    setParams({ g: id }, { replace: true })
+    actions().setCurrentGame(id)
+    setParams({}, { replace: true })
   }
 
   /** Ván trước (đã chốt) — dùng để hiện lại cược/cái khi chưa mở ván mới. */
@@ -409,7 +419,7 @@ export function Table() {
 
   const roundDelta = round ? movesNet(round.moves) : {}
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
-  // Tiến lên: chỉ người chơi ngồi ở 4 góc bàn — ai không chơi thì cho nghỉ ở tab Người chơi
+  // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
   const visible = session.players.filter(
     (p) => !p.removed && (seated ? seated.includes(p.id) : !round || round.participants.includes(p.id) || !p.active),

@@ -70,7 +70,7 @@ const HOST_GAME: Record<GameType, GuideStep[]> = {
     {
       target: 'players',
       title: 'Ai chơi',
-      text: 'Tiến lên tối đa 4 người, ngồi ở 4 góc bàn. Ai không chơi thì cho nghỉ 💤 ở tab Người chơi.',
+      text: 'Tiến lên tối đa 4 người, ngồi ở 4 cạnh bàn. Ai không chơi thì cho nghỉ 💤 ở tab Người chơi.',
     },
     { target: 'actions', title: 'Ván', text: '+ Mở ván để bắt đầu; hết ván bấm Chốt ván để tính lời/lỗ, bấm nhầm thì Hủy ván.' },
   ],

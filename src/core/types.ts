@@ -158,6 +158,8 @@ export interface Session {
   code?: string
   /** Bầu host mới (khi host vắng): người bầu → người được bầu. */
   hostVotes: Record<ID, ID>
+  /** Game đang chơi trên bàn — giữ khi rời màn Bàn chơi rồi quay lại. */
+  currentGameId?: ID
 }
 
 export type Net = Record<ID, number>

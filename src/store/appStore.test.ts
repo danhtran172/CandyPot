@@ -470,6 +470,17 @@ describe('appStore — Tiến lên: người chơi = ai không tạm nghỉ', ()
   })
 })
 
+describe('appStore — game đang chơi', () => {
+  it('lưu game đang chơi vào bàn (giữ khi rời màn Bàn chơi)', () => {
+    const t = s().addGame('tienlen')
+    s().addGame('xidach')
+    s().setCurrentGame(t)
+    expect(session().currentGameId).toBe(t)
+    s().setCurrentGame('khong-co')
+    expect(session().currentGameId).toBe(t)
+  })
+})
+
 describe('appStore — tạo bàn', () => {
   it('bàn một máy không có mã; bàn nhiều người có mã 5 số, hiện ở danh sách', () => {
     expect(session().mode).toBe('solo')

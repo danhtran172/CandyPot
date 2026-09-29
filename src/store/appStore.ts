@@ -68,6 +68,8 @@ export interface AppState {
   removePlayer(id: ID): string[]
 
   addGame(type: GameType): ID
+  /** Chọn game đang chơi trên bàn. */
+  setCurrentGame(gameId: ID): void
   renameGame(gameId: ID, name: string): void
   removeGame(gameId: ID): void
 
@@ -310,6 +312,11 @@ export function createAppStore(repo: SessionRepo) {
           }
         })
         return id
+      },
+
+      setCurrentGame(gameId) {
+        if (get().session?.currentGameId === gameId || !game(gameId)) return
+        mutate((s) => ({ ...s, currentGameId: gameId }))
       },
 
       renameGame(gameId, name) {

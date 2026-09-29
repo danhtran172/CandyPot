@@ -272,13 +272,11 @@ export function Board({
           </div>
 
           {ordered.map((s, i) => {
-            // Bàn vuông ≤ 4 người: ngồi ở 4 góc (tôi góc dưới trái, theo chiều kim đồng hồ; 2 người thì ngồi chéo nhau)
-            const corners = square && n <= 4
-            const angle = corners ? (3 * Math.PI) / 4 + (Math.PI / 2) * (n === 2 ? i * 2 : i) : Math.PI / 2 + (2 * Math.PI * i) / n
-            // Bàn vuông đông hơn: chiếu hướng ngồi lên cạnh hình vuông
-            const edge = square && !corners ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
-            const left = corners ? 50 + 50 * Math.cos(angle) : square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
-            const top = corners ? 50 + 54 * Math.sin(angle) : square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
+            const angle = Math.PI / 2 + (2 * Math.PI * i) / n
+            // Bàn vuông: chiếu hướng ngồi lên cạnh hình vuông (4 người = giữa 4 cạnh, tôi ở cạnh dưới)
+            const edge = square ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
+            const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
+            const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
             const stake = s.stake !== undefined && (
