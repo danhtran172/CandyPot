@@ -4,6 +4,13 @@ import { appStore, repo } from '../../store'
 import { ask } from '../dialog'
 import { dateOf } from '../format'
 
+/** 3 lý do nên dùng app — hiện ngay dưới tên app. */
+const BENEFITS = [
+  { icon: '🧮', title: 'Khỏi giấy bút, khỏi cãi nhau', text: 'app tự cộng lời/lỗ từng ván, cuối buổi chỉ ra cách trả kẹo ít lượt nhất.' },
+  { icon: '📱', title: 'Mỗi người một điện thoại', text: 'join bằng mã 5 số, tự trả, tự đòi kẹo — cả bàn thấy ngay.' },
+  { icon: '🃏', title: 'Luật có sẵn', text: 'Tiến lên, Xì dách, Poker, Lô tô: bấm vào người là trả, không cần nhớ ai cược bao nhiêu.' },
+]
+
 export function Home() {
   const [sessions, setSessions] = useState(() => repo.list())
 
@@ -25,6 +32,19 @@ export function Home() {
         Candy<span className="text-lemon">Pot</span>
       </h1>
       <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
+
+      <ul className="mt-5 space-y-2.5 text-sm">
+        {BENEFITS.map((b) => (
+          <li key={b.title} className="flex gap-2.5">
+            <span aria-hidden className="text-xl leading-5">
+              {b.icon}
+            </span>
+            <span className="text-muted">
+              <b className="text-cream">{b.title}</b> — {b.text}
+            </span>
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-8 grid grid-cols-[1fr_auto] gap-2">
         <Link
