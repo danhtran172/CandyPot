@@ -6,9 +6,9 @@ import { dateOf } from '../format'
 
 /** 3 lý do dùng app thay cho tiền mặt / ghi giấy — hiện ngay dưới tên app. */
 const BENEFITS = [
-  { icon: '💵', text: 'Không cần tiền lẻ, tàn cuộc mới trả.' },
-  { icon: '🧹', text: 'Bàn gọn, không tiền vương vãi.' },
-  { icon: '📝', text: 'Khỏi ghi sổ — app tự cộng, không sót.' },
+  { icon: '🧾', title: 'Hết cảnh "ván đó tao thắng mà"', text: 'Ván nào cũng lưu, ai cũng xem lại được.' },
+  { icon: '⚡', title: 'Tàn cuộc 1 phút là xong', text: 'App gom nợ chéo còn ít lượt trả nhất.' },
+  { icon: '🍬', title: 'Không tiền trên bàn', text: 'Khỏi đổi tiền lẻ, chơi vui mà không sát phạt.' },
 ]
 
 export function Home() {
@@ -33,13 +33,16 @@ export function Home() {
       </h1>
       <p className="mt-2 text-muted">Sổ ghi kẹo cho bàn bài của nhóm bạn.</p>
 
-      <ul className="mt-5 space-y-1.5">
+      <ul className="mt-5 space-y-3">
         {BENEFITS.map((b) => (
-          <li key={b.icon} className="flex items-center gap-2.5 font-semibold">
-            <span aria-hidden className="text-xl">
+          <li key={b.icon} className="flex gap-3">
+            <span aria-hidden className="text-2xl leading-none">
               {b.icon}
             </span>
-            {b.text}
+            <span className="leading-tight">
+              <b className="block">{b.title}</b>
+              <span className="text-sm text-muted">{b.text}</span>
+            </span>
           </li>
         ))}
       </ul>
