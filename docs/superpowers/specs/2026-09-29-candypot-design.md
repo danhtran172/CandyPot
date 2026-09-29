@@ -34,6 +34,7 @@ Các mục dưới đây **thay thế** phần tương ứng trong §2, §3, §5
 - **Tiến lên có ô Bet:** giữa bàn vuông là ô Bet hiện mức Nhất/Nhì (kể cả khi chưa mở ván). Host bấm vào để đặt 2 mức (Nhì ≤ Nhất); đổi luôn ván đang mở và làm mặc định cho ván sau. Kéo trả kẹo gợi ý Nhì, Nhất, Nhất × 1,5, Nhất × 2 theo 2 mức này. Người khác bấm thì báo "Chỉ host mới đổi mức cược được".
 - **Chọn game bằng ô chọn (dropdown):** chỉ 3 lựa chọn Tiến lên / Xì dách / Poker (ghi "· đang chơi" nếu có ván mở); chọn loại nào thì dùng game loại đó trong buổi, chưa có thì tự tạo. Không còn nút "+ Game".
 - **Cược Tiến lên tự tính:** ở ô Bet và màn Mở ván, nhập một ô thì ô kia tự tính (Nhất = 2 × Nhì, Nhì = Nhất ÷ 2 làm tròn); sửa tiếp ô vừa được tự tính là đặt riêng, bấm "Tự tính lại" để nối lại.
+- **Nút +/− nhảy theo hệ số:** mọi ô số (cược, "Số khác" khi trả/đòi/đặt kẹo…) có + nhảy ×1,5 → ×2 → ×3 của số gốc rồi lặp lại từ ×3 (4 → 6 → 8 → 12 → 18 → 24 → 36), − đi lùi đúng các bậc đó. Số gốc là số đang có hoặc số vừa gõ; muốn số khác thì gõ thẳng vào ô (số có gạch chân chấm).
 
 ## 1. Mục tiêu
 

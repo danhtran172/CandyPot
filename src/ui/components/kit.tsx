@@ -1,5 +1,6 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { ladderStep, onLadder } from '../../core/ladder'
 import type { Player } from '../../core/types'
 
 type Variant = 'primary' | 'ghost' | 'danger' | 'soft'
@@ -49,37 +50,47 @@ export function Chip({
   )
 }
 
+/**
+ * Ô số có nút −/+: + nhảy theo ×1,5 → ×2 → ×3 của số gốc (4 → 6 → 8 → 12…), − đi lùi các bậc đó.
+ * Số gốc là số đang có (hoặc số vừa gõ); muốn số khác thì gõ thẳng vào ô.
+ */
 export function Stepper({
   value,
   onChange,
   min = 0,
-  step = 1,
   label,
 }: {
   value: number
   onChange: (v: number) => void
   min?: number
-  step?: number
   label?: string
 }) {
+  const anchor = useRef(value)
+  const step = (dir: 1 | -1) => {
+    // Số bị đổi từ ngoài (gõ tay, tự tính…) không nằm trên thang cũ → lấy nó làm gốc mới
+    if (!onLadder(anchor.current, value)) anchor.current = value
+    onChange(ladderStep(anchor.current, value, dir, min))
+  }
   return (
     <div className="flex shrink-0 items-center overflow-hidden rounded-xl border border-line bg-night/60">
       <button
         type="button"
         aria-label={`Giảm ${label ?? ''}`}
         className="px-3 py-1.5 text-lg text-muted active:bg-plum-2"
-        onClick={() => onChange(Math.max(min, value - step))}
+        onClick={() => step(-1)}
       >
         −
       </button>
       <input
         aria-label={label}
         inputMode="numeric"
-        className="num w-12 bg-transparent text-center font-semibold outline-none"
+        className="num w-12 bg-transparent text-center font-semibold underline decoration-muted/50 decoration-dotted underline-offset-4 outline-none"
         value={Number.isFinite(value) ? value : ''}
         onChange={(e) => {
           const n = parseInt(e.target.value.replace(/\D/g, ''), 10)
-          onChange(Number.isNaN(n) ? 0 : n)
+          const v = Number.isNaN(n) ? 0 : n
+          anchor.current = v
+          onChange(v)
         }}
         onFocus={(e) => e.target.select()}
       />
@@ -87,7 +98,7 @@ export function Stepper({
         type="button"
         aria-label={`Tăng ${label ?? ''}`}
         className="px-3 py-1.5 text-lg text-muted active:bg-plum-2"
-        onClick={() => onChange(value + step)}
+        onClick={() => step(1)}
       >
         +
       </button>
