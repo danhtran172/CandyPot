@@ -32,9 +32,11 @@ export function NewSession() {
   const nextEmoji = (emoji: string) => EMOJIS[(EMOJIS.indexOf(emoji) + 1) % EMOJIS.length]
 
   const start = () => {
-    const named = players.filter((p) => p.name.trim())
+    // Bàn nhiều người: chỉ có host lúc tạo, người khác tự join bằng mã
+    const named = mode === 'multi' ? players.slice(0, 1).filter((p) => p.name.trim()) : players.filter((p) => p.name.trim())
     const errs: string[] = []
-    if (named.length < 2) errs.push('Cần ít nhất 2 người chơi có tên.')
+    if (mode === 'multi' && !named.length) errs.push('Nhập tên của bạn (host).')
+    if (mode === 'solo' && named.length < 2) errs.push('Cần ít nhất 2 người chơi có tên.')
     const names = named.map((p) => p.name.trim().toLowerCase())
     if (new Set(names).size !== names.length) errs.push('Hai người chơi đang trùng tên.')
     setErrors(errs)
@@ -54,7 +56,11 @@ export function NewSession() {
             type="button"
             role="radio"
             aria-checked={mode === m.value}
-            onClick={() => setMode(m.value)}
+            onClick={() => {
+              setMode(m.value)
+              // Bàn nhiều người cần ít nhất ô tên host
+              if (!players.length) setPlayers([{ name: '', emoji: EMOJIS[0] }])
+            }}
             className={`flex flex-col items-start gap-1 rounded-3xl border-2 p-3 text-left transition ${
               mode === m.value ? 'border-lemon bg-lemon/10' : 'border-line bg-plum'
             }`}
@@ -85,48 +91,71 @@ export function NewSession() {
         />
       </Card>
 
-      <Card className="mt-3">
-        <SectionTitle aside={<span className="text-sm text-muted">{players.filter((p) => p.name.trim()).length} người</span>}>
-          Người chơi
-        </SectionTitle>
-        <ul className="space-y-2">
-          {players.map((p, i) => (
-            <li key={i} className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Đổi biểu tượng"
-                className="grid size-11 shrink-0 place-items-center rounded-xl bg-plum-2 text-2xl"
-                onClick={() => update(i, { emoji: nextEmoji(p.emoji) })}
-              >
-                {p.emoji}
-              </button>
-              <input
-                aria-label={`Tên người chơi ${i + 1}`}
-                className="min-w-0 flex-1 rounded-xl border border-line bg-night/60 px-3 py-2.5 outline-none focus:border-lemon"
-                placeholder={`Người chơi ${i + 1}`}
-                value={p.name}
-                onChange={(e) => update(i, { name: e.target.value })}
-              />
-              <button
-                type="button"
-                aria-label="Bỏ người này"
-                className="px-2 text-muted hover:text-berry"
-                onClick={() => setPlayers((ps) => ps.filter((_, j) => j !== i))}
-              >
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-        <Button
-          className="mt-3 w-full"
-          disabled={players.length >= MAX_PLAYERS}
-          onClick={() => setPlayers((ps) => [...ps, { name: '', emoji: EMOJIS[ps.length % EMOJIS.length] }])}
-        >
-          {players.length >= MAX_PLAYERS ? `Tối đa ${MAX_PLAYERS} người` : '+ Thêm người chơi'}
-        </Button>
-      </Card>
-
+      {mode === 'multi' ? (
+        <Card className="mt-3">
+          <SectionTitle>Bạn (host)</SectionTitle>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Đổi biểu tượng"
+              className="grid size-11 shrink-0 place-items-center rounded-xl bg-plum-2 text-2xl"
+              onClick={() => update(0, { emoji: nextEmoji(players[0].emoji) })}
+            >
+              {players[0].emoji}
+            </button>
+            <input
+              aria-label="Tên của bạn"
+              className="min-w-0 flex-1 rounded-xl border border-line bg-night/60 px-3 py-2.5 outline-none focus:border-lemon"
+              placeholder="Tên của bạn"
+              value={players[0].name}
+              onChange={(e) => update(0, { name: e.target.value })}
+            />
+          </div>
+          <p className="mt-2 text-xs text-muted">Người khác tự join bằng mã 5 số. Trong lúc chờ, host vẫn thêm người được ở màn Người chơi.</p>
+        </Card>
+      ) : (
+        <Card className="mt-3">
+          <SectionTitle aside={<span className="text-sm text-muted">{players.filter((p) => p.name.trim()).length} người</span>}>
+            Người chơi
+          </SectionTitle>
+          <ul className="space-y-2">
+            {players.map((p, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Đổi biểu tượng"
+                  className="grid size-11 shrink-0 place-items-center rounded-xl bg-plum-2 text-2xl"
+                  onClick={() => update(i, { emoji: nextEmoji(p.emoji) })}
+                >
+                  {p.emoji}
+                </button>
+                <input
+                  aria-label={`Tên người chơi ${i + 1}`}
+                  className="min-w-0 flex-1 rounded-xl border border-line bg-night/60 px-3 py-2.5 outline-none focus:border-lemon"
+                  placeholder={`Người chơi ${i + 1}`}
+                  value={p.name}
+                  onChange={(e) => update(i, { name: e.target.value })}
+                />
+                <button
+                  type="button"
+                  aria-label="Bỏ người này"
+                  className="px-2 text-muted hover:text-berry"
+                  onClick={() => setPlayers((ps) => ps.filter((_, j) => j !== i))}
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          <Button
+            className="mt-3 w-full"
+            disabled={players.length >= MAX_PLAYERS}
+            onClick={() => setPlayers((ps) => [...ps, { name: '', emoji: EMOJIS[ps.length % EMOJIS.length] }])}
+          >
+            {players.length >= MAX_PLAYERS ? `Tối đa ${MAX_PLAYERS} người` : '+ Thêm người chơi'}
+          </Button>
+        </Card>
+      )}
 
       <div className="mt-4">
         <Errors errors={errors} />
