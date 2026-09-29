@@ -106,3 +106,10 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Bàn phím ảo đang mở: popup toàn màn hình nổi lên ngay trên bàn phím (--kb do src/ui/keyboard.ts cập nhật) */
+[role='dialog'].fixed.inset-0,
+[role='alertdialog'].fixed.inset-0 {
+  bottom: var(--kb, 0px);
+  transition: bottom 0.15s ease-out;
+}
