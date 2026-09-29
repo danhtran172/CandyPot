@@ -45,7 +45,7 @@ Shortcut Bấm vào sẽ tự bật `npm run dev` (cửa sổ thu nhỏ, nếu c
 
 ## Chơi nhiều máy (Firebase)
 
-Bản đang chạy: **https://candypot-5888e.web.app** (dự án Firebase `candypot-5888e`).
+Bản đang chạy: **https://candypot.web.app** (dự án Firebase `candypot-5888e`; địa chỉ cũ https://candypot-5888e.web.app vẫn chạy song song — `firebase.json` deploy cả 2).
 
 Chưa cấu hình thì app vẫn chạy: bàn "Nhiều người join" giả lập trên chính máy đó (các tab thấy nhau). Để join qua mạng:
 

@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "candypot-5888e"
-  }
+  },
+  "targets": {
+    "candypot-5888e": {
+      "hosting": {
+        "main": [
+          "candypot"
+        ],
+        "old": [
+          "candypot-5888e"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
