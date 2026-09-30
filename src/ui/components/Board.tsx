@@ -107,7 +107,7 @@ export function Board({
   buyBox?: { price: number }
   /** Tên chế độ chơi (kèm icon) — in khắc chìm trên mặt bàn. */
   title?: ReactNode
-  /** Luôn nằm trên cùng vùng giữa bàn (VD nút Rule ?). */
+  /** Ghim sát mép trên mặt bàn (VD nút Rule ?), không trôi theo nội dung giữa bàn. */
   top?: ReactNode
   /** Thu nhỏ ô Pot theo tỉ lệ này (VD 0.4 = còn 40%). */
   potScale?: number
@@ -239,12 +239,14 @@ export function Board({
                 : 'inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)]'
             }`}
           />
+          {top && (
+            <div className={`absolute left-1/2 z-10 -translate-x-1/2 ${square ? 'top-[25%]' : 'top-[19%]'}`}>{top}</div>
+          )}
           <div
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             }`}
           >
-            {top}
             {title && (
               <span className="engraved font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase">
                 {title}
