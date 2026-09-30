@@ -78,7 +78,6 @@ export function Board({
   onBetHold,
   buyBox,
   title,
-  top,
   potScale,
   hat,
   hatLocked,
@@ -91,7 +90,7 @@ export function Board({
   shape?: 'oval' | 'square'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
-  /** Nút ở góc trên bên phải bàn (vd ⚙ cài đặt Poker). */
+  /** Nút ở góc trên bên phải bàn (Rule ? + ⚙ cài đặt). */
   cornerTop?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
   pot?: number
@@ -107,8 +106,6 @@ export function Board({
   buyBox?: { price: number }
   /** Tên chế độ chơi (kèm icon) — in mờ (70%) trên mặt bàn. */
   title?: ReactNode
-  /** Ghim sát mép trên mặt bàn (VD nút Rule ?), không trôi theo nội dung giữa bàn. */
-  top?: ReactNode
   /** Thu nhỏ ô Pot theo tỉ lệ này (VD 0.4 = còn 40%). */
   potScale?: number
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
@@ -239,9 +236,6 @@ export function Board({
                 : 'inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)]'
             }`}
           />
-          {top && (
-            <div className={`absolute left-1/2 z-10 -translate-x-1/2 ${square ? 'top-[25%]' : 'top-[19%]'}`}>{top}</div>
-          )}
           <div
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'

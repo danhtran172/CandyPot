@@ -642,19 +642,6 @@ export function Table() {
                 {GAMES[game.type].label}
               </>
             }
-            top={
-              withRules && (
-                <button
-                  type="button"
-                  aria-label="Xem luật"
-                  data-guide="rule"
-                  onClick={() => setShowRules(true)}
-                  className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-0.5 text-sm font-bold text-berry transition active:scale-95"
-                >
-                  Rule ?
-                </button>
-              )
-            }
             betBox={game.type === 'xidach'}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             // Lô tô lúc mua tờ: Pot còn 55% cỡ thường (ô Mua là chính), chốt rồi Pot về cỡ thường để trao
@@ -666,17 +653,31 @@ export function Table() {
             hatLocked={!canHost}
             center={<TableCenter game={game} round={round} players={players} />}
             cornerTop={
-              withRules && canHost ? (
-                <button
-                  type="button"
-                  aria-label={`Cài đặt ${GAMES[game.type].label}`}
-                  data-guide="settings"
-                  onClick={openSettings}
-                  className="grid size-9 place-items-center rounded-full border border-line/60 bg-night/70 text-lg"
-                >
-                  ⚙
-                </button>
-              ) : undefined
+              // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
+              withRules && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Xem luật"
+                    data-guide="rule"
+                    onClick={() => setShowRules(true)}
+                    className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-1 text-sm font-bold text-berry transition active:scale-95"
+                  >
+                    Rule ?
+                  </button>
+                  {canHost && (
+                    <button
+                      type="button"
+                      aria-label={`Cài đặt ${GAMES[game.type].label}`}
+                      data-guide="settings"
+                      onClick={openSettings}
+                      className="grid size-9 place-items-center rounded-full border border-line/60 bg-night/70 text-lg"
+                    >
+                      ⚙
+                    </button>
+                  )}
+                </div>
+              )
             }
             onTransfer={onTransfer}
             onTap={onTap}
