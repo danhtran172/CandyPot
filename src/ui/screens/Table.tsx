@@ -145,6 +145,7 @@ export function Table() {
   /** Người đang tới lượt Bỏ bài / Xem / Theo / Tố / All-in; báo khi sang vòng mới. */
   const pokerDo = (action: PokerAction) => {
     if (!game || !actor || !hand) return
+    if (!solo && actor !== me) return flash(`Lượt ${players[actor]?.name} — họ tự bấm trên máy của họ.`, true)
     const errors = actions().pokerAct(game.id, actor, action)
     if (errors.length) return flash(errors[0], true)
     const after = openRound(actions().session!, game.id)?.poker
@@ -228,11 +229,18 @@ export function Table() {
     if (isLoto && target === POT && from !== POT)
       return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
     const to = target === BUY ? POT : target
-    // Bàn nhiều người, không phải host: chỉ trả kẹo của mình hoặc đòi về mình (không làm thay người khác)
-    if (!canHost && from !== me && !(to === me && from !== POT && from !== DEALER)) {
-      if (from === POT) return flash(`Chờ ${hostName} trao pot.`, true)
-      if (from === DEALER) return flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
-      return flash('Chỉ trả kẹo của mình — muốn đòi thì kéo người đó về chỗ mình.', true)
+    // Bàn nhiều người: ai (kể cả host) cũng chỉ trả / cược / mua bằng kẹo của mình hoặc đòi về mình —
+    // không làm thay người khác. Host chỉ thêm quyền trao pot và đổi nhà cái.
+    if (!solo && from !== me && !(to === me && from !== POT && from !== DEALER)) {
+      if (from === POT) {
+        if (!canHost) return flash(`Chờ ${hostName} trao pot.`, true)
+      } else if (from === DEALER) {
+        if (!canHost) return flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
+      } else
+        return flash(
+          `${players[from]?.name ?? 'Người đó'} tự ${to === POT || to === BET || target === BUY ? (isLoto ? 'mua' : 'cược') : 'trả'} trên máy của họ — mỗi người chỉ dùng kẹo của mình.`,
+          true,
+        )
     }
     if (hand && (to === POT || from === POT)) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
     if (isFree && (to === POT || from === POT)) {
@@ -788,6 +796,11 @@ export function Table() {
                       >
                         🏆 {hand.awarded.length ? `Còn ${restPot} kẹo — ai mạnh nhất tiếp?` : 'Ai bài mạnh nhất?'}
                       </Button>
+                    ) : actor && handState && !solo && actor !== me ? (
+                      // Bàn nhiều người: người tới lượt tự bấm trên máy họ — host không cược thay
+                      <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-line bg-night/90 px-3 py-2 text-center text-sm text-muted">
+                        ⏳ Lượt <b className="mx-1 text-cream">{players[actor]?.name}</b>
+                      </div>
                     ) : actor && handState ? (
                       <>
                         <Button variant="danger" className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
