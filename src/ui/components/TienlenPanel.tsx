@@ -56,6 +56,7 @@ export function TienlenPanel({
   isHost,
   onPlay,
   onPass,
+  dealing,
   onNext,
   menu,
 }: {
@@ -66,6 +67,8 @@ export function TienlenPanel({
   isHost: boolean
   onPlay: (id: ID, cards: Card[]) => boolean
   onPass: (id: ID) => void
+  /** Đang xào / chia bài: chưa hiện bài trên tay. */
+  dealing?: boolean
   /** Host: chốt ván (kẹo đã tự tính) và chia ván mới. */
   onNext: () => void
   /** Nút ⋯ mở popup các chức năng còn lại. */
@@ -101,6 +104,8 @@ export function TienlenPanel({
           )}
           {menu}
         </div>
+      ) : dealing ? (
+        <p className="py-6 text-center text-sm font-semibold text-lemon">🃏 Đang chia bài…</p>
       ) : !viewer ? (
         <div className="flex items-center gap-2">
           <p className="flex-1 text-center text-xs text-muted">Bạn không chơi ván này · lượt {name(cards.turn!)}</p>

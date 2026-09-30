@@ -145,7 +145,8 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   /* Đan bài (riffle): chia đôi sang hai bên, rồi hai nửa đan xen rơi vào giữa */
   .shuffle-riffle {
-    animation: shuffle-riffle 1.7s cubic-bezier(0.45, 0, 0.3, 1) both;
+    /* Tốc độ giữ nguyên, xào 2 lượt cho lâu hơn */
+    animation: shuffle-riffle 1.7s cubic-bezier(0.45, 0, 0.3, 1) 2 both;
   }
   @keyframes shuffle-riffle {
     0% {
@@ -162,7 +163,7 @@ body {
   }
   /* Bridge: chia đôi, uốn cong hai nửa thành vòm, bài chảy xuống giữa rồi vuốt gọn */
   .shuffle-bridge {
-    animation: shuffle-bridge 1.9s cubic-bezier(0.45, 0, 0.3, 1) both;
+    animation: shuffle-bridge 1.9s cubic-bezier(0.45, 0, 0.3, 1) 2 both;
   }
   @keyframes shuffle-bridge {
     0% {
@@ -182,18 +183,11 @@ body {
       transform: translate(0, var(--y1)) rotate(0);
     }
   }
-  .shuffle-fade {
-    animation: shuffle-fade 2.2s ease both;
+  .fade-in {
+    animation: fade-in 0.25s ease both;
   }
-  @keyframes shuffle-fade {
-    0% {
-      opacity: 0;
-    }
-    8%,
-    85% {
-      opacity: 1;
-    }
-    100% {
+  @keyframes fade-in {
+    from {
       opacity: 0;
     }
   }

@@ -1,9 +1,9 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, Ref } from 'react'
 import cardBack from '../../assets/card-back.webp'
 
 /** Lưng một lá bài. Ảnh vuông, lá nằm giữa (tỉ lệ ~0,73) — object-cover vào khung lá là vừa khít. */
-export function CardBack({ className = '', style }: { className?: string; style?: CSSProperties }) {
-  return <img src={cardBack} alt="" draggable={false} style={style} className={`object-cover ${className}`} />
+export function CardBack({ className = '', style, ref }: { className?: string; style?: CSSProperties; ref?: Ref<HTMLImageElement> }) {
+  return <img ref={ref} src={cardBack} alt="" draggable={false} style={style} className={`object-cover ${className}`} />
 }
 
 /** Xấp lưng bài xòe nhẹ biểu thị số lá còn trên tay (vẽ tối đa 5 lá) + con số. */

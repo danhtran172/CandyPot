@@ -30,7 +30,7 @@ import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
-import { shuffleKindOf } from '../shuffle'
+import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
 import { placeOf, type TienlenCards } from '../../core/games/tienlenPlay'
 import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
@@ -537,15 +537,18 @@ export function Table() {
   const pops = useCandyPops(session)
   // Ván bài trong app vừa chia (mới mở vài giây) → hiệu ứng xào bài một lần cho ván đó
   const [shuffledId, setShuffledId] = useState<ID | null>(null)
+  /** Đang chia: bao nhiêu lá đã đáp xuống chỗ ngồi (xấp lưng bài tăng dần). */
+  const [dealt, setDealt] = useState<{ id: ID; n: number } | null>(null)
   // Ván đã có sẵn lúc mở màn này (vd tải lại trang giữa ván) thì không xào lại
   const [mountRoundId] = useState(() => round?.id)
-  const fresh = !!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId
+  const fresh =
+    !!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId && !reducedMotion()
   const shuffling = fresh && round && shuffledId !== round.id ? round.id : null
   useEffect(() => {
     if (!shuffling) return
-    const t = window.setTimeout(() => setShuffledId(shuffling), 2200)
+    const t = window.setTimeout(() => setShuffledId(shuffling), introMs(round?.tienlen?.order.length ?? 4))
     return () => window.clearTimeout(t)
-  }, [shuffling])
+  }, [shuffling]) // eslint-disable-line react-hooks/exhaustive-deps
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
   // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
@@ -556,6 +559,15 @@ export function Table() {
   )
 
   const tlCards = round?.tienlen
+  /** Số lá hiện ở chỗ ngồi: đang chia thì theo số lá đã đáp xuống (chia đều theo vòng), xong thì số lá thật. */
+  const seatCards = (c: TienlenCards, id: ID) => {
+    const real = c.hands[id]?.length
+    if (!shuffling || real === undefined) return real
+    const n = dealt?.id === shuffling ? dealt.n : 0
+    const seat = c.order.indexOf(id)
+    const got = Math.floor((n - seat + c.order.length - 1) / c.order.length)
+    return got > 0 ? Math.min(real, got) : undefined
+  }
   const seats: Seat[] = visible.map((p) => ({
     player: p,
     isMe: p.id === me,
@@ -573,7 +585,7 @@ export function Table() {
           ? (round ?? lastPlay)?.stakes[p.id]
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
-    cards: tlCards && !tlCards.finished.includes(p.id) ? tlCards.hands[p.id]?.length : undefined,
+    cards: tlCards && !tlCards.finished.includes(p.id) ? seatCards(tlCards, p.id) : undefined,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
     highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id),
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
@@ -780,6 +792,7 @@ export function Table() {
                     const errors = actions().tienlenPass(game.id, id)
                     if (errors.length) flash(errors[0], true)
                   }}
+                  dealing={!!shuffling}
                   onNext={nextRound}
                   menu={
                     <More on count={menuCount}>
@@ -1045,7 +1058,9 @@ export function Table() {
         />
       )}
 
-      {shuffling && <ShuffleOverlay kind={shuffleKindOf(shuffling)} />}
+      {shuffling && round?.tienlen && (
+        <ShuffleOverlay kind={shuffleKindOf(shuffling)} order={round.tienlen.order} onDealt={(n) => setDealt({ id: shuffling, n })} />
+      )}
 
       {gameMenu && (
         <div role="dialog" aria-modal="true" aria-label="Đổi game" className="fixed inset-0 z-50 flex items-center justify-center px-6">
