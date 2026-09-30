@@ -8,6 +8,7 @@ import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, contributions, normalizeSession, potOf } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
+import { deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
 import type { RoomBackend } from '../sync/RoomBackend'
@@ -136,6 +137,12 @@ export interface AppState {
   setLotoSettings(gameId: ID, price: number, max: number): string[]
   /** Xì dách: mức cược tối thiểu / tối đa. */
   setXidachLimits(gameId: ID, min: number, max: number): string[]
+  /** Đánh bài thật ngoài đời / dùng bài trong app (áp dụng từ ván sau; ván chưa chia thì chia luôn). */
+  setCardMode(gameId: ID, mode: 'real' | 'app'): string[]
+  /** Tiến lên (bài trong app): đánh bộ bài / bỏ lượt / trả kẹo theo hạng. */
+  tienlenPlay(gameId: ID, playerId: ID, cards: number[]): string[]
+  tienlenPass(gameId: ID, playerId: ID): string[]
+  tienlenPayout(gameId: ID): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
@@ -233,6 +240,12 @@ export function prevPlay(game: Game): Round | undefined {
 
 function findOpenIn(game: Game): Round | undefined {
   return game.rounds.find((r) => r.status === 'open')
+}
+
+/** Chia bài Tiến lên; người về Nhất ván trước (có chia bài) đi trước. */
+function dealTienlen(g: Game, participants: ID[]) {
+  const prev = [...g.rounds].reverse().find((r) => r.tienlen && r.tienlen.turn === null)?.tienlen
+  return deal(participants, shuffled(), prev?.finished[0])
 }
 
 export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
@@ -595,6 +608,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           const hand = startHand(order, nextButton(order, prev?.order, prev?.button), sb, cap, newId)
           Object.assign(round, { participants: order, bet: 2 * sb, stakes: {}, moves: hand.moves, poker: hand.hand })
         }
+        if (g.type === 'tienlen' && g.cardMode === 'app' && get().session?.mode === 'multi') round.tienlen = dealTienlen(g, round.participants)
         mapGame(gameId, (g) => ({
           ...g,
           rounds: [...g.rounds, round],
@@ -693,6 +707,51 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (![min, max].every((v) => Number.isInteger(v) && v > 0)) return ['Mức cược phải là số nguyên lớn hơn 0.']
         if (max < min) return ['Cược tối đa phải lớn hơn hoặc bằng cược tối thiểu.']
         mapGame(gameId, (x) => ({ ...x, xidachLimits: { min, max } }))
+        return []
+      },
+
+      setCardMode(gameId, mode) {
+        const g = game(gameId)
+        if (!g) return ['Không tìm thấy game.']
+        if (mode === 'app' && get().session?.mode !== 'multi') return ['Bài trong app chỉ chơi được ở bàn nhiều người.']
+        const open = findOpenIn(g)
+        // Ván đang mở chưa có lượt kẹo nào → chia bài / bỏ bài luôn cho ván này
+        const fresh = open && !open.moves.length && g.type === 'tienlen'
+        const cards = fresh && mode === 'app' ? dealTienlen(g, open.participants) : undefined
+        mapGame(gameId, (x) => ({
+          ...x,
+          cardMode: mode,
+          rounds: x.rounds.map((r) => (fresh && r.id === open.id ? { ...r, tienlen: cards } : r)),
+        }))
+        return []
+      },
+
+      tienlenPlay(gameId, playerId, cards) {
+        const open = openOf(gameId)
+        if (!open?.tienlen) return ['Ván này không chia bài trong app.']
+        const r = playTienlen(open.tienlen, playerId, cards)
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => (x.tienlen ? { ...x, tienlen: r } : x))
+        return []
+      },
+
+      tienlenPass(gameId, playerId) {
+        const open = openOf(gameId)
+        if (!open?.tienlen) return ['Ván này không chia bài trong app.']
+        const r = passTienlen(open.tienlen, playerId)
+        if (typeof r === 'string') return [r]
+        mapRound(gameId, open.id, (x) => (x.tienlen ? { ...x, tienlen: r } : x))
+        return []
+      },
+
+      tienlenPayout(gameId) {
+        const open = openOf(gameId)
+        if (!open?.tienlen) return ['Ván này không chia bài trong app.']
+        const list = tienlenPayouts(open.tienlen, open.bet, open.bet2 ?? open.bet)
+        if (!list.length) return ['Ván bài chưa xong.']
+        if (open.moves.some((m) => m.label.startsWith('Bài:'))) return ['Đã trả kẹo theo hạng rồi.']
+        const moves = list.map((p) => ({ id: newId(), from: p.from, to: p.to, amount: p.amount, label: `Bài: ${p.label}` }))
+        mapRound(gameId, open.id, (x) => (x.moves.some((m) => m.label.startsWith('Bài:')) ? x : { ...x, moves: [...x.moves, ...moves] }))
         return []
       },
 

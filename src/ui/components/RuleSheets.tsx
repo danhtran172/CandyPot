@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { GAMES } from '../../core/games'
+import { CARD_GAMES, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
 import { XIDACH_MAX_MULTIPLIER, xidachLimits } from '../../core/games/xidach'
 import { tienlenBets, tienlenPigs } from '../../core/suggest'
@@ -197,7 +197,20 @@ function ruleRows(game: Game): { icon: RuleIconName; label: string; value: strin
 }
 
 /** Popup "Rule ?": ai cũng xem được luật hiện hành; host có nút ⚙ Chỉnh. */
-export function RulesSheet({ game, isHost, onEdit, onClose }: { game: Game; isHost: boolean; onEdit: () => void; onClose: () => void }) {
+export function RulesSheet({
+  game,
+  isHost,
+  online,
+  onEdit,
+  onClose,
+}: {
+  game: Game
+  isHost: boolean
+  /** Bàn nhiều người: mới chơi được bài trong app. */
+  online: boolean
+  onEdit: () => void
+  onClose: () => void
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -219,6 +232,7 @@ export function RulesSheet({ game, isHost, onEdit, onClose }: { game: Game; isHo
             </li>
           ))}
         </ul>
+        {online && CARD_GAMES.includes(game.type) && <CardModeSwitch game={game} isHost={isHost} />}
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={onClose}>
             Đóng
@@ -232,6 +246,39 @@ export function RulesSheet({ game, isHost, onEdit, onClose }: { game: Game; isHo
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Hai mode chơi bài: đánh thực tế (bài ngoài đời, app chỉ tính kẹo) / dùng bài trong app. Host đổi. */
+function CardModeSwitch({ game, isHost }: { game: Game; isHost: boolean }) {
+  const mode = game.cardMode ?? 'real'
+  const opts = [
+    { v: 'real' as const, label: '🃏 Đánh thực tế', hint: 'Bài ngoài đời, app tính kẹo' },
+    { v: 'app' as const, label: '📱 Bài trong app', hint: 'App chia bài, đánh trên máy' },
+  ]
+  return (
+    <div className="mt-3">
+      <div className="grid grid-cols-2 gap-2">
+        {opts.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            disabled={!isHost}
+            aria-pressed={mode === o.v}
+            onClick={() => actions().setCardMode(game.id, o.v)}
+            className={`rounded-2xl border px-2 py-2 text-left transition ${
+              mode === o.v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'
+            }`}
+          >
+            <div className="text-sm font-bold">{o.label}</div>
+            <div className="text-[11px] text-muted">{o.hint}</div>
+          </button>
+        ))}
+      </div>
+      <p className="mt-1 text-center text-[11px] text-muted">
+        {isHost ? 'Đổi mode: áp dụng từ ván sau (ván chưa ai trả kẹo thì đổi luôn).' : 'Chỉ host đổi mode.'}
+      </p>
     </div>
   )
 }

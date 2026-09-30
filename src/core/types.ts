@@ -1,3 +1,4 @@
+import type { TienlenCards } from './games/tienlenPlay'
 export type ID = string
 
 export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'free'
@@ -102,6 +103,8 @@ export interface Round {
   moves: Move[]
   /** Poker có luật đầy đủ: blind, vòng cược, lượt, side pot. */
   poker?: PokerHand
+  /** Tiến lên đánh bằng bài trong app: bài từng người, lượt, bộ trên bàn, thứ tự về. */
+  tienlen?: TienlenCards
   /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]
@@ -120,6 +123,8 @@ export interface Game {
   lotoMax?: number
   /** Xì dách: mức cược tối thiểu / tối đa (mặc định 1 và 5 × min). */
   xidachLimits?: { min: number; max: number }
+  /** Cách chơi bài: real = đánh bài thật ngoài đời (mặc định); app = dùng bài trong app. */
+  cardMode?: 'real' | 'app'
   /** Poker: small blind và mức all-in (tổng tối đa mỗi người một tay). */
   pokerSettings?: { sb: number; cap: number }
 }

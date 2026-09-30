@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Children, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { GAME_ORDER, GAMES } from '../../core/games'
+import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
 import { seatedOf } from '../../core/games/tienlen'
 import { xidachBetOptions } from '../../core/games/xidach'
@@ -27,6 +27,8 @@ import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
 import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
+import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
+import { placeOf, type TienlenCards } from '../../core/games/tienlenPlay'
 import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
@@ -120,6 +122,8 @@ export function Table() {
     return true
   }
 
+  /** Chơi bằng bài trong app (chỉ bàn nhiều người): gom các nút phụ vào nút ⋯. */
+  const cardApp = !solo && game?.cardMode === 'app' && CARD_GAMES.includes(game.type)
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
@@ -492,10 +496,11 @@ export function Table() {
         aria-label="Quay lại ván trước"
         title="Quay lại ván trước"
         data-guide="back"
-        className="grid shrink-0 place-items-center bg-night/90 px-2.5 py-1.5 text-cream"
+        className="flex shrink-0 items-center bg-night/90 px-2.5 py-1.5 text-cream"
         onClick={backRound}
       >
         <PrevRoundIcon />
+        {cardApp && <span className="ml-1.5 text-sm">Ván trước</span>}
       </Button>
     ) : null
 
@@ -530,6 +535,7 @@ export function Table() {
     round && !seated ? visible.filter((p) => p.active && !round.participants.includes(p.id)).map((p) => p.id) : [],
   )
 
+  const tlCards = round?.tienlen
   const seats: Seat[] = visible.map((p) => ({
     player: p,
     isMe: p.id === me,
@@ -537,7 +543,7 @@ export function Table() {
     round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
     waiting: waitingIds.has(p.id),
     pop: pops[p.id],
-    badge: hand ? pokerBadge(p.id) : undefined,
+    badge: hand ? pokerBadge(p.id) : tlCards ? tienlenBadge(tlCards, p.id) : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
       ? hand.streetBets[p.id] || undefined
@@ -548,7 +554,7 @@ export function Table() {
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
-    highlight: !!hand && hand.toAct === p.id,
+    highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id),
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
       hand && p.id === me ? (
@@ -568,7 +574,7 @@ export function Table() {
   }))
 
   return (
-    <main className="pb-40">
+    <main className={round?.tienlen ? 'pb-80' : 'pb-40'}>
       <TopBar
         title={session.name}
         back="/"
@@ -731,6 +737,31 @@ export function Table() {
                 </div>
               )}
             </div>
+            {round?.tienlen && (
+              <div className="pointer-events-auto">
+                <TienlenPanel
+                  round={round}
+                  cards={round.tienlen}
+                  players={players}
+                  me={me ?? null}
+                  isHost={canHost}
+                  onPlay={(id, cards) => {
+                    const errors = actions().tienlenPlay(game.id, id, cards)
+                    if (errors.length) flash(errors[0], true)
+                    return !errors.length
+                  }}
+                  onPass={(id) => {
+                    const errors = actions().tienlenPass(game.id, id)
+                    if (errors.length) flash(errors[0], true)
+                  }}
+                  onPayout={() => {
+                    const errors = actions().tienlenPayout(game.id)
+                    if (errors.length) flash(errors[0], true)
+                    else flash('Đã trả kẹo theo hạng — kiểm tra rồi bấm Chốt ván.')
+                  }}
+                />
+              </div>
+            )}
             <div data-guide="actions" className="pointer-events-auto flex gap-2">
               {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
                 // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
@@ -897,17 +928,19 @@ export function Table() {
                 </>
               ) : round ? (
                 <>
-                  <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
-                    Hủy ván
-                  </Button>
-                  {backBtn}
+                  <More on={cardApp}>
+                    <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                      Hủy ván
+                    </Button>
+                    {backBtn}
+                  </More>
                   <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={closeRound}>
                     Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
                   </Button>
                 </>
               ) : (
                 <>
-                  {backBtn}
+                  <More on={cardApp}>{backBtn}</More>
                   <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                     + Mở ván
                   </Button>
@@ -958,7 +991,7 @@ export function Table() {
       {guide && <GuideTour key={guide.map((s) => s.id).join()} steps={guide} onClose={closeGuide} />}
 
       {showRules && game && (
-        <RulesSheet game={game} isHost={me === session.hostId} onEdit={openSettings} onClose={() => setShowRules(false)} />
+        <RulesSheet game={game} isHost={me === session.hostId} online={!solo} onEdit={openSettings} onClose={() => setShowRules(false)} />
       )}
 
       {editLimits && game && (
@@ -1190,6 +1223,7 @@ function TableCenter({
       </>
     )
   }
+  if (round.tienlen) return <TienlenTableCards cards={round.tienlen} players={players} />
   if (game.type === 'xidach') {
     return (
       <>
@@ -1208,4 +1242,44 @@ function lotoEditOptions(current: number, max: number): number[] {
   const best = current < max ? current + 1 : Math.max(0, current - 1)
   const rest = Array.from({ length: max }, (_, i) => i + 1).filter((n) => n !== best)
   return [...new Set([best, ...rest, 0])]
+}
+
+/** Tiến lên bài trong app: số lá còn trên tay, hoặc hạng khi đã về; bỏ lượt thì ghi rõ. */
+function tienlenBadge(cards: TienlenCards, id: ID): string | undefined {
+  const place = placeOf(cards, id)
+  if (place) return place
+  const n = cards.hands[id]?.length
+  if (n === undefined) return undefined
+  return `🂠 ${n}${cards.passed.includes(id) ? ' · Bỏ lượt' : ''}`
+}
+
+/** Chơi bài trong app (`on`): gom các nút phụ (Hủy ván, Ván trước…) vào một nút ⋯, bấm thì hiện ra. Không thì để nguyên. */
+function More({ on, children }: { on: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  if (!on) return <>{children}</>
+  const items = Children.toArray(children).filter(Boolean)
+  if (!items.length) return null
+  return (
+    <div className="relative shrink-0">
+      {open && (
+        <>
+          <button type="button" aria-label="Đóng" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div
+            className="pop absolute bottom-full left-0 z-20 mb-2 flex min-w-40 flex-col gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl"
+            onClickCapture={() => setOpen(false)}
+          >
+            {items}
+          </div>
+        </>
+      )}
+      <Button
+        aria-label="Chức năng khác"
+        aria-expanded={open}
+        className={`h-full bg-night/90 px-3 py-1.5 text-lg leading-none ${open ? 'ring-2 ring-lemon' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋯
+      </Button>
+    </div>
+  )
 }
