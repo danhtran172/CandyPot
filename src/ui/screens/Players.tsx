@@ -43,6 +43,8 @@ export function Players() {
   }
 
   const isHost = !!me && me === session.hostId
+  /** Bàn một máy: một người cầm máy ghi hộ cả bàn → không có chuyện chuyển / bầu host. */
+  const multi = session.mode === 'multi'
   const needed = hostVotesNeeded(session)
   const tally = hostVoteTally(session)
   const myVote = me ? session.hostVotes[me] : undefined
@@ -92,7 +94,12 @@ export function Players() {
           <b className="text-cream">Chạm avatar{canHost ? '' : ' của bạn'}</b> để đổi biểu tượng · dấu <MeIcon className="inline size-3.5 align-[-2px] text-lemon" /> là bạn (chọn lúc tạo / join bàn, không đổi được).
         </li>
         <li>
-          🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule. 💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
+          {multi && (
+            <>
+              🛎️ <b className="text-cream">Host</b> — người duyệt hoàn tác và đặt Rule.{' '}
+            </>
+          )}
+          💤 <b className="text-cream">Tạm nghỉ</b> — không vào ván mới, lời/lỗ vẫn giữ.
         </li>
         {canHost && (
           <li>
@@ -101,7 +108,7 @@ export function Players() {
         )}
       </ul>
 
-      <div className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-sm">
+      <div className={`mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-sm ${multi ? '' : 'hidden'}`}>
         {isHost ? (
           <>
             Bạn là host — bấm 🛎️ ở người khác để chuyển host ngay.
@@ -175,6 +182,7 @@ export function Players() {
                   else e.target.value = p.name
                 }}
               />
+              {multi && (
               <IconToggle
                 on={session.hostId === p.id}
                 icon="🛎️"
@@ -194,6 +202,7 @@ export function Players() {
                 badge={tally[p.id] ? `${tally[p.id]}/${needed}` : undefined}
                 marked={myVote === p.id || (hostAway && p.id === me)}
               />
+              )}
               {editable ? (
                 <IconToggle
                   on={!p.active}
