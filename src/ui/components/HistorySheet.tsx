@@ -12,7 +12,20 @@ import { PingButton } from './PingButton'
  * Bàn một máy (host ghi hộ cả bàn): hiện mọi lượt của cả bàn.
  * Hoàn tác: host làm ngay; người khác gửi yêu cầu để host xác nhận.
  */
-export function HistorySheet({ session, game, me, onClose }: { session: Session; game: Game; me?: ID; onClose: () => void }) {
+export function HistorySheet({
+  session,
+  game,
+  me,
+  onRest,
+  onClose,
+}: {
+  session: Session
+  game: Game
+  me?: ID
+  /** 💤 Mình tạm nghỉ (bấm avatar của mình trên bàn mở sheet này). */
+  onRest?: () => void
+  onClose: () => void
+}) {
   const [note, setNote] = useState<{ text: string; bad?: boolean } | null>(null)
 
   useEffect(() => {
@@ -59,7 +72,18 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70 backdrop-blur-sm" onClick={onClose} />
       <div className="pop relative flex max-h-[80dvh] w-full max-w-lg flex-col rounded-t-[2rem] border-t border-line bg-plum pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
         <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-line" />
-        <h2 className="font-display px-5 text-xl font-bold">📜 Trả/nhận {whole ? 'cả bàn' : 'của bạn'} · {game.name}</h2>
+        <div className="flex items-center gap-2 px-5">
+          <h2 className="font-display min-w-0 flex-1 text-xl font-bold">📜 Trả/nhận {whole ? 'cả bàn' : 'của bạn'} · {game.name}</h2>
+          {onRest && (
+            <button
+              type="button"
+              onClick={onRest}
+              className="shrink-0 rounded-full border border-grape/60 px-2.5 py-1 text-xs font-semibold text-grape active:scale-95"
+            >
+              💤 Tạm nghỉ
+            </button>
+          )}
+        </div>
         <p className="px-5 text-xs text-muted">
           {isHost ? 'Bạn là host: bấm ' : 'Bấm '}
           <UndoIcon className="size-3.5 align-[-2px]" />

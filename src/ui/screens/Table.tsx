@@ -270,9 +270,24 @@ export function Table() {
    * Bấm thay cho kéo — người làm luôn là mình: bấm người khác = đưa kẹo (đổi sang đòi được),
    * bấm mình = xem Trả/nhận, bấm Pot = bỏ kẹo / mua tờ / (host) trao pot, bấm Bet = đặt cược, bấm 🎩 = chọn cái.
    */
-  const onTap = (id: ID) => {
+  /** 💤 Mình tạm nghỉ / chơi lại (bấm avatar của chính mình trên bàn). */
+  const setResting = (resting: boolean) => {
+    if (!me) return
+    actions().updatePlayer(me, { active: !resting })
+    flash(resting ? 'Bạn tạm nghỉ 💤 — không vào ván mới.' : 'Bạn chơi lại rồi!')
+  }
+
+  const onTap = async (id: ID) => {
     if (!game || !me) return
-    if (id === me) return setShowLog(true)
+    if (id === me) {
+      // Mình đang nghỉ → hỏi chơi lại; đang chơi → xem Trả/nhận (có nút 💤 Tạm nghỉ)
+      if (players[me]?.active === false) {
+        const ok = await ask('Chơi lại?', { icon: '💤', message: 'Bạn đang tạm nghỉ — chơi lại thì vào ván mới.', okLabel: 'Chơi lại' })
+        if (ok) setResting(false)
+        return
+      }
+      return setShowLog(true)
+    }
     if (id === DEALER) return canHost ? setPicker('dealer') : flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
     if (id === POT) {
       if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
@@ -1000,7 +1015,22 @@ export function Table() {
         />
       )}
 
-      {showLog && game && <HistorySheet session={session} game={game} me={me} onClose={() => setShowLog(false)} />}
+      {showLog && game && (
+        <HistorySheet
+          session={session}
+          game={game}
+          me={me}
+          onRest={
+            me
+              ? () => {
+                  setShowLog(false)
+                  setResting(true)
+                }
+              : undefined
+          }
+          onClose={() => setShowLog(false)}
+        />
+      )}
 
       {pending && game && (
         <AmountSheet
