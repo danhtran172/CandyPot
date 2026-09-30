@@ -26,15 +26,23 @@ export class FirebaseRoomDb implements RoomDb {
 
   private connect() {
     this.conn ??= import('./firebaseSdk').then(async (sdk) => {
-      const app = sdk.initializeApp(this.options)
+      // Lần thử lại sau khi đăng nhập lỗi: app đã khởi tạo rồi thì dùng lại
+      const fresh = !sdk.getApps().length
+      const app = fresh ? sdk.initializeApp(this.options) : sdk.getApp()
       const db = sdk.getDatabase(app)
-      if (this.emulator) sdk.connectDatabaseEmulator(db, this.emulator.host, this.emulator.port)
-      sdk.onValue(sdk.ref(db, '.info/connected'), (snap) => {
-        this.online = snap.val() === true
-        this.connListeners.forEach((cb) => cb(this.online!))
-      })
+      if (fresh) {
+        if (this.emulator) sdk.connectDatabaseEmulator(db, this.emulator.host, this.emulator.port)
+        sdk.onValue(sdk.ref(db, '.info/connected'), (snap) => {
+          this.online = snap.val() === true
+          this.connListeners.forEach((cb) => cb(this.online!))
+        })
+      }
       await sdk.signInAnonymously(sdk.getAuth(app))
       return { sdk, db }
+    })
+    // Lỗi (tải SDK / đăng nhập thất bại, vd mất mạng) → lần sau thử lại, không kẹt lỗi mãi
+    this.conn.catch(() => {
+      this.conn = null
     })
     return this.conn
   }
