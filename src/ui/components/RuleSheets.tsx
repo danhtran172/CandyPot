@@ -232,7 +232,7 @@ export function RulesSheet({
             </li>
           ))}
         </ul>
-        {online && CARD_GAMES.includes(game.type) && <CardModeSwitch game={game} isHost={isHost} />}
+        {CARD_GAMES.includes(game.type) && <CardModeSwitch game={game} isHost={isHost} online={online} />}
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={onClose}>
             Đóng
@@ -251,8 +251,8 @@ export function RulesSheet({
 }
 
 /** Hai mode chơi bài: đánh thực tế (bài ngoài đời, app chỉ tính kẹo) / dùng bài trong app. Host đổi. */
-function CardModeSwitch({ game, isHost }: { game: Game; isHost: boolean }) {
-  const mode = game.cardMode ?? 'real'
+export function CardModeSwitch({ game, isHost, online }: { game: Game; isHost: boolean; online: boolean }) {
+  const mode = online ? (game.cardMode ?? 'real') : 'real'
   const opts = [
     { v: 'real' as const, label: '🃏 Đánh thực tế', hint: 'Bài ngoài đời, app tính kẹo' },
     { v: 'app' as const, label: '📱 Bài trong app', hint: 'App chia bài, đánh trên máy' },
@@ -264,7 +264,7 @@ function CardModeSwitch({ game, isHost }: { game: Game; isHost: boolean }) {
           <button
             key={o.v}
             type="button"
-            disabled={!isHost}
+            disabled={!isHost || !online}
             aria-pressed={mode === o.v}
             onClick={() => actions().setCardMode(game.id, o.v)}
             className={`rounded-2xl border px-2 py-2 text-left transition ${
@@ -277,7 +277,11 @@ function CardModeSwitch({ game, isHost }: { game: Game; isHost: boolean }) {
         ))}
       </div>
       <p className="mt-1 text-center text-[11px] text-muted">
-        {isHost ? 'Đổi mode: áp dụng từ ván sau (ván chưa ai trả kẹo thì đổi luôn).' : 'Chỉ host đổi mode.'}
+        {!online
+          ? '📱 Bài trong app chỉ dùng ở bàn online (Nhiều người join) — tạo bàn kiểu đó để chơi.'
+          : isHost
+            ? 'Đổi mode: áp dụng từ ván sau (ván chưa ai trả kẹo thì đổi luôn).'
+            : 'Chỉ host đổi mode.'}
       </p>
     </div>
   )

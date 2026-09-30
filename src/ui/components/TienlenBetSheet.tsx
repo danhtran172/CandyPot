@@ -2,14 +2,14 @@ import { useState } from 'react'
 import type { Game } from '../../core/types'
 import { tienlenBets } from '../../core/suggest'
 import { actions } from '../../store'
-import { LinkChip, SettingRow, SettingsModal } from './RuleSheets'
+import { CardModeSwitch, LinkChip, SettingRow, SettingsModal } from './RuleSheets'
 import { TienlenBetInputs } from './TienlenBetInputs'
 
 /**
  * Tiến lên: host đặt Rule — tiền ăn Nhất/Nhì và giá heo đỏ/heo đen (mặc định bằng Nhất/Nhì).
  * Đây là các số gợi ý khi trả kẹo.
  */
-export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
+export function TienlenBetSheet({ game, online, onDone }: { game: Game; online: boolean; onDone: (saved: boolean) => void }) {
   const init = tienlenBets(game)
   const [bet, setBet] = useState(init.bet)
   const [bet2, setBet2] = useState(init.bet2 ?? Math.max(1, Math.round(init.bet / 2)))
@@ -49,6 +49,7 @@ export function TienlenBetSheet({ game, onDone }: { game: Game; onDone: (saved: 
       <LinkChip linked={red === undefined} text="Heo đỏ = Nhất" onRelink={() => setRed(undefined)} />
       <SettingRow icon="pigBlack" label="Heo đen" hint="chặt heo đen" value={black ?? bet2} onChange={setBlack} />
       <LinkChip linked={black === undefined} text="Heo đen = Nhì" onRelink={() => setBlack(undefined)} />
+      <CardModeSwitch game={game} isHost online={online} />
     </SettingsModal>
   )
 }

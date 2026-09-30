@@ -1007,6 +1007,7 @@ export function Table() {
       {editBets && game && (
         <TienlenBetSheet
           game={game}
+          online={!solo}
           onDone={(saved) => {
             setEditBets(false)
             if (saved) flash('Đã đổi Rule.')
