@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beats, comboOf, deal, pass, payouts, play, type Card, type TienlenCards } from './tienlenPlay'
+import { beats, comboOf, deal, pass, payouts, play, playableCards, type Card, type TienlenCards } from './tienlenPlay'
 
 /** Lá theo hạng + chất: c('3♠') … c('2♥'). */
 const R = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
@@ -55,5 +55,21 @@ describe('tienlenPlay', () => {
     s = ok(play(s, 'b', cs('5♠'))) // b về Nhì → c Bét, xong ván
     expect([s.turn, s.finished]).toEqual([null, ['a', 'b', 'c']])
     expect(payouts(s, 4, 2)).toEqual([{ from: 'c', to: 'a', amount: 4, label: 'Nhất' }])
+  })
+})
+
+describe('playableCards — lá đi được', () => {
+  it('chặn đôi 7: chỉ các đôi to hơn (và hàng chặt) còn sáng', () => {
+    const hand = cs('4♠ 8♠ 8♥ 9♣ J♠ J♦ 2♥')
+    expect([...playableCards(hand, cs('7♠ 7♥'))].sort((a, b) => a - b)).toEqual(cs('8♠ 8♥ J♠ J♦'))
+  })
+  it('vòng mới: mọi lá; ván đầu: chỉ bộ có 3♠', () => {
+    const hand = cs('3♠ 4♦ 5♣ 9♥')
+    expect(playableCards(hand, null).size).toBe(4)
+    expect([...playableCards(hand, null, true)].sort((a, b) => a - b)).toEqual(cs('3♠ 4♦ 5♣'))
+  })
+  it('chặn sảnh 3 lá: lá trong sảnh 3 lá to hơn', () => {
+    const hand = cs('6♠ 7♦ 8♣ K♥')
+    expect([...playableCards(hand, cs('4♠ 5♠ 6♦'))].sort((a, b) => a - b)).toEqual(cs('6♠ 7♦ 8♣'))
   })
 })

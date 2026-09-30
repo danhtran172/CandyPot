@@ -182,3 +182,38 @@ export function payouts(s: TienlenCards, bet: number, bet2: number): { from: ID;
   if (f.length >= 4) out.push({ from: f[2], to: f[1], amount: bet2, label: 'Nhì' })
   return out
 }
+
+/**
+ * Các lá trên tay dùng được ở nước này: nằm trong ít nhất một bộ hợp lệ chặn được bộ trên bàn
+ * (vòng mới: bộ nào cũng được; ván đầu: bộ phải có 3♠).
+ */
+export function playableCards(hand: Card[], table: Card[] | null, mustOpen = false): Set<Card> {
+  const prev = table ? comboOf(table) : null
+  const byRank: Card[][] = Array.from({ length: 13 }, () => [])
+  for (const c of [...hand].sort((a, b) => a - b)) byRank[rankOf(c)].push(c)
+  const maxOf = (r: number) => byRank[r][byRank[r].length - 1]
+  const ok = (combo: Combo, withThree: boolean) => (!mustOpen || withThree) && (!prev || beats(prev, combo))
+  const has3 = hand.includes(THREE_SPADES)
+  const out = new Set<Card>()
+  for (const c of hand) {
+    const r = rankOf(c)
+    const same = byRank[r]
+    let usable = false
+    // Rác / đôi / sám / tứ quý: lấy c cùng các lá to nhất cùng hạng
+    for (let k = 1; k <= same.length && !usable; k++) {
+      const top = k === 1 ? c : Math.max(c, same[same.length - 1] === c ? same[same.length - 2] : same[same.length - 1])
+      const three = c === THREE_SPADES || (r === 0 && has3 && k > 1)
+      usable = ok({ type: (['single', 'pair', 'triple', 'quad'] as const)[k - 1], size: k, top }, three)
+    }
+    // Sảnh / đôi thông: mọi đoạn hạng liên tiếp (không có 2) chứa hạng của c
+    for (let a = 0; a <= r && !usable; a++)
+      for (let b = Math.max(r, a + 2); b < TWO && !usable; b++) {
+        const ranks = Array.from({ length: b - a + 1 }, (_, i) => a + i)
+        const three = a === 0 && has3
+        if (ranks.every((x) => byRank[x].length)) usable = ok({ type: 'straight', size: ranks.length, top: r === b ? c : maxOf(b) }, three)
+        if (!usable && ranks.every((x) => byRank[x].length >= 2)) usable = ok({ type: 'pairs', size: ranks.length, top: maxOf(b) }, three)
+      }
+    if (usable) out.add(c)
+  }
+  return out
+}

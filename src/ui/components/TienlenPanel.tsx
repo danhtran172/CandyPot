@@ -1,21 +1,34 @@
 import { useState, type ReactNode } from 'react'
-import { cardLabel, comboOf, COMBO_LABEL, isRed, placeOf, type Card, type TienlenCards } from '../../core/games/tienlenPlay'
+import { cardLabel, comboOf, COMBO_LABEL, isRed, placeOf, playableCards, type Card, type TienlenCards } from '../../core/games/tienlenPlay'
 import type { ID, Player, Round } from '../../core/types'
 import { Button } from './kit'
 
 /** Một lá bài. */
-export function PlayingCard({ card, selected, onClick, small }: { card: Card; selected?: boolean; onClick?: () => void; small?: boolean }) {
+export function PlayingCard({
+  card,
+  selected,
+  onClick,
+  small,
+  dim,
+}: {
+  card: Card
+  selected?: boolean
+  onClick?: () => void
+  small?: boolean
+  /** Lá không đi được nước này: mờ, không bấm được. */
+  dim?: boolean
+}) {
   const label = cardLabel(card)
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={!onClick}
+      disabled={!onClick || dim}
       aria-pressed={selected}
       aria-label={label}
       className={`num flex shrink-0 flex-col items-start rounded-lg border bg-cream font-bold leading-none shadow transition ${
         small ? 'h-11 w-8 px-1 py-1 text-xs' : 'h-16 w-11 px-1.5 py-1.5 text-sm'
-      } ${isRed(card) ? 'text-berry' : 'text-night'} ${selected ? '-translate-y-3 border-lemon ring-2 ring-lemon' : 'border-night/20'}`}
+      } ${isRed(card) ? 'text-berry' : 'text-night'} ${selected ? '-translate-y-3 border-lemon ring-2 ring-lemon' : 'border-night/20'} ${dim ? 'opacity-30 grayscale' : ''}`}
     >
       <span>{label.slice(0, -1)}</span>
       <span className={small ? 'text-sm' : 'text-lg'}>{label.slice(-1)}</span>
@@ -62,6 +75,8 @@ export function TienlenPanel({
   const hand = viewer ? (cards.hands[viewer] ?? []) : []
   const myTurn = !!viewer && cards.turn === viewer
   const combo = comboOf(picked)
+  // Tới lượt: làm mờ các lá không nằm trong bộ nào chặn được bàn
+  const playable = myTurn ? playableCards(hand, cards.table?.cards ?? null, cards.mustOpen) : null
 
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-1 pb-2 backdrop-blur">
@@ -87,7 +102,7 @@ export function TienlenPanel({
         <>
           <p className="text-center text-xs text-muted">
             {myTurn ? (
-              <b className="text-lemon">Lượt bạn</b>
+              <b className="text-lemon">Lượt bạn{playable && !playable.size ? ' — không chặn được, Bỏ lượt' : ''}</b>
             ) : cards.finished.includes(viewer) ? (
               `Bạn đã về ${placeOf(cards, viewer)} 🎉`
             ) : (
@@ -102,6 +117,7 @@ export function TienlenPanel({
                   key={c}
                   card={c}
                   selected={picked.includes(c)}
+                  dim={!!playable && !playable.has(c)}
                   onClick={() => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))}
                 />
               ))}
