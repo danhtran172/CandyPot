@@ -21,6 +21,12 @@ export function outgoingAsks(session: Session, me: ID | undefined): CandyRequest
   return oldestFirst(session.requests.filter((r) => r.to === me))
 }
 
+/** Trung tâm yêu cầu: lời đòi mình đã từ chối — vẫn ghi lại (còn đến khi người đòi xóa hoặc mình đổi ý trả). */
+export function declinedByMe(session: Session, me: ID | undefined): CandyRequest[] {
+  if (!me) return []
+  return oldestFirst(session.requests.filter((r) => r.from === me && !!r.status)).reverse()
+}
+
 /** Task host: yêu cầu hoàn tác + lời đòi bị từ chối được nhờ host duyệt (chỉ host trả lời được). */
 export function hostTasks(session: Session, me: ID | undefined): Task[] {
   if (!me || me !== session.hostId) return []

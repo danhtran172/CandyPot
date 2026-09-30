@@ -2,7 +2,7 @@ import { actions } from '../../store'
 import { ask, tell } from '../dialog'
 import { playerMap, timeOf } from '../format'
 import { useMe } from '../me'
-import { answerTask, incomingAsks, outgoingAsks } from '../tasks'
+import { answerTask, declinedByMe, incomingAsks, outgoingAsks } from '../tasks'
 import { Button, SectionTitle, TopBar, Who } from '../components/kit'
 import { TaskCard } from '../components/TaskCard'
 import { UndoIcon } from '../components/UndoIcon'
@@ -17,13 +17,24 @@ const STATUS = {
   rejected: { label: () => '❌ host từ chối', tone: 'text-berry' },
 } as const
 
-/** Trung tâm yêu cầu: ai đòi mình (trả lời) và mình đang đòi ai (chờ họ, bị từ chối → nhờ host). */
+/** Trạng thái lời đòi mình đã từ chối (nhìn từ phía người bị đòi). */
+const DECLINED = {
+  declined: { label: () => '✋ bạn đã từ chối', tone: 'text-berry' },
+  escalated: { label: (name: string) => `🛎️ ${name} nhờ host`, tone: 'text-sky' },
+  rejected: { label: () => '✅ host đồng ý không trả', tone: 'text-mint' },
+} as const
+
+/**
+ * Trung tâm yêu cầu: ai đòi mình (trả lời), lời đòi mình đã từ chối (ghi lại, đổi ý thì trả được)
+ * và mình đang đòi ai (chờ họ, bị từ chối → nhờ host).
+ */
 export function Requests() {
   const session = useSession()
   const [me] = useMe(session)
   const players = playerMap(session)
   const incoming = incomingAsks(session, me)
   const outgoing = outgoingAsks(session, me)
+  const declined = declinedByMe(session, me)
   const isHost = !!me && me === session.hostId
 
   const escalate = async (id: string) => {
@@ -41,6 +52,20 @@ export function Requests() {
     })
     if (!ok) return
     const errors = actions().judgeRequest(id, true)
+    if (errors.length) await tell(errors[0], { icon: '⚠️' })
+  }
+
+  /** Đổi ý: trả lời đòi mình đã từ chối. */
+  const payAnyway = async (id: string) => {
+    const r = session.requests.find((x) => x.id === id)
+    if (!r) return
+    const ok = await ask(`Trả ${players[r.to]?.name} ${r.amount} kẹo?`, {
+      icon: '🍬',
+      message: 'Bạn đã từ chối lời đòi này — đổi ý thì trả luôn.',
+      okLabel: 'Trả luôn',
+    })
+    if (!ok) return
+    const errors = actions().payDeclined(id)
     if (errors.length) await tell(errors[0], { icon: '⚠️' })
   }
 
@@ -75,6 +100,31 @@ export function Requests() {
             <TaskCard key={t.id} session={session} task={t} />
           ))}
         </ul>
+      )}
+
+      {declined.length > 0 && (
+        <>
+          <div className="mt-6" />
+          <SectionTitle>Bạn đã từ chối</SectionTitle>
+          <ul className="rounded-2xl bg-plum">
+            {declined.map((r) => {
+              const st = DECLINED[r.status as keyof typeof DECLINED]
+              return (
+                <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2.5 text-sm last:border-0">
+                  <Who player={players[r.to]} className="min-w-0 font-semibold text-sky" />
+                  <span className="text-muted">đòi</span>
+                  <span className="num font-display font-extrabold text-lemon">{r.amount}</span>
+                  <span className={`ml-auto text-[11px] whitespace-nowrap ${st.tone}`}>
+                    {st.label(players[r.to]?.name ?? '?')} · {timeOf(r.answeredAt ?? r.at)}
+                  </span>
+                  <Button className="shrink-0 px-2.5 py-1 text-xs font-bold text-lemon" onClick={() => payAnyway(r.id)}>
+                    Trả
+                  </Button>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
 
       <div className="mt-6" />

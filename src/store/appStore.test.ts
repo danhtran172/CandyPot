@@ -291,6 +291,18 @@ describe('appStore — đòi kẹo', () => {
     expect(netOf(session())).toEqual({ [a]: 0, [b]: 2, [c]: -2 })
   })
 
+  it('người bị đòi đổi ý: trả luôn lời đòi đã từ chối', () => {
+    const g = s().addGame('free')
+    s().requestCandy(g, c, b, 3)
+    const id = session().requests[0].id
+    expect(s().payDeclined(id)).toEqual(['Lời đòi này vẫn đang chờ bạn trả lời.'])
+    s().answerRequest(id, false)
+    s().escalateRequest(id)
+    expect(s().payDeclined(id)).toEqual([])
+    expect(session().requests).toEqual([])
+    expect(netOf(session())).toEqual({ [a]: 0, [b]: 3, [c]: -3 })
+  })
+
   it('có ván đang mở thì kẹo đòi được ghi vào ván', () => {
     const g = s().addGame('tienlen')
     s().openRound(g, { participants: [a, b], bet: 4, bet2: 2, stakes: {}, dealer: null })

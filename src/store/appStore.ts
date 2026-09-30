@@ -140,6 +140,8 @@ export interface AppState {
   escalateRequest(requestId: ID): string[]
   /** Host duyệt lời đòi được nhờ: OK thì chuyển kẹo luôn; không thì đánh dấu host từ chối. */
   judgeRequest(requestId: ID, accept: boolean): string[]
+  /** Người bị đòi đổi ý: trả luôn lời đòi mình đã từ chối (kể cả đang nhờ host / host đã từ chối). */
+  payDeclined(requestId: ID): string[]
   cancelRequest(requestId: ID): void
   /** Nhắc lại một yêu cầu còn chờ (lời đòi kẹo hoặc xin hoàn tác) — thông báo bật lại bên kia. */
   pingRequest(requestId: ID): string[]
@@ -893,6 +895,16 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           ...s,
           requests: s.requests.map((r) => (r.id === requestId ? { ...r, status: 'rejected' as const, answeredAt: now } : r)),
         }))
+        return []
+      },
+
+      payDeclined(requestId) {
+        const req = get().session?.requests.find((r) => r.id === requestId)
+        if (!req) return ['Lời đòi kẹo này không còn nữa.']
+        if (!req.status) return ['Lời đòi này vẫn đang chờ bạn trả lời.']
+        const errors = get().addMove(req.gameId, req.from, req.to, req.amount, 'Đòi kẹo')
+        if (errors.length) return errors
+        mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
         return []
       },
 
