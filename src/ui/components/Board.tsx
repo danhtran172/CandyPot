@@ -32,6 +32,8 @@ export interface Seat {
   action?: ReactNode
   /** Vào bàn lúc ván đang chơi: chưa tính ván này, tự vào từ ván sau — avatar mờ + ⏳. */
   waiting?: boolean
+  /** Số kẹo vừa đổi (+/−) — ô nhỏ dưới avatar ~1 giây; `key` đổi thì chạy lại hiệu ứng. */
+  pop?: { amount: number; key: number }
 }
 
 interface Drag {
@@ -398,6 +400,17 @@ export function Board({
                     )
                   )}
                   {side !== 'below' && stake}
+                  {s.pop && (
+                    <span
+                      key={s.pop.key}
+                      aria-live="polite"
+                      className={`candy-pop num font-display pointer-events-none absolute top-[calc(100%+3px)] left-1/2 z-20 -translate-x-1/2 rounded-lg border px-1.5 text-sm leading-5 font-extrabold whitespace-nowrap shadow-lg ${
+                        s.pop.amount > 0 ? 'border-mint/60 bg-night text-mint' : 'border-berry/60 bg-night text-berry'
+                      }`}
+                    >
+                      {signed(s.pop.amount)}
+                    </span>
+                  )}
                 </span>
                 <span
                   className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active && !s.waiting ? '' : 'opacity-50'}`}

@@ -38,6 +38,7 @@ import { ask } from '../dialog'
 import { Button, Card, PotChip, TopBar } from '../components/kit'
 import potIcon from '../../assets/pot.webp'
 import { useSession } from '../components/useSession'
+import { useCandyPops } from '../components/useCandyPops'
 import { playCount, playerMap, roundNumber } from '../format'
 import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
@@ -519,6 +520,7 @@ export function Table() {
   }
 
   const roundDelta = round ? movesNet(round.moves) : {}
+  const pops = useCandyPops(session)
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
   // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
@@ -534,6 +536,7 @@ export function Table() {
     online: onlineIds.has(p.id),
     round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
     waiting: waitingIds.has(p.id),
+    pop: pops[p.id],
     badge: hand ? pokerBadge(p.id) : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
