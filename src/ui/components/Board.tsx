@@ -5,6 +5,7 @@ import { candyFor } from '../candyIcons'
 import potIcon from '../../assets/pot.webp'
 import dragCandy from '../../assets/drag-candy.webp'
 import bowtie from '../../assets/rules/bowtie.webp'
+import ticket from '../../assets/loto-ticket.webp'
 
 export interface Seat {
   player: Player
@@ -18,6 +19,8 @@ export interface Seat {
   stake?: number
   /** Cược lấy từ ván trước (chưa mở ván) — hiện mờ. */
   stakeDim?: boolean
+  /** Lô tô: số tờ đã mua trong ván, hiện trước chỗ ngồi dạng [tờ bingo màu riêng] × N. */
+  tickets?: { count: number; color: string }
   isMe?: boolean
   /** Đang có máy mở bàn (bàn nhiều người) — chấm xanh góc trên bên trái avatar. */
   online?: boolean
@@ -297,7 +300,16 @@ export function Board({
             const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
-            const stake = s.stake !== undefined && (
+            const stake = s.tickets ? (
+              <span
+                className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap ${STAKE_POS[side]}`}
+                style={{ color: s.tickets.color }}
+                title={`${s.tickets.count} tờ`}
+              >
+                <TicketIcon color={s.tickets.color} />
+                <span className="num">× {s.tickets.count}</span>
+              </span>
+            ) : s.stake !== undefined && (
               <span
                 className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
                   s.stakeDim ? 'opacity-45' : ''
@@ -430,4 +442,10 @@ export function flyCandy(from: ID, to: ID, amount: number) {
 /** Chấm xanh "đang mở app". */
 export function OnlineDot({ className = '' }: { className?: string }) {
   return <span role="img" aria-label="Đang online" title="Đang online" className={`size-3 rounded-full bg-mint ring-2 ring-plum ${className}`} />
+}
+
+/** Tờ lô tô (hình bingo) tô theo màu của từng người. */
+function TicketIcon({ color }: { color: string }) {
+  const mask = `url(${ticket}) center / contain no-repeat`
+  return <span aria-hidden className="size-5 shrink-0" style={{ backgroundColor: color, mask, WebkitMask: mask }} />
 }

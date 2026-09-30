@@ -115,6 +115,8 @@ export interface AppState {
   setLotoPrice(gameId: ID, price: number): string[]
   /** Tiến lên: host đặt mức cược Nhất/Nhì (ván đang mở + mặc định cho ván sau). */
   setTienlenBets(gameId: ID, bet: number, bet2: number, pigs?: { red?: number; black?: number }): string[]
+  /** Lô tô (chưa chốt): đặt lại số tờ một người mua trong ván đang mở (0 = bỏ mua). */
+  setLotoTickets(gameId: ID, playerId: ID, count: number): string[]
   /** Lô tô: giá mỗi tờ + số tờ tối đa mỗi người một ván. */
   setLotoSettings(gameId: ID, price: number, max: number): string[]
   /** Xì dách: mức cược tối thiểu / tối đa. */
@@ -884,6 +886,22 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           ...s,
           requests: s.requests.map((r) => (r.id === requestId ? { ...r, status: 'rejected' as const, answeredAt: now } : r)),
         }))
+        return []
+      },
+
+      setLotoTickets(gameId, playerId, count) {
+        const g = game(gameId)
+        const open = openOf(gameId)
+        if (!g || g.type !== 'loto' || !open) return ['Chưa có ván Lô tô nào đang mở.']
+        if (open.phase === 'playing') return ['Đã chốt — không đổi số tờ được nữa.']
+        if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
+        if (!Number.isInteger(count) || count < 0 || count > lotoMax(g)) return [`Mỗi người mua 0–${lotoMax(g)} tờ một ván.`]
+        // Gộp các lần mua của người này thành một lượt đúng số tờ mới
+        const move = { id: newId(), from: playerId, to: POT, amount: count * open.bet, label: `${count} tờ` }
+        mapRound(gameId, open.id, (r) => {
+          const others = r.moves.filter((m) => !(m.from === playerId && m.to === POT))
+          return { ...r, moves: count ? [...others, move] : others }
+        })
         return []
       },
 

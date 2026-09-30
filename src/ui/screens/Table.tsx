@@ -41,13 +41,15 @@ import { playCount, playerMap, roundNumber } from '../format'
 import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
 import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
+import { ticketColors } from '../ticketColors'
 import { answeredAsks, hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
   const session = useSession()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [pending, setPending] = useState<{ from: ID; to: ID; tapped?: boolean } | null>(null)
+  /** Popup chọn số kẹo đang mở: ai → ai; `edit` = Lô tô chưa chốt, người đã mua chỉnh lại số tờ. */
+  const [pending, setPending] = useState<{ from: ID; to: ID; tapped?: boolean; edit?: boolean } | null>(null)
   const [picker, setPicker] = useState<'dealer' | 'award' | null>(null)
   const [pokerSheet, setPokerSheet] = useState<'raise' | 'allin' | 'settings' | null>(null)
   const [showLog, setShowLog] = useState(false)
@@ -118,12 +120,15 @@ export function Table() {
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
-  /** Lô tô: người này còn mua được mấy tờ trong ván đang mở. */
-  const lotoLeft = (id: ID) => {
-    if (!game || !round) return game ? lotoMax(game) : 0
-    const bought = round.moves.filter((m) => m.from === id && m.to === POT).reduce((sum, m) => sum + m.amount, 0)
-    return lotoMax(game) - Math.floor(bought / lotoPrice(game))
+  /** Lô tô: số tờ người này đã mua trong ván đang mở. */
+  const lotoBought = (id: ID) => {
+    if (!game || !round) return 0
+    const paid = round.moves.filter((m) => m.from === id && m.to === POT).reduce((sum, m) => sum + m.amount, 0)
+    return Math.floor(paid / lotoPrice(game))
   }
+  /** Lô tô: người này còn mua được mấy tờ trong ván đang mở. */
+  const lotoLeft = (id: ID) => (game ? lotoMax(game) - lotoBought(id) : 0)
+  const colors = isLoto ? ticketColors(session) : {}
   const hostName = players[session.hostId ?? '']?.name ?? '?'
   const hostAway = useHostAway(session, me)
 
@@ -238,7 +243,8 @@ export function Table() {
     if (isLoto && (to === POT || from === POT)) {
       if (from === POT) return void awardPot(to)
       if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
-      if (round && lotoLeft(from) <= 0) return flash(`${players[from]?.name} đã mua đủ ${lotoMax(game)} tờ.`, true)
+      // Đã mua rồi, chưa chốt → kéo lại vào Pot để chỉnh số tờ
+      if (round && lotoBought(from) > 0) return setPending({ from, to, edit: true })
       if (!round && !openNext()) return
       return setPending({ from, to })
     }
@@ -297,7 +303,14 @@ export function Table() {
 
   const pick = (o: Option) => {
     if (!game || !pending) return
-    if (pending.to === BET) {
+    if (pending.edit) {
+      const count = Math.round(o.amount / lotoPrice(game))
+      const before = lotoBought(pending.from)
+      const errors = actions().setLotoTickets(game.id, pending.from, count)
+      if (errors.length) flash(errors[0], true)
+      else if (count !== before)
+        flash(count ? `${players[pending.from]?.name} mua ${count} tờ (trước là ${before}).` : `${players[pending.from]?.name} bỏ mua.`)
+    } else if (pending.to === BET) {
       const errors = actions().setStake(game.id, pending.from, o.amount)
       if (errors.length) flash(errors[0], true)
       else flyCandy(pending.from, BET, o.amount)
@@ -462,6 +475,7 @@ export function Table() {
           ? (round ?? lastPlay)?.stakes[p.id]
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
+    tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
     highlight: !!hand && hand.toAct === p.id,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
@@ -946,7 +960,10 @@ export function Table() {
           to={players[pending.to]}
           me={me}
           options={
-            isLoto && pending.to === POT
+            pending.edit
+              ? // Chỉnh lại: 0 (bỏ mua) … tối đa
+                Array.from({ length: lotoMax(game) + 1 }, (_, n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
+              : isLoto && pending.to === POT
               ? [1, 2]
                   .filter((n) => n <= lotoLeft(pending.from))
                   .map((n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
@@ -956,6 +973,7 @@ export function Table() {
           }
           mode={isLoto && pending.to === POT ? 'buy' : pending.to === BET ? 'bet' : isRequest(pending) ? 'request' : 'pay'}
           unit={isLoto && pending.to === POT ? { name: 'tờ', price: lotoPrice(game) } : undefined}
+          current={pending.edit ? lotoBought(pending.from) : undefined}
           onPick={pick}
           onSwap={
             pending.tapped && pending.from !== POT && pending.to !== POT && pending.to !== BET

@@ -427,6 +427,24 @@ describe('appStore — Lô tô', () => {
     s().quickOpen(g)
     expect(open().bet).toBe(3)
   })
+
+  it('chưa chốt: chỉnh lại số tờ đã mua (tăng / giảm / bỏ mua); chốt rồi thì thôi', () => {
+    const g = s().addGame('loto')
+    s().setLotoPrice(g, 5)
+    s().quickOpen(g)
+    const open = () => openRound(session(), g)!
+    const paid = (id: string) => open().moves.filter((m) => m.from === id && m.to === POT).reduce((n, m) => n + m.amount, 0)
+    s().addMove(g, a, POT, 5, '1 tờ')
+    s().addMove(g, a, POT, 5, '1 tờ')
+    s().addMove(g, b, POT, 10, '2 tờ')
+    expect(s().setLotoTickets(g, a, 1)).toEqual([])
+    expect([paid(a), open().moves.filter((m) => m.from === a).length]).toEqual([5, 1])
+    expect(s().setLotoTickets(g, a, 3)).toEqual(['Mỗi người mua 0–2 tờ một ván.'])
+    expect(s().setLotoTickets(g, b, 0)).toEqual([])
+    expect(paid(b)).toBe(0)
+    s().lockBets(g)
+    expect(s().setLotoTickets(g, a, 2)).toEqual(['Đã chốt — không đổi số tờ được nữa.'])
+  })
 })
 
 describe('appStore — Tự do', () => {

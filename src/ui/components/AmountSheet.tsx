@@ -16,6 +16,7 @@ export function AmountSheet({
   options,
   mode = 'pay',
   unit,
+  current,
   onSwap,
   swapLabel,
   extra,
@@ -30,6 +31,8 @@ export function AmountSheet({
   mode?: 'pay' | 'request' | 'bet' | 'buy'
   /** Chọn theo đơn vị (vd "tờ" giá 5 kẹo): nút ghi số tờ, số kẹo = số tờ × giá. */
   unit?: { name: string; price: number }
+  /** Chỉnh lại (Lô tô đã mua, chưa chốt): số đơn vị đang có — nút tương ứng được đánh dấu, có nút 0 = bỏ. */
+  current?: number
   /** Đổi chiều (Đưa ⇄ Đòi) — hiện khi bấm vào một người. */
   onSwap?: () => void
   /** Chữ trên nút đổi chiều (mặc định "Đòi X thay vì trả" / "Trả X thay vì đòi"). */
@@ -43,7 +46,7 @@ export function AmountSheet({
   const per = unit?.price ?? 1
   const mine = from.id === me
   /** Tên hành động theo đúng việc: trả người khác / cược vào pot / trao pot. */
-  const verb = mode === 'pay' ? (from.id === POT ? 'Trao' : to.id === POT ? 'Cược' : 'Trả') : VERB[mode]
+  const verb = current !== undefined ? 'Đổi' : mode === 'pay' ? (from.id === POT ? 'Trao' : to.id === POT ? 'Cược' : 'Trả') : VERB[mode]
   /** "A " trước động từ khi ghi hộ người khác. */
   const who = mine ? null : (
     <>
@@ -65,7 +68,17 @@ export function AmountSheet({
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70 backdrop-blur-sm" onClick={onClose} />
       <div className="pop relative w-full max-w-lg rounded-t-[2rem] border-t border-line bg-plum px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
-        {mode === 'buy' && unit ? (
+        {mode === 'buy' && unit && current !== undefined ? (
+          <div className="text-center">
+            <div className="font-display text-xl font-bold">
+              {who}
+              {mine ? 'Đổi' : 'đổi'} số {unit.name}?
+            </div>
+            <div className="text-xs text-muted">
+              Đang mua <span className="font-semibold text-lemon">{current} {unit.name}</span> — chọn lại, 0 = bỏ mua. App tự trả lại / lấy thêm kẹo.
+            </div>
+          </div>
+        ) : mode === 'buy' && unit ? (
           <div className="text-center">
             <div className="font-display text-xl font-bold">
               {who}
@@ -123,16 +136,32 @@ export function AmountSheet({
             <button
               key={o.amount}
               type="button"
-              aria-label={unit ? `${verb} ${o.amount / per} ${unit.name} (${o.amount} kẹo)` : `${verb} ${o.amount} kẹo`}
+              aria-label={
+                unit
+                  ? current !== undefined
+                    ? o.amount
+                      ? `Đổi thành ${o.amount / per} ${unit.name} (${o.amount} kẹo)`
+                      : 'Bỏ mua'
+                    : `${verb} ${o.amount / per} ${unit.name} (${o.amount} kẹo)`
+                  : `${verb} ${o.amount} kẹo`
+              }
+              aria-current={current !== undefined && o.amount / per === current ? 'true' : undefined}
               onClick={() => onPick(o)}
-              className="grid min-h-24 place-items-center rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
+              className={`grid min-h-24 place-items-center rounded-3xl border bg-night/50 active:scale-95 active:bg-plum-2 ${
+                current !== undefined && o.amount / per === current ? 'border-lemon ring-2 ring-lemon/40' : 'border-line'
+              }`}
             >
               {unit ? (
                 <span className="flex flex-col items-center gap-1">
                   <span className="font-display text-2xl font-extrabold">
                     {o.amount / per} <span className="text-base font-bold text-muted">{unit.name}</span>
                   </span>
-                  <span className="candy num text-sm">{o.amount}</span>
+                  {o.amount ? (
+                    <span className="candy num text-sm">{o.amount}</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-berry">Bỏ mua</span>
+                  )}
+                  {current !== undefined && o.amount / per === current && <span className="text-[10px] font-bold text-lemon">đang mua</span>}
                 </span>
               ) : (
                 <span className="flex flex-col items-center gap-1">
