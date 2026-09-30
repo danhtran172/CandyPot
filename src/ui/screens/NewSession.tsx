@@ -92,11 +92,6 @@ export function NewSession() {
           </button>
         ))}
       </div>
-      {mode === 'multi' && (
-        <p className="mb-3 rounded-2xl border border-sky/40 bg-sky/10 px-3 py-2 text-xs">
-          Bàn sẽ có <b>mã 5 số</b> (và mã QR) để mọi người join từ điện thoại của mình — ai cũng tự trả / đòi kẹo được.
-        </p>
-      )}
 
       <Card>
         <label className="block text-sm text-muted" htmlFor="session-name">
