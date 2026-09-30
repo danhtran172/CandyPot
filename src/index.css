@@ -140,3 +140,61 @@ body {
   bottom: var(--kb, 0px);
   transition: bottom 0.15s ease-out;
 }
+
+/* Xào bài (Tiến lên bài trong app): mỗi lá dùng --x (nửa trái/phải), --y0 (chồng lúc đầu), --y1 (chồng lúc cuối), --r */
+@media (prefers-reduced-motion: no-preference) {
+  /* Đan bài (riffle): chia đôi sang hai bên, rồi hai nửa đan xen rơi vào giữa */
+  .shuffle-riffle {
+    animation: shuffle-riffle 1.7s cubic-bezier(0.45, 0, 0.3, 1) both;
+  }
+  @keyframes shuffle-riffle {
+    0% {
+      transform: translate(0, var(--y0)) rotate(0);
+    }
+    28%,
+    45% {
+      transform: translate(var(--x), var(--y0)) rotate(var(--r));
+    }
+    75%,
+    100% {
+      transform: translate(0, var(--y1)) rotate(0);
+    }
+  }
+  /* Bridge: chia đôi, uốn cong hai nửa thành vòm, bài chảy xuống giữa rồi vuốt gọn */
+  .shuffle-bridge {
+    animation: shuffle-bridge 1.9s cubic-bezier(0.45, 0, 0.3, 1) both;
+  }
+  @keyframes shuffle-bridge {
+    0% {
+      transform: translate(0, var(--y0)) rotate(0);
+    }
+    22% {
+      transform: translate(var(--x), var(--y0)) rotate(0);
+    }
+    42% {
+      transform: translate(calc(var(--x) * 0.55), calc(var(--y0) - 22px)) rotate(var(--r));
+    }
+    62% {
+      transform: translate(calc(var(--x) * 0.15), calc(var(--y1) - 14px)) rotate(calc(var(--r) * 0.4));
+    }
+    80%,
+    100% {
+      transform: translate(0, var(--y1)) rotate(0);
+    }
+  }
+  .shuffle-fade {
+    animation: shuffle-fade 2.2s ease both;
+  }
+  @keyframes shuffle-fade {
+    0% {
+      opacity: 0;
+    }
+    8%,
+    85% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}

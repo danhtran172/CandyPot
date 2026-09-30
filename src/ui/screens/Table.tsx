@@ -29,6 +29,8 @@ import { PriceSheet } from '../components/PriceSheet'
 import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
+import { ShuffleOverlay } from '../components/ShuffleOverlay'
+import { shuffleKindOf } from '../shuffle'
 import { placeOf, type TienlenCards } from '../../core/games/tienlenPlay'
 import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
@@ -533,6 +535,17 @@ export function Table() {
 
   const roundDelta = round ? movesNet(round.moves) : {}
   const pops = useCandyPops(session)
+  // Ván bài trong app vừa chia (mới mở vài giây) → hiệu ứng xào bài một lần cho ván đó
+  const [shuffledId, setShuffledId] = useState<ID | null>(null)
+  // Ván đã có sẵn lúc mở màn này (vd tải lại trang giữa ván) thì không xào lại
+  const [mountRoundId] = useState(() => round?.id)
+  const fresh = !!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId
+  const shuffling = fresh && round && shuffledId !== round.id ? round.id : null
+  useEffect(() => {
+    if (!shuffling) return
+    const t = window.setTimeout(() => setShuffledId(shuffling), 2200)
+    return () => window.clearTimeout(t)
+  }, [shuffling])
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
   // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
@@ -1030,6 +1043,8 @@ export function Table() {
           onClose={() => setGuidePick(false)}
         />
       )}
+
+      {shuffling && <ShuffleOverlay kind={shuffleKindOf(shuffling)} />}
 
       {gameMenu && (
         <div role="dialog" aria-modal="true" aria-label="Đổi game" className="fixed inset-0 z-50 flex items-center justify-center px-6">
