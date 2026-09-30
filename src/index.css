@@ -18,6 +18,8 @@
   --color-berry: #ff5c7a;
   --color-grape: #a974f0;
   --color-sky: #5cc8ff;
+  /* Lựa chọn nên dùng (option đầu tiên bên trái) */
+  --color-recommend: #84c5b1;
 
   --font-display: 'Baloo 2', system-ui, sans-serif;
   --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { RecommendBadge } from './RecommendBadge'
 import { ALL_IN_MULTIPLIER } from '../../core/games/pokerHand'
 import type { Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
@@ -144,14 +145,15 @@ export function PokerRaiseSheet({
           </div>
         </div>
         <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(1, options.length)}, minmax(0, 1fr))` }}>
-          {options.map((to) => (
+          {options.map((to, i) => (
             <button
               key={to}
               type="button"
               aria-label={`Tố lên ${to}`}
               onClick={() => onPick(to)}
-              className="flex min-h-24 flex-col items-center justify-center gap-1 rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
+              className="relative flex min-h-24 flex-col items-center justify-center gap-1 rounded-3xl border border-line bg-night/50 active:scale-95 active:bg-plum-2"
             >
+              {i === 0 && <RecommendBadge />}
               <span className="candy num text-2xl">{to}</span>
               <span className="text-[11px] text-muted">bỏ thêm {to - streetBet}</span>
             </button>

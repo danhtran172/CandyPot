@@ -17,9 +17,14 @@ export function xidachLimits(game: Game): { min: number; max: number } {
   return game.xidachLimits ?? { min: 1, max: XIDACH_MAX_MULTIPLIER }
 }
 
-/** Gợi ý đặt cược: tối thiểu, cược cũ (nếu trong khoảng), tối đa. */
+/**
+ * Gợi ý đặt cược. Đầu tiên là mức nên chọn: cược cũ (nếu trong khoảng), không có thì mức giữa;
+ * sau đó các mức tối thiểu / giữa / tối đa còn lại, tăng dần.
+ */
 export function xidachBetOptions(game: Game, previous?: number): number[] {
   const { min, max } = xidachLimits(game)
-  const mid = previous && previous > min && previous < max ? previous : Math.round((min + max) / 2)
-  return [...new Set([min, mid, max])].sort((a, b) => a - b)
+  const mid = Math.round((min + max) / 2)
+  const best = previous && previous >= min && previous <= max ? previous : mid
+  const rest = [...new Set([min, mid, max])].filter((x) => x !== best).sort((a, b) => a - b)
+  return [best, ...rest]
 }

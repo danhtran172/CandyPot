@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { POT, type ID, type Option, type Player } from '../../core/types'
 import { Button, Stepper, Who } from './kit'
 import { RuleIcon, type RuleIconName } from './RuleIcons'
+import { RecommendBadge } from './RecommendBadge'
 
 /** Nhãn gợi ý (Nhất / Nhì / Heo…) → biểu tượng hiện dưới số. */
 const OPTION_ICON: Record<string, RuleIconName> = { Nhất: 'first', Nhì: 'second', 'Heo đỏ': 'pigRed', 'Heo đen': 'pigBlack' }
@@ -132,7 +133,8 @@ export function AmountSheet({
         )}
 
         <div className="mt-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(options.length, 4)}, minmax(0, 1fr))` }}>
-          {options.slice(0, 4).map((o) => (
+          {/* Lựa chọn đầu tiên = nên chọn (👍) — nơi gọi xếp mức hợp lý nhất lên đầu */}
+          {options.slice(0, 4).map((o, i) => (
             <button
               key={o.amount}
               type="button"
@@ -147,10 +149,11 @@ export function AmountSheet({
               }
               aria-current={current !== undefined && o.amount / per === current ? 'true' : undefined}
               onClick={() => onPick(o)}
-              className={`grid min-h-24 place-items-center rounded-3xl border bg-night/50 active:scale-95 active:bg-plum-2 ${
+              className={`relative grid min-h-24 place-items-center rounded-3xl border bg-night/50 active:scale-95 active:bg-plum-2 ${
                 current !== undefined && o.amount / per === current ? 'border-lemon ring-2 ring-lemon/40' : 'border-line'
               }`}
             >
+              {i === 0 && <RecommendBadge />}
               {unit ? (
                 <span className="flex flex-col items-center gap-1">
                   <span className="font-display text-2xl font-extrabold">

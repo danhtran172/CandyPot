@@ -8,6 +8,7 @@ import { readProfile, saveProfile } from '../profile'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 import hostIcon from '../../assets/rules/host.webp'
 import groupIcon from '../../assets/rules/group.webp'
+import { RecommendBadge } from '../components/RecommendBadge'
 
 const MODES = [
   { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.', beta: false },
@@ -63,7 +64,7 @@ export function NewSession() {
       <TopBar title="Tạo bàn" back="/" />
 
       <div className="mb-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Kiểu bàn">
-        {MODES.map((m) => (
+        {MODES.map((m, i) => (
           <button
             key={m.value}
             type="button"
@@ -74,10 +75,12 @@ export function NewSession() {
               // Bàn nhiều người cần ít nhất ô tên host
               if (!players.length) setPlayers([{ name: '', emoji: EMOJIS[0] }])
             }}
-            className={`flex flex-col items-start gap-1 rounded-3xl border-2 p-3 text-left transition ${
+            className={`relative flex flex-col items-start gap-1 rounded-3xl border-2 p-3 text-left transition ${
               mode === m.value ? 'border-lemon bg-lemon/10' : 'border-line bg-plum'
             }`}
           >
+            {/* Kiểu đầu tiên (Nhiều người join) = nên chọn */}
+            {i === 0 && <RecommendBadge />}
             <img src={m.icon} alt="" draggable={false} className="size-9 max-w-none" />
             <span className="font-display leading-tight font-bold">
               {m.title}

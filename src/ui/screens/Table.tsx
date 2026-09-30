@@ -961,8 +961,7 @@ export function Table() {
           me={me}
           options={
             pending.edit
-              ? // Chỉnh lại: 0 (bỏ mua) … tối đa
-                Array.from({ length: lotoMax(game) + 1 }, (_, n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
+              ? lotoEditOptions(lotoBought(pending.from), lotoMax(game)).map((n) => ({ amount: n * lotoPrice(game), label: `${n} tờ` }))
               : isLoto && pending.to === POT
               ? [1, 2]
                   .filter((n) => n <= lotoLeft(pending.from))
@@ -1096,3 +1095,12 @@ function TableCenter({
   return <span className="text-xs text-muted">Ván {roundNumber(game, round)}</span>
 }
 
+/**
+ * Lô tô, chỉnh lại số tờ: đầu tiên là mức nên chọn — mua thêm 1 tờ (đã đủ tối đa thì bớt 1), rồi các mức còn lại
+ * tăng dần, "0 = bỏ mua" cuối cùng.
+ */
+function lotoEditOptions(current: number, max: number): number[] {
+  const best = current < max ? current + 1 : Math.max(0, current - 1)
+  const rest = Array.from({ length: max }, (_, i) => i + 1).filter((n) => n !== best)
+  return [...new Set([best, ...rest, 0])]
+}

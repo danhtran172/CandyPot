@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { eligibleShare } from './games/poker'
 import { suggestOptions, tienlenBets } from './suggest'
+import { xidachBetOptions } from './games/xidach'
 import { POT, type Game, type Move, type Round } from './types'
 
 let n = 0
@@ -99,5 +100,17 @@ describe('Tiến lên có heo', () => {
       [6, 'Heo đen'],
       [10, 'Heo đỏ'],
     ])
+  })
+})
+
+describe('xidachBetOptions — mức nên chọn đứng đầu', () => {
+  const xd = { ...game('xidach'), xidachLimits: { min: 1, max: 5 } }
+  it('có cược cũ thì cược cũ đầu tiên, còn lại tăng dần', () => {
+    expect(xidachBetOptions(xd, 2)).toEqual([2, 1, 3, 5])
+    expect(xidachBetOptions(xd, 5)).toEqual([5, 1, 3])
+  })
+  it('chưa có cược cũ (hoặc ngoài khoảng) thì mức giữa đầu tiên', () => {
+    expect(xidachBetOptions(xd)).toEqual([3, 1, 5])
+    expect(xidachBetOptions(xd, 9)).toEqual([3, 1, 5])
   })
 })
