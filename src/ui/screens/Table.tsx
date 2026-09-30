@@ -148,10 +148,9 @@ export function Table() {
     if (errors.length) return flash(errors[0], true)
     const after = openRound(actions().session!, game.id)?.poker
     if (!after || after.street === hand.street) return
-    if (after.street === 'done') {
-      const won = openRound(actions().session!, game.id)?.moves.filter((m) => m.from === POT)
-      flash(`${won?.map((m) => players[m.to]?.name).join(', ')} ăn pot! Bấm Tay mới để chơi tiếp.`)
-    } else if (after.street === 'showdown') flash(`Showdown — ${hostName} trao pot cho người thắng.`)
+    // Xong tay (mọi người bỏ bài) → pot tự trao; cả bàn đã có thông báo "🏆 … ăn pot" (PotAwardNotice)
+    if (after.street === 'done') return
+    if (after.street === 'showdown') flash(`Showdown — ${hostName} trao pot cho người thắng.`)
     else flash(`Sang ${STREET_LABEL[after.street]}.`)
   }
 
@@ -165,18 +164,12 @@ export function Table() {
   const awardBest = (winners: ID[]) => {
     setPicker(null)
     if (!game || !round) return
-    const before = round.moves.length
     const errors = actions().pokerAwardBest(game.id, winners)
     if (errors.length) return flash(errors[0], true)
+    // Ai ăn bao nhiêu: cả bàn đã có thông báo "🏆 … ăn pot" (PotAwardNotice) — không báo trùng ở đây
     const after = openRound(actions().session!, game.id)
-    const got: Record<ID, number> = {}
-    for (const m of after?.moves.slice(before) ?? []) got[m.to] = (got[m.to] ?? 0) + m.amount
-    const text = Object.entries(got)
-      .map(([id, n]) => `${players[id]?.name} ăn ${n}`)
-      .join(', ')
-    if (after?.poker?.street === 'done') return flash(`${text} kẹo — bấm Tay mới.`)
+    if (after?.poker?.street === 'done') return
     // Còn pot người thắng không được ăn (all-in thiếu) → hỏi tiếp người mạnh nhất trong số còn lại
-    flash(`${text} kẹo. Còn pot phụ — chọn người mạnh nhất trong số còn lại.`)
     setPicker('award')
   }
 
@@ -219,9 +212,9 @@ export function Table() {
     const errors = actions().addMove(game.id, POT, to, pot, 'Ăn pot')
     if (errors.length) return flash(errors[0], true)
     flyCandy(POT, to, pot)
+    // Báo "🏆 … ăn pot" do PotAwardNotice lo (cả bàn) — ở đây chỉ báo lỗi nếu có
     const closing = actions().closeRound(game.id)
     if (closing.length) flash(closing[0], true)
-    else flash(`${name} ăn ${pot} kẹo! Bấm Ván mới để chơi tiếp.`)
   }
 
   const onTransfer = (from: ID, target: ID) => {
@@ -339,10 +332,8 @@ export function Table() {
         flyCandy(pending.from, pending.to, o.amount)
         // Tự do: trao hết pot thì ván tự xong
         const now = isFree && pending.from === POT ? openRound(actions().session!, game.id) : undefined
-        if (now && potOf(now) === 0) {
-          actions().closeRound(game.id)
-          flash(`${players[pending.to]?.name} ăn ${o.amount} kẹo — xong ván, bấm 💰 Pot để cược ván mới.`)
-        }
+        // (thông báo "🏆 … ăn pot" do PotAwardNotice lo cho cả bàn)
+        if (now && potOf(now) === 0) actions().closeRound(game.id)
       }
     }
     setPending(null)

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Game, ID, Move, Round, Session } from '../../core/types'
+import { POT, type Game, type ID, type Move, type Round, type Session } from '../../core/types'
 import { actions } from '../../store'
 import { playerMap, roundNumber, signed, timeOf } from '../format'
 import { ask } from '../dialog'
@@ -124,7 +124,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                         </>
                       ) : (
                         <>
-                          <span className="text-muted">{d > 0 ? 'Nhận từ' : 'Trả cho'}</span>
+                          <span className="text-muted">{d > 0 ? 'Nhận từ' : m.to === POT ? 'Cược vào' : 'Trả cho'}</span>
                           <Who player={players[d > 0 ? m.from : m.to]} className="min-w-0 font-semibold text-sky" />
                           <span className={`num font-display ml-auto text-base font-extrabold ${d > 0 ? 'text-mint' : 'text-berry'}`}>
                             {signed(d)}
