@@ -71,7 +71,9 @@ export function Players() {
     const ok = await ask(`Xóa ${playerName} khỏi phòng?`, {
       icon: '🗑️',
       message: used
-        ? 'Lời/lỗ và lịch sử vẫn giữ để tính trả kẹo. Thêm lại đúng tên này để đưa người đó trở lại.'
+        ? `Lời/lỗ và lịch sử vẫn giữ để tính trả kẹo. ${
+            session.mode === 'multi' ? 'Người đó join lại với đúng tên này là trở lại.' : 'Thêm lại đúng tên này để đưa người đó trở lại.'
+          }`
         : `${playerName} chưa chơi ván nào — xóa hẳn.`,
       okLabel: 'Xóa',
       danger: true,
@@ -209,7 +211,8 @@ export function Players() {
         </ul>
       </Card>
 
-      <Card className={`mt-3 ${canHost ? '' : 'hidden'}`}>
+      {/* Bàn nhiều người: mỗi người tự join bằng mã và tự thêm tên mình — không thêm tay */}
+      <Card className={`mt-3 ${canHost && session.mode !== 'multi' ? '' : 'hidden'}`}>
         <SectionTitle>Thêm người</SectionTitle>
         <div className="flex gap-2">
           <input

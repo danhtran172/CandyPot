@@ -9,6 +9,7 @@ import { PingButton } from './PingButton'
 
 /**
  * Lịch sử trả/nhận của riêng mình trong một game: lời đòi đang chờ, các lượt mình trả/nhận.
+ * Bàn một máy (host ghi hộ cả bàn): hiện mọi lượt của cả bàn.
  * Hoàn tác: host làm ngay; người khác gửi yêu cầu để host xác nhận.
  */
 export function HistorySheet({ session, game, me, onClose }: { session: Session; game: Game; me?: ID; onClose: () => void }) {
@@ -22,7 +23,8 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
 
   const players = playerMap(session)
   const isHost = !!me && me === session.hostId
-  const involves = (m: Move) => m.from === me || m.to === me
+  const whole = session.mode !== 'multi'
+  const involves = (m: Move) => whole || m.from === me || m.to === me
   const asking = session.requests.filter((r) => r.gameId === game.id && (r.to === me || r.from === me))
   const rounds = game.rounds
     .map((r) => ({ round: r, moves: r.moves.filter(involves) }))
@@ -56,7 +58,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70 backdrop-blur-sm" onClick={onClose} />
       <div className="pop relative flex max-h-[80dvh] w-full max-w-lg flex-col rounded-t-[2rem] border-t border-line bg-plum pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
         <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-line" />
-        <h2 className="font-display px-5 text-xl font-bold">📜 Trả/nhận của bạn · {game.name}</h2>
+        <h2 className="font-display px-5 text-xl font-bold">📜 Trả/nhận {whole ? 'cả bàn' : 'của bạn'} · {game.name}</h2>
         <p className="px-5 text-xs text-muted">
           {isHost ? 'Bạn là host: bấm ' : 'Bấm '}
           <UndoIcon className="size-3.5 align-[-2px]" />
@@ -92,7 +94,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
           )}
 
           {rounds.length === 0 && asking.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted">Bạn chưa trả hay nhận kẹo nào trong game này.</p>
+            <p className="py-8 text-center text-sm text-muted">{whole ? 'Chưa ai trả kẹo trong game này.' : 'Bạn chưa trả hay nhận kẹo nào trong game này.'}</p>
           )}
 
           {rounds.map(({ round: r, moves }) => (
@@ -110,11 +112,22 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                   const waiting = pendingUndo.get(m.id)
                   return (
                     <li key={m.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2 text-sm last:border-0">
-                      <span className="text-muted">{d > 0 ? 'Nhận từ' : 'Trả cho'}</span>
-                      <Who player={players[d > 0 ? m.from : m.to]} className="min-w-0 font-semibold text-sky" />
-                      <span className={`num font-display ml-auto text-base font-extrabold ${d > 0 ? 'text-mint' : 'text-berry'}`}>
-                        {signed(d)}
-                      </span>
+                      {whole && m.from !== me && m.to !== me ? (
+                        <>
+                          <Who player={players[m.from]} className="min-w-0 font-semibold text-sky" />
+                          <span className="text-muted">→</span>
+                          <Who player={players[m.to]} className="min-w-0 font-semibold text-sky" />
+                          <span className="candy num ml-auto text-sm">{m.amount}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-muted">{d > 0 ? 'Nhận từ' : 'Trả cho'}</span>
+                          <Who player={players[d > 0 ? m.from : m.to]} className="min-w-0 font-semibold text-sky" />
+                          <span className={`num font-display ml-auto text-base font-extrabold ${d > 0 ? 'text-mint' : 'text-berry'}`}>
+                            {signed(d)}
+                          </span>
+                        </>
+                      )}
                       {waiting ? (
                         <>
                           <span className="text-[11px] whitespace-nowrap text-lemon">⏳ chờ host</span>

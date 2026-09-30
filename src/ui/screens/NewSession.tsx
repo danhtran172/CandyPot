@@ -126,7 +126,7 @@ export function NewSession() {
               onChange={(e) => update(0, { name: e.target.value })}
             />
           </div>
-          <p className="mt-2 text-xs text-muted">Người khác tự join bằng mã 5 số. Trong lúc chờ, host vẫn thêm người được ở màn Người chơi.</p>
+          <p className="mt-2 text-xs text-muted">Người khác tự join bằng mã 5 số (hoặc quét QR) và tự thêm tên mình.</p>
         </Card>
       ) : (
         <Card className="mt-3">

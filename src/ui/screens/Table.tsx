@@ -38,7 +38,7 @@ import { ask } from '../dialog'
 import { Button, Card, TopBar } from '../components/kit'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
-import { guideSeen, guideSteps, markGuideSeen, type GuideRole } from '../guides'
+import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
 import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
 import { hostTasks, incomingAsks } from '../tasks'
@@ -56,7 +56,7 @@ export function Table() {
   const [editLimits, setEditLimits] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [guidePick, setGuidePick] = useState(false)
-  const [guide, setGuide] = useState<{ game: GameType; role: GuideRole } | null>(null)
+  const [guide, setGuide] = useState<GuideStep[] | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
   // ?g= (link cũ) → game đang chơi đã lưu → game mới nhất
@@ -76,6 +76,8 @@ export function Table() {
   const onlineIds = useOnlineIds()
   /** Điều khiển ván (mở / chốt / hủy / đổi game…): bàn một máy thì máy này; bàn nhiều người thì chỉ host. */
   const canHost = canHostOf(session, me)
+  /** Bàn một máy: host ghi hộ cả bàn (kéo thay mọi người) — không có đòi kẹo. */
+  const solo = session.mode !== 'multi'
   const base = `/s/${session.id}`
 
   const flash = (text: string, bad = false) => {
@@ -256,8 +258,8 @@ export function Table() {
     setPending({ from, to })
   }
 
-  /** Kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). */
-  const isRequest = (p: { from: ID; to: ID }) => p.to === me && p.from !== me && p.from !== POT
+  /** Bàn nhiều người: kéo hũ kẹo của người khác về chỗ mình = đòi kẹo (chờ người đó bấm OK). Bàn một máy thì ghi luôn. */
+  const isRequest = (p: { from: ID; to: ID }) => !solo && p.to === me && p.from !== me && p.from !== POT
 
   /**
    * Bấm thay cho kéo — người làm luôn là mình: bấm người khác = đưa kẹo (đổi sang đòi được),
@@ -416,17 +418,23 @@ export function Table() {
       </Button>
     ) : null
 
-  // Lần đầu làm host / lần đầu chơi một game trên máy này → tự mở hướng dẫn
+  // Lần đầu gặp một tính năng (trên máy này) → tự hướng dẫn đúng những bước chưa xem bao giờ, đang có trên màn hình
   const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
+  // Đang mở popup → chưa hướng dẫn (đóng popup xong mới hiện, không đè lên)
+  const busy = !!(pending || picker || pokerSheet || showLog || editBets || editPrice || editLimits || showRules || guidePick)
   useEffect(() => {
-    if (!game || guide || !me) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
-    if (guideSeen(game.type, role)) return
-    const t = window.setTimeout(() => setGuide({ game: game.type, role }), 400)
+    if (!game || guide || !me || busy) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
+    const t = window.setTimeout(() => {
+      // Popup khác (hộp xác nhận…) → để lúc khác
+      if (document.querySelector('[role=dialog], [role=alertdialog]')) return
+      const fresh = unseenSteps(guideSteps(game.type, role, solo)).filter(onScreen)
+      if (fresh.length) setGuide(fresh)
+    }, 600)
     return () => window.clearTimeout(t)
-  }, [game?.type, role, guide, me]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [game?.type, role, guide, me, round?.id, round?.phase, busy]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const closeGuide = () => {
-    if (guide) markGuideSeen(guide.game, guide.role)
+  const closeGuide = (shown: GuideStep[]) => {
+    markStepsSeen(shown)
     setGuide(null)
   }
 
@@ -486,7 +494,13 @@ export function Table() {
             <button
               type="button"
               aria-label="Hướng dẫn"
-              onClick={() => (game ? setGuidePick(true) : flash('Chọn một game trước đã.', true))}
+              onClick={() =>
+                !game
+                  ? flash('Chọn một game trước đã.', true)
+                  : solo
+                    ? setGuide(guideSteps(game.type, 'host', true))
+                    : setGuidePick(true)
+              }
               className="grid size-8 place-items-center rounded-full bg-plum-2 text-sm font-bold text-lemon"
             >
               ?
@@ -606,10 +620,13 @@ export function Table() {
               </button>
             }
             cornerRight={
-              <>
-                <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
-                <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
-              </>
+              // Bàn một máy: không ai xin hoàn tác / đòi kẹo qua máy khác
+              solo ? undefined : (
+                <>
+                  <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
+                  <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
+                </>
+              )
             }
             onTransfer={onTransfer}
             onTap={onTap}
@@ -822,13 +839,13 @@ export function Table() {
           ]}
           onPick={(id) => {
             setGuidePick(false)
-            setGuide({ game: game.type, role: id as GuideRole })
+            setGuide(guideSteps(game.type, id as GuideRole))
           }}
           onClose={() => setGuidePick(false)}
         />
       )}
 
-      {guide && <GuideTour key={`${guide.game}:${guide.role}`} steps={guideSteps(guide.game, guide.role)} onClose={closeGuide} />}
+      {guide && <GuideTour key={guide.map((s) => s.id).join()} steps={guide} onClose={closeGuide} />}
 
       {showRules && game && (
         <RulesSheet game={game} isHost={me === session.hostId} onEdit={openSettings} onClose={() => setShowRules(false)} />
@@ -945,6 +962,7 @@ export function Table() {
               ? () => setPending({ from: pending.to, to: pending.from, tapped: true })
               : undefined
           }
+          swapLabel={solo ? `${players[pending.to]?.name} trả ${players[pending.from]?.name} thay vì ngược lại` : undefined}
           extra={
             game.type === 'poker' && pending.to === POT && round && potOf(round) > 0 ? (
               <button

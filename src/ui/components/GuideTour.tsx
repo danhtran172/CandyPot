@@ -1,21 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import dragCandy from '../../assets/drag-candy.webp'
-import type { GuideStep } from '../guides'
+import { elementsOf, onScreen, type GuideStep } from '../guides'
 import { Button } from './kit'
 
 const PAD = 8
-
-const byGuide = (name: string | undefined) => (name ? document.querySelector<HTMLElement>(`[data-guide="${name}"]`) : null)
-
-/** Các phần tử một bước cần chỉ vào (phần tử chính, hoặc điểm đầu / cuối của bàn tay mẫu). */
-function elementsOf(step: GuideStep): (HTMLElement | null)[] {
-  if (step.demo?.kind === 'tap') return [byGuide(step.demo.at)]
-  if (step.demo?.kind === 'drag') return [byGuide(step.demo.from), byGuide(step.demo.to)]
-  return step.target ? [byGuide(step.target)] : []
-}
-
-/** Bước hiện được: thẻ giữa màn hình, hoặc đủ phần tử trên màn hình. */
-const available = (step: GuideStep) => elementsOf(step).every(Boolean)
 
 /** Khung bao các phần tử (để khoét sáng). */
 function unionRect(els: HTMLElement[]) {
@@ -37,9 +25,15 @@ const center = (el: HTMLElement) => {
  * Hướng dẫn trên giao diện: làm tối màn hình, khoét sáng phần tử đang nói tới và hiện thẻ giải thích cạnh nó.
  * Bước có `demo` thì có bàn tay mẫu làm thử ngay trên bàn (bấm, hoặc kéo gói kẹo), lặp lại liên tục.
  */
-export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: () => void }) {
+export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: (shown: GuideStep[]) => void }) {
   // Chỉ giữ các bước có đủ phần tử trên màn hình
-  const [list] = useState(() => steps.filter(available))
+  const [list] = useState(() => steps.filter(onScreen))
+  const close = () => onClose(list)
+
+  // Không bước nào có trên màn hình → đóng luôn
+  useEffect(() => {
+    if (!list.length) onClose([])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [i, setI] = useState(0)
   const [box, setBox] = useState<ReturnType<typeof unionRect>>(null)
   const [points, setPoints] = useState<{ x: number; y: number }[]>([])
@@ -75,13 +69,13 @@ export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: () 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') close()
       if (e.key === 'ArrowRight') setI((n) => Math.min(n + 1, list.length - 1))
       if (e.key === 'ArrowLeft') setI((n) => Math.max(n - 1, 0))
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [list.length, onClose])
+  }, [list.length, onClose]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!step) return null
   const last = i === list.length - 1
@@ -128,7 +122,7 @@ export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: () 
           </div>
           <p className="mt-1 text-sm leading-snug">{step.text}</p>
           <div className="mt-3 flex items-center gap-2">
-            <button type="button" className="text-xs font-semibold text-muted" onClick={onClose}>
+            <button type="button" className="text-xs font-semibold text-muted" onClick={close}>
               Bỏ qua
             </button>
             <span className="flex-1" />
@@ -137,7 +131,7 @@ export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: () 
                 Trước
               </Button>
             )}
-            <Button variant="primary" className="px-4 py-1.5 text-sm" onClick={() => (last ? onClose() : setI(i + 1))}>
+            <Button variant="primary" className="px-4 py-1.5 text-sm" onClick={() => (last ? close() : setI(i + 1))}>
               {last ? 'Xong' : 'Tiếp'}
             </Button>
           </div>

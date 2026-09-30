@@ -17,6 +17,7 @@ export function AmountSheet({
   mode = 'pay',
   unit,
   onSwap,
+  swapLabel,
   extra,
   onPick,
   onClose,
@@ -31,6 +32,8 @@ export function AmountSheet({
   unit?: { name: string; price: number }
   /** Đổi chiều (Đưa ⇄ Đòi) — hiện khi bấm vào một người. */
   onSwap?: () => void
+  /** Chữ trên nút đổi chiều (mặc định "Đòi X thay vì trả" / "Trả X thay vì đòi"). */
+  swapLabel?: string
   /** Nút phụ dưới cùng (vd "Trao pot…"). */
   extra?: ReactNode
   options: { amount: number; label: string }[]
@@ -110,7 +113,7 @@ export function AmountSheet({
         {onSwap && (mode === 'pay' || mode === 'request') && (
           <div className="mt-2 flex justify-center">
             <button type="button" onClick={onSwap} className="rounded-full bg-night/60 px-3 py-1 text-xs font-semibold text-sky">
-              ⇄ {mode === 'pay' ? `Đòi ${to.name} thay vì trả` : `Trả ${from.name} thay vì đòi`}
+              ⇄ {swapLabel ?? (mode === 'pay' ? `Đòi ${to.name} thay vì trả` : `Trả ${from.name} thay vì đòi`)}
             </button>
           </div>
         )}
