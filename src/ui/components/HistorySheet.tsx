@@ -167,7 +167,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                           <Who player={players[m.from]} className="min-w-0 font-semibold text-sky" />
                           <span className="text-muted">→</span>
                           <Who player={players[m.to]} className="min-w-0 font-semibold text-sky" />
-                          <span className="candy num ml-auto text-sm">{m.amount}</span>
+                          <span className="num font-display ml-auto text-base font-extrabold text-lemon">{m.amount}</span>
                         </>
                       ) : (
                         <>
