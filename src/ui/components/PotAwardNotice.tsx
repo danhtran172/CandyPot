@@ -5,12 +5,15 @@ import { GameIcon } from './GameIcon'
 
 type Award = { key: string; to: ID; amount: number; gameId: ID }
 
-/** Mọi lượt kẹo đi ra từ Pot (trao pot) của bàn, gộp theo game + người nhận trong cùng một lần cập nhật. */
+/** Mọi lượt kẹo đi ra từ Pot (trao pot) của bàn. Khóa gồm cả người nhận → host trao lại cho người khác cũng được báo. */
 function potAwards(session: Session): Map<string, Award> {
   const out = new Map<string, Award>()
   for (const g of session.games)
     for (const r of g.rounds)
-      for (const m of r.moves) if (m.from === POT) out.set(m.id, { key: m.id, to: m.to, amount: m.amount, gameId: g.id })
+      for (const m of r.moves) {
+        const key = `${m.id}:${m.to}`
+        if (m.from === POT) out.set(key, { key, to: m.to, amount: m.amount, gameId: g.id })
+      }
   return out
 }
 

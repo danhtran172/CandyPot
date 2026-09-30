@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { netOf } from '../core/ledger'
-import { openRound } from '../core/round'
+import { openRound, potOf } from '../core/round'
 import { POT } from '../core/types'
 import { LocalRepo, MemoryKV } from '../storage/LocalRepo'
 import { createAppStore, pingWait, type AppStore } from './appStore'
@@ -342,7 +342,7 @@ describe('appStore — hoàn tác cần host', () => {
     expect(session().games[0].rounds).toEqual([])
   })
 
-  it('không hoàn tác được lượt pot làm lệch ván Poker đã kết thúc', () => {
+  it('Poker đã kết thúc: hoàn tác lượt ăn pot → trao lại cho người khác, pot không lệch', () => {
     const g = s().addGame('poker')
     s().quickOpen(g)
     s().pokerAct(g, a, { type: 'fold' })
@@ -350,7 +350,12 @@ describe('appStore — hoàn tác cần host', () => {
     s().closeRound(g)
     const r = session().games[0].rounds[0]
     const win = r.moves.find((m) => m.from === POT)!
-    expect(s().undoMove(g, r.id, win.id)[0]).toMatch(/Không hoàn tác được/)
+    const other = win.to === a ? b : a
+    expect(s().undoMove(g, r.id, win.id)).toEqual([])
+    expect(s().reassignAward(other)).toEqual([])
+    const after = session().games[0].rounds[0]
+    expect(after.moves.find((m) => m.id === win.id)!.to).toBe(other)
+    expect(Object.values(netOf(session())).reduce((x, y) => x + y, 0)).toBe(0)
   })
 })
 
@@ -444,6 +449,43 @@ describe('appStore — Lô tô', () => {
     expect(paid(b)).toBe(0)
     s().lockBets(g)
     expect(s().setLotoTickets(g, a, 2)).toEqual(['Đã chốt — không đổi số tờ được nữa.'])
+  })
+})
+
+describe('appStore — hoàn tác trao pot (pot không bao giờ âm)', () => {
+  it('ván đã xong: hoàn tác lượt trao pot → popup trao lại (ván không mở lại); chọn người khác thì tính lại ván', () => {
+    const g = s().addGame('loto')
+    s().quickOpen(g)
+    s().addMove(g, a, POT, 5, '1 tờ')
+    s().addMove(g, b, POT, 5, '1 tờ')
+    s().lockBets(g)
+    expect(s().addMove(g, POT, b, 11, 'Ăn pot')).toEqual(['Pot chỉ còn 10 kẹo.'])
+    s().addMove(g, POT, b, 10, 'Ăn pot')
+    s().closeRound(g)
+    // Ván sau đang chơi — không bị ảnh hưởng
+    s().quickOpen(g)
+    const round = session().games[0].rounds[0]
+    const award = round.moves.find((m) => m.from === POT)!
+    expect(s().undoMove(g, round.id, award.id)).toEqual([])
+    expect(s().reaward).toEqual({ gameId: g, roundId: round.id, moveId: award.id })
+    expect(session().games[0].rounds[0].status).toBe('closed')
+    expect(s().reassignAward(a)).toEqual([])
+    expect(s().reaward).toBeNull()
+    expect(netOf(session())).toEqual({ [a]: 5, [b]: -5, [c]: 0 })
+    expect(openRound(session(), g)).toBeDefined()
+  })
+
+  it('không cho hoàn tác lượt bỏ kẹo vào pot khi pot đã trao đi (pot sẽ âm)', () => {
+    const g = s().addGame('free')
+    s().quickOpen(g)
+    s().addMove(g, a, POT, 4, '')
+    s().addMove(g, b, POT, 6, '')
+    s().lockBets(g)
+    s().addMove(g, POT, b, 10, 'Cả pot')
+    const round = openRound(session(), g)!
+    const bet = round.moves.find((m) => m.from === a)!
+    expect(s().undoMove(g, round.id, bet.id)).toEqual(['Pot sẽ bị âm — hoàn tác lượt trao pot trước rồi mới hoàn tác lượt này.'])
+    expect(potOf(openRound(session(), g)!)).toBe(0)
   })
 })
 

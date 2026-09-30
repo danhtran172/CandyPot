@@ -5,7 +5,7 @@ import { seatedOf } from '../core/games/tienlen'
 import { xidachLimits } from '../core/games/xidach'
 import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
-import { closeTransfers, normalizeSession } from '../core/round'
+import { closeTransfers, normalizeSession, potOf } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
@@ -68,6 +68,10 @@ export interface AppState {
   online: boolean | null
   /** Tạm ngắt kết nối vì app ẩn / lâu không dùng (chạm để nối lại). */
   paused: boolean
+  /** Host vừa hoàn tác lượt trao pot của ván đã xong → popup chọn lại người nhận (chỉ trên máy này). */
+  reaward: { gameId: ID; roundId: ID; moveId: ID } | null
+  /** Trao lại lượt pot đang chờ (`reaward`) cho người khác; undefined = giữ nguyên, đóng popup. */
+  reassignAward(to: ID | undefined): string[]
   /** Bàn nhiều người: những người đang có máy mở bàn (chấm xanh). */
   present: ID[]
   /** Máy này đang mở bàn với vai `playerId` (undefined = chưa chọn / rời bàn). */
@@ -384,6 +388,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       error: null,
       online: null,
       paused: false,
+      reaward: null,
       present: [],
       roomKind: rooms?.kind ?? null,
 
@@ -727,6 +732,8 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!Number.isInteger(amount) || amount <= 0) return ['Số kẹo phải là số nguyên lớn hơn 0.']
         const move = { id: newId(), from, to, amount, label: label.trim() || 'Chuyển tay' }
         const open = findOpenIn(g)
+        // Không trao nhiều hơn số kẹo đang có trong pot (pot không được âm)
+        if (open && from === POT && amount > potOf(open)) return [`Pot chỉ còn ${potOf(open)} kẹo.`]
         if (open?.poker && (from === POT || to === POT)) return ['Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.']
         if (g.type === 'free' && open) {
           if (open.phase === 'betting' && from === POT) return ['Chưa chốt cược — bấm Chốt cược rồi mới trao pot.']
@@ -952,8 +959,14 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (round.status === 'open' && round.poker) return ['Poker: dùng nút ↩ trên bàn để hoàn tác thao tác cuối.']
         const moves = round.moves.filter((m) => m.id !== moveId)
         const dropPending = (s: Session) => ({ ...s, undos: s.undos.filter((u) => u.moveId !== moveId) })
+        // Bỏ lượt bỏ kẹo vào Pot mà pot đã trao đi rồi → pot âm: phải hoàn tác lượt trao pot trước
+        if (potOf({ ...round, moves }) < 0) return ['Pot sẽ bị âm — hoàn tác lượt trao pot trước rồi mới hoàn tác lượt này.']
+        const undoneAward = round.moves.find((m) => m.id === moveId)?.from === POT
         if (round.status === 'open') {
           mapRound(gameId, roundId, (r) => ({ ...r, moves }))
+        } else if (undoneAward) {
+          // Hoàn tác trao pot ở ván đã xong: không mở lại ván — hiện popup Pot để host trao lại cho đúng người
+          set({ reaward: { gameId, roundId, moveId } })
         } else if (round.kind === 'manual' && moves.length === 0) {
           mapGame(gameId, (g) => ({ ...g, rounds: g.rounds.filter((r) => r.id !== roundId) }))
         } else {
@@ -975,6 +988,22 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!s || !round?.moves.some((m) => m.id === moveId)) return ['Lượt này không còn nữa.']
         if (s.undos.some((u) => u.moveId === moveId)) return ['Lượt này đang chờ host xác nhận.']
         mutate((s) => ({ ...s, undos: [...s.undos, { id: newId(), gameId, roundId, moveId, by, at: Date.now() }] }))
+        return []
+      },
+
+      reassignAward(to) {
+        const r = get().reaward
+        set({ reaward: null })
+        if (!r || !to) return []
+        const round = game(r.gameId)?.rounds.find((x) => x.id === r.roundId)
+        const award = round?.moves.find((m) => m.id === r.moveId)
+        if (!round || !award) return ['Lượt trao pot này không còn nữa.']
+        if (award.to === to) return []
+        // Đổi người nhận của đúng lượt trao đó rồi tính lại trả kẹo của ván (pot vẫn hết như cũ)
+        mapRound(r.gameId, r.roundId, (x) => {
+          const moves = x.moves.map((m) => (m.id === r.moveId ? { ...m, to } : m))
+          return { ...x, moves, transfers: x.status === 'closed' ? closeTransfers({ ...x, moves }) : x.transfers }
+        })
         return []
       },
 

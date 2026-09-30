@@ -4,6 +4,7 @@ import { actions, useApp } from '../../store'
 import { RequestInbox } from './RequestInbox'
 import { WhoAmI } from './WhoAmI'
 import { PotAwardNotice } from './PotAwardNotice'
+import { ReawardSheet } from './ReawardSheet'
 import { readMe } from '../me'
 
 const TABS = [
@@ -84,6 +85,8 @@ export function SessionLayout() {
       <Outlet />
       {/* Trao pot cho ai → cả bàn thấy thông báo */}
       <PotAwardNotice session={session} />
+      {/* Host hoàn tác trao pot của ván đã xong → chọn lại người nhận */}
+      <ReawardSheet session={session} />
       {!/\/(host|requests)$/.test(pathname) && (
         <RequestInbox session={session} onOpenAll={(tab) => navigate(`/s/${sid}/${tab}`)} />
       )}

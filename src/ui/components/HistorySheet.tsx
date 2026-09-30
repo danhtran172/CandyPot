@@ -43,6 +43,8 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
       })
       if (!ok) return
       const errors = actions().undoMove(game.id, r.id, m.id)
+      // Hoàn tác trao pot của ván đã xong → popup chọn lại người nhận hiện lên; đóng danh sách này
+      if (!errors.length && actions().reaward) return onClose()
       setNote(errors.length ? { text: errors[0], bad: true } : { text: 'Đã hoàn tác.' })
     } else {
       const errors = actions().requestUndo(game.id, r.id, m.id, me)
