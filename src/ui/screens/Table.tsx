@@ -41,6 +41,7 @@ import { playCount, playerMap, roundNumber } from '../format'
 import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
 import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
+import { lockWarnings } from '../../core/lockCheck'
 import { ticketColors } from '../ticketColors'
 import { answeredAsks, hostTasks, incomingAsks } from '../tasks'
 
@@ -341,10 +342,38 @@ export function Table() {
 
 
   /** Xì dách / Lô tô: khóa cược (mua tờ) để chơi và trả kẹo. */
-  const lockBets = () => {
+  const lockBets = async () => {
     if (!game) return
     if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — bấm 💰 Pot để mua.', true)
     if (isFree && round && potOf(round) === 0) return flash('Chưa ai cược — bấm 💰 Pot để cược.', true)
+    // Không chặn, chỉ nhắc: người đang chơi chưa bet / mua, người đang nghỉ mà đã bet / mua
+    if (round) {
+      const { missing, resting } = lockWarnings(session, game, round)
+      if (missing.length || resting.length) {
+        const verb = isLoto ? 'mua tờ' : game.type === 'xidach' ? 'bet' : 'cược'
+        const names = (ids: ID[]) => ids.map((id) => players[id]?.name).join(', ')
+        const ok = await ask(`Chốt luôn?`, {
+          icon: '⚠️',
+          message: (
+            <>
+              {missing.length > 0 && (
+                <span className="block">
+                  Đang chơi mà chưa {verb}: <b className="text-cream">{names(missing)}</b>
+                </span>
+              )}
+              {resting.length > 0 && (
+                <span className="block">
+                  Đang nghỉ 💤 mà đã {verb}: <b className="text-cream">{names(resting)}</b>
+                </span>
+              )}
+            </>
+          ),
+          okLabel: 'Vẫn chốt',
+          cancelLabel: 'Để kiểm tra',
+        })
+        if (!ok) return
+      }
+    }
     const errors = actions().lockBets(game.id)
     if (errors.length) flash(errors[0], true)
     else
