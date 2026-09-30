@@ -11,8 +11,8 @@ import groupIcon from '../../assets/rules/group.webp'
 import { RecommendBadge } from '../components/RecommendBadge'
 
 const MODES = [
-  { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.', beta: false },
-  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.', beta: true },
+  { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
+  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
 ] as const
 
 interface Draft {
@@ -82,10 +82,7 @@ export function NewSession() {
             {/* Kiểu đầu tiên (Nhiều người join) = nên chọn */}
             {i === 0 && <RecommendBadge />}
             <img src={m.icon} alt="" draggable={false} className="size-9 max-w-none" />
-            <span className="font-display leading-tight font-bold">
-              {m.title}
-              {m.beta && <i className="ml-1 align-middle font-sans text-[0.6em] font-semibold text-sky">(Beta)</i>}
-            </span>
+            <span className="font-display leading-tight font-bold">{m.title}</span>
             <span className="text-xs text-muted">{m.hint}</span>
           </button>
         ))}

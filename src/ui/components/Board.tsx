@@ -9,9 +9,7 @@ import ticket from '../../assets/loto-ticket.webp'
 
 export interface Seat {
   player: Player
-  /** Lời/lỗ cộng dồn các ván đã chốt. */
-  total: number
-  /** Được/mất trong ván đang mở; undefined = không có ván. */
+  /** Được/mất trong ván đang mở; undefined = không có ván. Lời/lỗ cộng dồn chỉ xem ở Tổng kết / Lịch sử. */
   round?: number
   /** Dòng phụ: "Nhà cái"… */
   badge?: string
@@ -370,11 +368,11 @@ export function Board({
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
-                <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.total)}`} title="Lời/lỗ cả bàn">
-                  {signed(s.total)}
-                </span>
-                {s.round !== undefined && s.round !== 0 && (
-                  <span className={`num text-[11px] leading-tight font-bold ${toneOf(s.round)}`}>ván {signed(s.round)}</span>
+                {/* Chỉ hiện được/mất của ván đang chơi — tổng cả bàn xem ở Tổng kết / Lịch sử */}
+                {s.round !== undefined && (
+                  <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.round)}`} title="Được/mất ván này">
+                    {signed(s.round)}
+                  </span>
                 )}
                 {s.badge && (
                   <span className="mt-0.5 rounded-full bg-night/70 px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-lemon">

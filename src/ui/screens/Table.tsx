@@ -15,7 +15,6 @@ import {
   toCall,
   type PokerAction,
 } from '../../core/games/pokerHand'
-import { netOf } from '../../core/ledger'
 import { contributions, movesNet, openRound, potOf } from '../../core/round'
 import { suggestOptions } from '../../core/suggest'
 import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
@@ -74,7 +73,6 @@ export function Table() {
     if (linked && session.games.some((g) => g.id === linked)) actions().setCurrentGame(linked)
   }, [linked]) // eslint-disable-line react-hooks/exhaustive-deps
   const players = playerMap(session)
-  const net = netOf(session)
   const [me] = useMe(session)
   const onlineIds = useOnlineIds()
   /** Điều khiển ván (mở / chốt / hủy / đổi game…): bàn một máy thì máy này; bàn nhiều người thì chỉ host. */
@@ -492,7 +490,6 @@ export function Table() {
     player: p,
     isMe: p.id === me,
     online: onlineIds.has(p.id),
-    total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
     badge: hand ? pokerBadge(p.id) : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
