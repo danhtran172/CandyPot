@@ -25,7 +25,8 @@ export function History() {
   const canHost = canHostOf(session, me)
   const [tab, setTab] = useState<'rounds' | 'people'>('rounds')
   const [open, setOpen] = useState<ID | null>(null)
-  const [who, setWho] = useState<ID>(session.players[0]?.id ?? '')
+  // Theo người: mặc định xem chính mình
+  const [who, setWho] = useState<ID>(me ?? session.players[0]?.id ?? '')
   const navigate = useNavigate()
   const players = playerMap(session)
 
@@ -97,6 +98,8 @@ export function History() {
           {[...entries].reverse().map((e) => {
             const net = netOfTransfers(e.round.transfers)
             const isOpen = open === e.round.id
+            // Ván này mình được/mất bao nhiêu (không chơi mà cũng không trả/nhận thì không hiện)
+            const mine = me && (e.round.participants.includes(me) || net[me]) ? (net[me] ?? 0) : undefined
             return (
               <li key={e.round.id}>
                 <Card className="p-0">
@@ -112,14 +115,22 @@ export function History() {
                       </span>
                       <span className="text-xs text-muted">{timeOf(e.round.at)}</span>
                     </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 text-sm">
-                      {Object.entries(net)
-                        .filter(([, v]) => v !== 0)
-                        .map(([id, v]) => (
-                          <span key={id}>
-                            {players[id]?.emoji} <b className={`num ${toneOf(v)}`}>{signed(v)}</b>
-                          </span>
-                        ))}
+                    <div className="mt-1 flex items-start gap-3">
+                      <div className="flex min-w-0 flex-1 flex-wrap gap-x-3 text-sm">
+                        {Object.entries(net)
+                          .filter(([, v]) => v !== 0)
+                          .map(([id, v]) => (
+                            <span key={id} className={id === me ? 'rounded-full bg-lemon/15 px-1.5' : ''}>
+                              {players[id]?.emoji} <b className={`num ${toneOf(v)}`}>{signed(v)}</b>
+                            </span>
+                          ))}
+                      </div>
+                      {mine !== undefined && (
+                        <span className="shrink-0 rounded-2xl bg-night/50 px-2.5 py-0.5 text-right leading-tight" title="Bạn được/mất ván này">
+                          <span className="block text-[10px] font-semibold text-muted">Bạn</span>
+                          <b className={`num font-display text-lg ${toneOf(mine)}`}>{signed(mine)}</b>
+                        </span>
+                      )}
                     </div>
                   </button>
                   {isOpen && (
