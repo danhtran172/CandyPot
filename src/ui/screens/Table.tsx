@@ -21,6 +21,7 @@ import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type 
 import { actions } from '../../store'
 import { pokerSettingsOf } from '../../store/appStore'
 import { AmountSheet } from '../components/AmountSheet'
+import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
@@ -53,6 +54,7 @@ export function Table() {
   const [picker, setPicker] = useState<'dealer' | 'award' | null>(null)
   const [pokerSheet, setPokerSheet] = useState<'raise' | 'allin' | 'settings' | null>(null)
   const [showLog, setShowLog] = useState(false)
+  const [showMe, setShowMe] = useState(false)
   const [editBets, setEditBets] = useState(false)
   const [editPrice, setEditPrice] = useState(false)
   const [editLimits, setEditLimits] = useState(false)
@@ -277,17 +279,10 @@ export function Table() {
     flash(resting ? 'Bạn tạm nghỉ 💤 — không vào ván mới.' : 'Bạn chơi lại rồi!')
   }
 
-  const onTap = async (id: ID) => {
+  const onTap = (id: ID) => {
     if (!game || !me) return
-    if (id === me) {
-      // Mình đang nghỉ → hỏi chơi lại; đang chơi → xem Trả/nhận (có nút 💤 Tạm nghỉ)
-      if (players[me]?.active === false) {
-        const ok = await ask('Chơi lại?', { icon: '💤', message: 'Bạn đang tạm nghỉ — chơi lại thì vào ván mới.', okLabel: 'Chơi lại' })
-        if (ok) setResting(false)
-        return
-      }
-      return setShowLog(true)
-    }
+    // Bấm avatar của mình → 💤 tạm nghỉ / chơi lại + lời/lỗ của mình từng ván (Trả/nhận ở nút riêng)
+    if (id === me) return setShowMe(true)
     if (id === DEALER) return canHost ? setPicker('dealer') : flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
     if (id === POT) {
       if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
@@ -493,7 +488,7 @@ export function Table() {
   // Lần đầu gặp một tính năng (trên máy này) → tự hướng dẫn đúng những bước chưa xem bao giờ, đang có trên màn hình
   const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
   // Đang mở popup → chưa hướng dẫn (đóng popup xong mới hiện, không đè lên)
-  const busy = !!(pending || picker || pokerSheet || showLog || editBets || editPrice || editLimits || showRules || guidePick)
+  const busy = !!(pending || picker || pokerSheet || showLog || showMe || editBets || editPrice || editLimits || showRules || guidePick)
   useEffect(() => {
     if (!game || guide || !me || busy) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
     const t = window.setTimeout(() => {
@@ -1015,20 +1010,17 @@ export function Table() {
         />
       )}
 
-      {showLog && game && (
-        <HistorySheet
+      {showLog && game && <HistorySheet session={session} game={game} me={me} onClose={() => setShowLog(false)} />}
+
+      {showMe && me && (
+        <MeSheet
           session={session}
-          game={game}
           me={me}
-          onRest={
-            me
-              ? () => {
-                  setShowLog(false)
-                  setResting(true)
-                }
-              : undefined
-          }
-          onClose={() => setShowLog(false)}
+          onRest={(resting) => {
+            setShowMe(false)
+            setResting(resting)
+          }}
+          onClose={() => setShowMe(false)}
         />
       )}
 
