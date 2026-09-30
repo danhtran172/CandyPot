@@ -639,6 +639,8 @@ export function Table() {
             title={GAMES[game.type].label}
             betBox={game.type === 'xidach'}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
+            // Lô tô lúc mua tờ: Pot nhỏ lại 60% (ô Mua là chính), chốt rồi Pot về cỡ thường để trao
+            potScale={isLoto && round?.phase !== 'playing' ? 0.4 : undefined}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}

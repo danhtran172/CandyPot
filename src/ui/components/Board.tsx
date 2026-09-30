@@ -78,6 +78,7 @@ export function Board({
   onBetHold,
   buyBox,
   title,
+  potScale,
   hat,
   hatLocked,
   shape = 'oval',
@@ -105,6 +106,8 @@ export function Board({
   buyBox?: { price: number }
   /** Tên chế độ chơi — in khắc chìm trên mặt bàn. */
   title?: string
+  /** Thu nhỏ ô Pot theo tỉ lệ này (VD 0.4 = còn 40%). */
+  potScale?: number
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   /** Không đổi được nhà cái (không phải host) → ô 🎩 chỉ để xem. */
@@ -200,6 +203,8 @@ export function Board({
     <div
       data-drop={POT}
       data-guide="pot"
+      // Thu nhỏ (vd Lô tô lúc mua tờ — ô Mua là chính); zoom co cả chỗ chiếm trong bố cục
+      style={potScale !== undefined ? { zoom: potScale } : undefined}
       onPointerDown={start(POT)}
       role="button"
       tabIndex={0}
