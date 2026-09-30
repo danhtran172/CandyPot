@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import type { Session } from '../../core/types'
 import { playerMap, roundNumber, timeOf } from '../format'
-import { answerTask, okLabel, type Task } from '../tasks'
+import { answerTask, okLabel, requestOf, type Task } from '../tasks'
 import { Button, Who } from './kit'
 
 /** Nội dung một việc — dùng chung cho thông báo trên cùng và các màn Host / Yêu cầu. */
 export function TaskSummary({ session, task }: { session: Session; task: Task }) {
   const players = playerMap(session)
-  const gameId = task.kind === 'ask' ? task.req.gameId : task.undo.gameId
+  const gameId = requestOf(task).gameId
   const game = session.games.find((g) => g.id === gameId)
 
   if (task.kind === 'ask') {
@@ -24,6 +24,27 @@ export function TaskSummary({ session, task }: { session: Session; task: Task })
           </div>
           <div className="text-xs text-muted">
             {game?.name} · {timeOf(req.at)}
+            {!!req.pings && <span className="ml-1.5 font-bold text-lemon">🔔 nhắc lần {req.pings}</span>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (task.kind === 'judge') {
+    const { req } = task
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <span aria-hidden className="text-3xl">
+          ⚖️
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="font-display text-lg leading-tight font-bold">
+            <span className="text-sky">{players[req.to]?.name}</span> nhờ host: đòi <span className="text-sky">{players[req.from]?.name}</span>{' '}
+            <span className="candy num text-base">{req.amount}</span>
+          </div>
+          <div className="text-xs text-muted">
+            {players[req.from]?.name} đã từ chối · {game?.name} · {timeOf(req.answeredAt ?? req.at)}
             {!!req.pings && <span className="ml-1.5 font-bold text-lemon">🔔 nhắc lần {req.pings}</span>}
           </div>
         </div>

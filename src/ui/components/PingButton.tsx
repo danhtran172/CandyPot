@@ -5,7 +5,7 @@ import { pingWait } from '../../store/appStore'
 import { tell } from '../dialog'
 
 /** 🔔 Nhắc lại một yêu cầu còn chờ; vừa nhắc thì hiện số giây phải đợi. */
-export function PingButton({ req, className = '' }: { req: { id: ID; at: number; pingedAt?: number; pings?: number }; className?: string }) {
+export function PingButton({ req, className = '' }: { req: { id: ID; at: number; pingedAt?: number; answeredAt?: number; pings?: number }; className?: string }) {
   const [now, setNow] = useState(() => Date.now())
   const wait = pingWait(req, now)
 

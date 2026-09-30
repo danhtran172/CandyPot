@@ -41,7 +41,7 @@ import { playCount, playerMap, roundNumber } from '../format'
 import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
 import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
-import { hostTasks, incomingAsks } from '../tasks'
+import { answeredAsks, hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
   const session = useSession()
@@ -321,7 +321,7 @@ export function Table() {
     setPending(null)
   }
 
-  const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id)
+  const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id && !r.status)
   const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
 
@@ -624,7 +624,7 @@ export function Table() {
               solo ? undefined : (
                 <>
                   <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
-                  <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length} />
+                  <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length + answeredAsks(session, me).length} />
                 </>
               )
             }

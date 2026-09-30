@@ -25,7 +25,8 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
   const isHost = !!me && me === session.hostId
   const whole = session.mode !== 'multi'
   const involves = (m: Move) => whole || m.from === me || m.to === me
-  const asking = session.requests.filter((r) => r.gameId === game.id && (r.to === me || r.from === me))
+  // Lời đòi còn chờ người bị đòi (bị từ chối / nhờ host thì xem ở 📨 Yêu cầu)
+  const asking = session.requests.filter((r) => r.gameId === game.id && !r.status && (r.to === me || r.from === me))
   const rounds = game.rounds
     .map((r) => ({ round: r, moves: r.moves.filter(involves) }))
     .filter((x) => x.moves.length > 0)

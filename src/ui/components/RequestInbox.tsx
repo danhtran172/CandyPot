@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ID, Session } from '../../core/types'
 import { useMe } from '../me'
-import { answerTask, okLabel, tasksFor, type Task } from '../tasks'
+import { answerTask, okLabel, requestOf, tasksFor } from '../tasks'
 import { Button } from './kit'
 import { TaskSummary } from './TaskCard'
 
-/** Yêu cầu gốc của một việc (để biết lần nhắc). */
-const pingOf = (t: Task) => (t.kind === 'ask' ? t.req : t.undo)
+const pingOf = requestOf
 
 /**
  * Thông báo trên cùng cho việc cũ nhất đang chờ mình (bị đòi kẹo / host duyệt hoàn tác).

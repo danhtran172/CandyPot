@@ -25,7 +25,7 @@ export function HostTasks() {
   const mine = myUndos(session, me)
 
   const acceptAll = async () => {
-    const ok = await ask(`Hoàn tác cả ${tasks.length} lượt?`, { icon: '↩️', okLabel: 'Hoàn tác hết' })
+    const ok = await ask(`Duyệt cả ${tasks.length} việc?`, { icon: '🛎️', message: 'Hoàn tác các lượt được xin, chuyển kẹo các lời đòi được nhờ.', okLabel: 'Duyệt hết' })
     if (!ok) return
     const errors = tasks.flatMap((t) => answerTask(t, true))
     if (errors.length) await tell(errors[0], { icon: '⚠️' })
@@ -55,7 +55,7 @@ export function HostTasks() {
               )
             }
           >
-            Xin hoàn tác
+            Chờ host duyệt
           </SectionTitle>
           {tasks.length === 0 ? (
             <p className="rounded-3xl border border-dashed border-line p-5 text-center text-sm text-muted">

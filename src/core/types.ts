@@ -132,6 +132,13 @@ export interface CandyRequest {
   /** Lần nhắc gần nhất và số lần đã nhắc (người đòi bấm 🔔). */
   pingedAt?: number
   pings?: number
+  /**
+   * Không có = chờ người bị đòi. 'declined' = người bị đòi từ chối (người đòi thấy, có thể nhờ host);
+   * 'escalated' = đang chờ host duyệt; 'rejected' = host cũng từ chối. Lời đòi còn trong danh sách đến khi người đòi xóa.
+   */
+  status?: 'declined' | 'escalated' | 'rejected'
+  /** Lúc đổi trạng thái gần nhất (từ chối / nhờ host / host từ chối). */
+  answeredAt?: number
 }
 
 /** Yêu cầu hoàn tác một lượt kéo — chờ host xác nhận. */

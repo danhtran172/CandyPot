@@ -256,14 +256,39 @@ describe('appStore — đòi kẹo', () => {
     expect(netOf(session())).toEqual({ [a]: 5, [b]: -5, [c]: 0 })
   })
 
-  it('từ chối hoặc hủy thì không chuyển', () => {
+  it('từ chối hoặc hủy thì không chuyển; lời đòi bị từ chối vẫn còn đến khi người đòi xóa', () => {
     const g = s().addGame('xidach')
     s().requestCandy(g, b, a, 5)
-    s().answerRequest(session().requests[0].id, false)
+    const id = session().requests[0].id
+    s().answerRequest(id, false)
+    expect(session().requests).toMatchObject([{ id, status: 'declined' }])
+    expect(s().answerRequest(id, true)).toEqual(['Lời đòi này đã được trả lời rồi.'])
+    s().cancelRequest(id)
     s().requestCandy(g, c, a, 3)
     s().cancelRequest(session().requests[0].id)
     expect(session().requests).toEqual([])
     expect(netOf(session())).toEqual({ [a]: 0, [b]: 0, [c]: 0 })
+  })
+
+  it('bị từ chối → nhờ host: host duyệt thì chuyển kẹo luôn, host từ chối thì đánh dấu', () => {
+    const g = s().addGame('free')
+    s().requestCandy(g, c, b, 4)
+    const id = session().requests[0].id
+    expect(s().escalateRequest(id)).toEqual(['Chỉ nhờ host được khi lời đòi bị từ chối.'])
+    s().answerRequest(id, false)
+    expect(s().escalateRequest(id)).toEqual([])
+    expect(session().requests[0]).toMatchObject({ status: 'escalated' })
+    expect(s().judgeRequest(id, false)).toEqual([])
+    expect(session().requests[0]).toMatchObject({ status: 'rejected' })
+    expect(s().pingRequest(id)).toEqual(['Yêu cầu này đã được trả lời.'])
+
+    s().requestCandy(g, c, b, 2)
+    const again = session().requests[1].id
+    s().answerRequest(again, false)
+    s().escalateRequest(again)
+    expect(s().judgeRequest(again, true)).toEqual([])
+    expect(session().requests.map((r) => r.id)).toEqual([id])
+    expect(netOf(session())).toEqual({ [a]: 0, [b]: 2, [c]: -2 })
   })
 
   it('có ván đang mở thì kẹo đòi được ghi vào ván', () => {
@@ -483,6 +508,8 @@ describe('appStore — nhắc lại yêu cầu', () => {
     expect(s().pingRequest(req.id)[0]).toMatch(/Vừa nhắc xong/)
     expect(pingWait({ at: 0, pingedAt: 1_000 }, 31_000)).toBe(0)
     s().answerRequest(req.id, false)
+    expect(s().pingRequest(req.id)).toEqual(['Yêu cầu này đã được trả lời.'])
+    s().cancelRequest(req.id)
     expect(s().pingRequest(req.id)).toEqual(['Yêu cầu này không còn nữa — đã được trả lời hoặc đã hủy.'])
   })
 })

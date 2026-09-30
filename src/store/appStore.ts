@@ -128,8 +128,12 @@ export interface AppState {
   removeMove(gameId: ID, roundId: ID, moveId: ID): void
   /** Đòi kẹo: `to` đòi `from` trả `amount`, chờ `from` xác nhận. */
   requestCandy(gameId: ID, from: ID, to: ID, amount: number): string[]
-  /** Người bị đòi trả lời: OK thì chuyển kẹo. */
+  /** Người bị đòi trả lời: OK thì chuyển kẹo; từ chối thì lời đòi vẫn còn (bị từ chối) để người đòi nhờ host. */
   answerRequest(requestId: ID, accept: boolean): string[]
+  /** Lời đòi bị từ chối → nhờ host giải quyết. */
+  escalateRequest(requestId: ID): string[]
+  /** Host duyệt lời đòi được nhờ: OK thì chuyển kẹo luôn; không thì đánh dấu host từ chối. */
+  judgeRequest(requestId: ID, accept: boolean): string[]
   cancelRequest(requestId: ID): void
   /** Nhắc lại một yêu cầu còn chờ (lời đòi kẹo hoặc xin hoàn tác) — thông báo bật lại bên kia. */
   pingRequest(requestId: ID): string[]
@@ -194,8 +198,8 @@ export function pokerSettingsOf(game: Game): { sb: number; cap: number } {
 export const PING_COOLDOWN_MS = 30_000
 
 /** Còn bao nhiêu giây nữa mới nhắc lại được (0 = nhắc được ngay). */
-export function pingWait(req: { at: number; pingedAt?: number }, now: number): number {
-  return Math.max(0, Math.ceil(((req.pingedAt ?? req.at) + PING_COOLDOWN_MS - now) / 1000))
+export function pingWait(req: { at: number; pingedAt?: number; answeredAt?: number }, now: number): number {
+  return Math.max(0, Math.ceil(((req.pingedAt ?? req.answeredAt ?? req.at) + PING_COOLDOWN_MS - now) / 1000))
 }
 
 /** Mã bàn 5 số ngẫu nhiên (10000–99999). */
@@ -833,11 +837,53 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       answerRequest(requestId, accept) {
         const req = get().session?.requests.find((r) => r.id === requestId)
         if (!req) return ['Lời đòi kẹo này không còn nữa.']
+        if (req.status) return ['Lời đòi này đã được trả lời rồi.']
         if (accept) {
           const errors = get().addMove(req.gameId, req.from, req.to, req.amount, 'Đòi kẹo')
           if (errors.length) return errors
+          mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+          return []
         }
-        mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+        // Từ chối: giữ lại cho người đòi thấy (nhờ host hoặc tự xóa)
+        const now = Date.now()
+        mutate((s) => ({
+          ...s,
+          requests: s.requests.map((r) => (r.id === requestId && !r.status ? { ...r, status: 'declined' as const, answeredAt: now } : r)),
+        }))
+        return []
+      },
+
+      escalateRequest(requestId) {
+        const req = get().session?.requests.find((r) => r.id === requestId)
+        if (!req) return ['Lời đòi kẹo này không còn nữa.']
+        if (req.status !== 'declined') return ['Chỉ nhờ host được khi lời đòi bị từ chối.']
+        const now = Date.now()
+        mutate((s) => ({
+          ...s,
+          requests: s.requests.map((r) =>
+            r.id === requestId && r.status === 'declined'
+              ? { ...r, status: 'escalated' as const, answeredAt: now, pingedAt: undefined, pings: undefined }
+              : r,
+          ),
+        }))
+        return []
+      },
+
+      judgeRequest(requestId, accept) {
+        const req = get().session?.requests.find((r) => r.id === requestId)
+        if (!req) return ['Lời đòi kẹo này không còn nữa.']
+        if (req.status !== 'escalated' && req.status !== 'declined') return ['Lời đòi này không chờ host duyệt.']
+        if (accept) {
+          const errors = get().addMove(req.gameId, req.from, req.to, req.amount, 'Host duyệt đòi kẹo')
+          if (errors.length) return errors
+          mutate((s) => ({ ...s, requests: s.requests.filter((r) => r.id !== requestId) }))
+          return []
+        }
+        const now = Date.now()
+        mutate((s) => ({
+          ...s,
+          requests: s.requests.map((r) => (r.id === requestId ? { ...r, status: 'rejected' as const, answeredAt: now } : r)),
+        }))
         return []
       },
 
@@ -933,6 +979,8 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const s = get().session
         const req = s?.requests.find((r) => r.id === requestId) ?? s?.undos.find((u) => u.id === requestId)
         if (!req) return ['Yêu cầu này không còn nữa — đã được trả lời hoặc đã hủy.']
+        // Chỉ nhắc được khi còn người phải trả lời (chờ người bị đòi / chờ host)
+        if ('status' in req && (req.status === 'declined' || req.status === 'rejected')) return ['Yêu cầu này đã được trả lời.']
         const wait = pingWait(req, Date.now())
         if (wait > 0) return [`Vừa nhắc xong — đợi ${wait} giây nữa.`]
         const ping = <T extends { id: ID; pings?: number }>(x: T): T =>
