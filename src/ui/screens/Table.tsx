@@ -636,6 +636,7 @@ export function Table() {
             seats={seats}
             pot={game.type === 'loto' || game.type === 'free' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
             potAfterCenter={game.type === 'loto'}
+            title={GAMES[game.type].label}
             betBox={game.type === 'xidach'}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
@@ -1148,10 +1149,8 @@ function TableCenter({
     const soon = GAMES[game.type].soon
     return (
       <>
+        {/* Tên chế độ đã khắc chìm trên mặt bàn */}
         <GameIcon type={game.type} className="size-9" />
-        <span className="font-display text-lg leading-tight font-bold">
-          <GameName type={game.type} />
-        </span>
         <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm 💰 Pot để cược' : 'Chưa mở ván'}</span>
       </>
     )

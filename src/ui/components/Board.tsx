@@ -77,6 +77,7 @@ export function Board({
   betLocked,
   onBetHold,
   buyBox,
+  title,
   hat,
   hatLocked,
   shape = 'oval',
@@ -102,6 +103,8 @@ export function Board({
   onBetHold?: () => void
   /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (như thả vào Pot). */
   buyBox?: { price: number }
+  /** Tên chế độ chơi — in khắc chìm trên mặt bàn. */
+  title?: string
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   /** Không đổi được nhà cái (không phải host) → ô 🎩 chỉ để xem. */
@@ -233,6 +236,7 @@ export function Board({
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             }`}
           >
+            {title && <span className="engraved font-display pointer-events-none text-2xl leading-none font-extrabold tracking-wider uppercase">{title}</span>}
             {!potAfterCenter && potBox}
             {betBox && (
               <div
@@ -255,23 +259,6 @@ export function Board({
               >
                 <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
                 <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'bấm để đặt cược'}</span>
-              </div>
-            )}
-            {buyBox && (
-              <div
-                data-drop={POT}
-                data-guide="buy"
-                onClick={() => onTap?.(POT)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && onTap?.(POT)}
-                aria-label={`Mua tờ — ${buyBox.price} kẹo một tờ`}
-                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 border-dashed border-pink-400/70 bg-night/50 px-4 py-2 transition select-none active:scale-95 ${ring(POT)}`}
-              >
-                <span className="font-display text-2xl leading-none font-bold text-pink-400">Mua</span>
-                <span className="mt-1 text-[10px] text-muted">
-                  <b className="text-pink-300">{buyBox.price} kẹo</b> / tờ
-                </span>
               </div>
             )}
             {hat && hatLocked && (
@@ -300,6 +287,24 @@ export function Board({
             )}
             {center}
             {potAfterCenter && potBox}
+            {/* Ô Mua ở cuối cột giữa — gần chỗ ngồi của mình (dưới cùng bàn) */}
+            {buyBox && (
+              <div
+                data-drop={POT}
+                data-guide="buy"
+                onClick={() => onTap?.(POT)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onTap?.(POT)}
+                aria-label={`Mua tờ — ${buyBox.price} kẹo một tờ`}
+                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 border-dashed border-pink-400/70 bg-night/50 px-4 py-2 transition select-none active:scale-95 ${ring(POT)}`}
+              >
+                <span className="font-display text-2xl leading-none font-bold text-pink-400">Mua</span>
+                <span className="mt-1 text-[10px] text-muted">
+                  <b className="text-pink-300">{buyBox.price} kẹo</b> / tờ
+                </span>
+              </div>
+            )}
           </div>
 
           {ordered.map((s, i) => {
