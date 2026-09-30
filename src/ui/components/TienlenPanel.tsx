@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cardLabel, comboOf, COMBO_LABEL, isRed, placeOf, type Card, type TienlenCards } from '../../core/games/tienlenPlay'
 import type { ID, Player, Round } from '../../core/types'
 import { Button } from './kit'
@@ -35,7 +35,8 @@ export function TienlenPanel({
   isHost,
   onPlay,
   onPass,
-  onPayout,
+  onNext,
+  menu,
 }: {
   round: Round
   cards: TienlenCards
@@ -44,7 +45,10 @@ export function TienlenPanel({
   isHost: boolean
   onPlay: (id: ID, cards: Card[]) => boolean
   onPass: (id: ID) => void
-  onPayout: () => void
+  /** Host: chốt ván (kẹo đã tự tính) và chia ván mới. */
+  onNext: () => void
+  /** Nút ⋯ mở popup các chức năng còn lại. */
+  menu: ReactNode
 }) {
   const viewer = me && cards.order.includes(me) ? me : null
   // Lá đang chọn — sang lượt khác thì tự bỏ chọn
@@ -62,15 +66,23 @@ export function TienlenPanel({
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-1 pb-2 backdrop-blur">
       {done ? (
-        isHost && !paid ? (
-          <Button variant="primary" className="mt-1 w-full" onClick={onPayout}>
-            💰 Trả kẹo theo hạng
-          </Button>
-        ) : (
-          <p className="text-center text-xs text-muted">{paid ? 'Đã trả kẹo theo hạng — host bấm Chốt ván.' : 'Chờ host trả kẹo theo hạng.'}</p>
-        )
+        <div className="mt-1 flex gap-2">
+          {isHost ? (
+            <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
+              Ván mới
+            </Button>
+          ) : (
+            <p className="flex flex-1 items-center justify-center text-center text-xs text-muted">
+              {paid ? 'Đã tự trả kẹo theo hạng · ' : ''}Chờ host chia ván mới
+            </p>
+          )}
+          {menu}
+        </div>
       ) : !viewer ? (
-        <p className="text-center text-xs text-muted">Bạn không chơi ván này · lượt {name(cards.turn!)}</p>
+        <div className="flex items-center gap-2">
+          <p className="flex-1 text-center text-xs text-muted">Bạn không chơi ván này · lượt {name(cards.turn!)}</p>
+          {menu}
+        </div>
       ) : (
         <>
           <p className="text-center text-xs text-muted">
@@ -95,8 +107,10 @@ export function TienlenPanel({
               ))}
             </div>
           </div>
+          {!myTurn && <div className="mt-2 flex justify-end">{menu}</div>}
           {myTurn && (
             <div className="mt-2 flex gap-2">
+              {menu}
               <Button className="px-3" disabled={!cards.table} onClick={() => onPass(viewer)}>
                 Bỏ lượt
               </Button>

@@ -124,6 +124,8 @@ export function Table() {
 
   /** Chơi bằng bài trong app (chỉ bàn nhiều người): gom các nút phụ vào nút ⋯. */
   const cardApp = !solo && game?.cardMode === 'app' && CARD_GAMES.includes(game.type)
+  /** Đang đánh bài trong app: app tự tính kẹo — dưới đáy chỉ còn bài trên tay và một nút ⋯ cho các chức năng còn cần. */
+  const cardPlay = cardApp && !!round?.tienlen
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
@@ -362,6 +364,7 @@ export function Table() {
   }
 
   const asking = session.requests.filter((r) => r.to === me && r.gameId === game?.id && !r.status)
+  const asksCount = incomingAsks(session, me).length + answeredAsks(session, me).length
   const myRoundMoves = round?.moves.filter((m) => m.from === me || m.to === me).length ?? 0
 
 
@@ -489,6 +492,7 @@ export function Table() {
     if (errors.length) flash(errors[0], true)
     else flash(`Đã quay lại ván ${n}.`)
   }
+  const menuCount = myRoundMoves + asking.length + hostTasks(session, me).length + asksCount
   // Nút quay lại ván trước — chỉ host, nằm bên trái nút chính
   const backBtn =
     lastPlay && me === session.hostId ? (
@@ -711,6 +715,7 @@ export function Table() {
 
           {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
           <div className="pointer-events-none fixed inset-x-0 bottom-16 z-10 mx-auto max-w-lg px-4 pb-[env(safe-area-inset-bottom)]">
+            {!cardPlay && (
             <div className="mb-2 flex items-end justify-between">
               <button
                 type="button"
@@ -737,7 +742,8 @@ export function Table() {
                 </div>
               )}
             </div>
-            {round?.tienlen && (
+            )}
+            {cardPlay && round?.tienlen && (
               <div className="pointer-events-auto">
                 <TienlenPanel
                   round={round}
@@ -754,14 +760,30 @@ export function Table() {
                     const errors = actions().tienlenPass(game.id, id)
                     if (errors.length) flash(errors[0], true)
                   }}
-                  onPayout={() => {
-                    const errors = actions().tienlenPayout(game.id)
-                    if (errors.length) flash(errors[0], true)
-                    else flash('Đã trả kẹo theo hạng — kiểm tra rồi bấm Chốt ván.')
-                  }}
+                  onNext={nextRound}
+                  menu={
+                    <More on count={menuCount} align="right">
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowLog(true)}>
+                        📜 Trả/nhận{myRoundMoves + asking.length ? ` (${myRoundMoves + asking.length})` : ''}
+                      </Button>
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/host`)}>
+                        🛎️ Host{hostTasks(session, me).length ? ` (${hostTasks(session, me).length})` : ''}
+                      </Button>
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/requests`)}>
+                        📨 Yêu cầu{asksCount ? ` (${asksCount})` : ''}
+                      </Button>
+                      {canHost && (
+                        <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                          Hủy ván
+                        </Button>
+                      )}
+                      {backBtn}
+                    </More>
+                  }
                 />
               </div>
             )}
+            {!cardPlay && (
             <div data-guide="actions" className="pointer-events-auto flex gap-2">
               {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
                 // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
@@ -947,6 +969,7 @@ export function Table() {
                 </>
               )}
             </div>
+            )}
           </div>
         </>
       )}
@@ -1255,7 +1278,17 @@ function tienlenBadge(cards: TienlenCards, id: ID): string | undefined {
 }
 
 /** Chơi bài trong app (`on`): gom các nút phụ (Hủy ván, Ván trước…) vào một nút ⋯, bấm thì hiện ra. Không thì để nguyên. */
-function More({ on, children }: { on: boolean; children: ReactNode }) {
+function More({
+  on,
+  count = 0,
+  align = 'left',
+  children,
+}: {
+  on: boolean
+  count?: number
+  align?: 'left' | 'right'
+  children: ReactNode
+}) {
   const [open, setOpen] = useState(false)
   if (!on) return <>{children}</>
   const items = Children.toArray(children).filter(Boolean)
@@ -1266,7 +1299,7 @@ function More({ on, children }: { on: boolean; children: ReactNode }) {
         <>
           <button type="button" aria-label="Đóng" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
           <div
-            className="pop absolute bottom-full left-0 z-20 mb-2 flex min-w-40 flex-col gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl"
+            className={`pop absolute bottom-full ${align === 'right' ? 'right-0' : 'left-0'} z-20 mb-2 flex min-w-44 flex-col gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl`}
             onClickCapture={() => setOpen(false)}
           >
             {items}
@@ -1276,10 +1309,15 @@ function More({ on, children }: { on: boolean; children: ReactNode }) {
       <Button
         aria-label="Chức năng khác"
         aria-expanded={open}
-        className={`h-full bg-night/90 px-3 py-1.5 text-lg leading-none ${open ? 'ring-2 ring-lemon' : ''}`}
+        className={`relative h-full bg-night/90 px-3 py-1.5 text-lg leading-none ${open ? 'ring-2 ring-lemon' : ''}`}
         onClick={() => setOpen((o) => !o)}
       >
         ⋯
+        {count > 0 && (
+          <span className="num absolute -top-1.5 -right-1.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-berry px-1 text-[10px] font-bold text-night">
+            {count}
+          </span>
+        )}
       </Button>
     </div>
   )

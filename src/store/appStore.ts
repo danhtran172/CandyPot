@@ -731,7 +731,16 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!open?.tienlen) return ['Ván này không chia bài trong app.']
         const r = playTienlen(open.tienlen, playerId, cards)
         if (typeof r === 'string') return [r]
-        mapRound(gameId, open.id, (x) => (x.tienlen ? { ...x, tienlen: r } : x))
+        // Về hết → app tự trả kẹo theo hạng
+        const pay = tienlenPayouts(r, open.bet, open.bet2 ?? open.bet).map((p) => ({
+          id: newId(),
+          from: p.from,
+          to: p.to,
+          amount: p.amount,
+          label: `Bài: ${p.label}`,
+        }))
+        const paid = (x: Round) => x.moves.some((m) => m.label.startsWith('Bài:'))
+        mapRound(gameId, open.id, (x) => (x.tienlen ? { ...x, tienlen: r, moves: paid(x) ? x.moves : [...x.moves, ...pay] } : x))
         return []
       },
 
