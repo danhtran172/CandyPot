@@ -1343,7 +1343,8 @@ function More({
           <button type="button" aria-label="Đóng" className="fixed inset-0 z-40 cursor-default bg-night/50" onClick={() => setOpen(false)} />
           <div
             className="pop fixed inset-x-4 bottom-44 z-50 mx-auto grid max-w-sm grid-cols-2 gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl [&>*]:w-full [&>*]:whitespace-nowrap"
-            onClickCapture={() => setOpen(false)}
+            // Đóng sau khi nút bên trong chạy xong (đóng ở pha capture thì nút bị gỡ trước khi kịp chạy)
+            onClick={() => setOpen(false)}
           >
             {items}
           </div>
