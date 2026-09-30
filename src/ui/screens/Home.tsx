@@ -5,6 +5,13 @@ import { ask } from '../dialog'
 import { dateOf } from '../format'
 import { QrModal } from '../components/QrModal'
 import { appUrl } from '../appUrl'
+import { MAX_SAVED } from '../../storage/LocalRepo'
+import type { SessionMeta } from '../../storage/SessionRepo'
+import hostIcon from '../../assets/rules/host.webp'
+import groupIcon from '../../assets/rules/group.webp'
+
+/** Danh sách bàn thu gọn: hiện chừng này bàn gần nhất, còn lại bấm "Xem thêm". */
+const COLLAPSED = 3
 
 /** 3 lý do dùng app thay cho tiền mặt / ghi giấy — hiện ngay dưới tên app. */
 const BENEFITS = [
@@ -16,6 +23,8 @@ const BENEFITS = [
 export function Home() {
   const [sessions, setSessions] = useState(() => repo.list())
   const [showQr, setShowQr] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const shown = expanded ? sessions : sessions.slice(0, COLLAPSED)
 
   const remove = async (id: string, name: string) => {
     const ok = await ask(`Xóa bàn "${name}"?`, {
@@ -75,20 +84,23 @@ export function Home() {
         </Link>
       </div>
 
-      <h2 className="font-display mt-10 mb-3 text-lg font-bold">Bàn đã chơi</h2>
+      <h2 className="font-display mt-10 mb-3 flex items-baseline justify-between text-lg font-bold">
+        Bàn đã chơi
+        {sessions.length > 0 && <span className="font-sans text-xs font-normal text-muted">giữ {MAX_SAVED} bàn gần nhất</span>}
+      </h2>
       {sessions.length === 0 ? (
         <p className="rounded-3xl border border-dashed border-line p-6 text-center text-muted">
           Chưa có bàn nào. Tạo bàn để bắt đầu ghi kẹo.
         </p>
       ) : (
         <ul className="space-y-2">
-          {sessions.map((s) => (
+          {shown.map((s) => (
             <li key={s.id} className="flex items-center gap-2 rounded-3xl border border-line/60 bg-plum p-2 pl-4">
               <Link to={`/s/${s.id}`} className="min-w-0 flex-1 py-2">
                 <div className="truncate font-semibold">{s.name}</div>
-                <div className="text-sm text-muted">
+                <div className="flex items-center text-sm text-muted">
                   {s.playerCount} người{s.updatedAt ? ` · ${dateOf(s.updatedAt)}` : ''}
-                  {s.code && <span className="num ml-1.5 rounded-full bg-sky/15 px-1.5 text-xs font-bold text-sky">#{s.code}</span>}
+                  <ModeTag meta={s} />
                 </div>
               </Link>
               <button
@@ -103,6 +115,16 @@ export function Home() {
           ))}
         </ul>
       )}
+      {sessions.length > COLLAPSED && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((x) => !x)}
+          className="mt-2 w-full rounded-2xl py-2 text-sm font-semibold text-sky"
+        >
+          {expanded ? 'Thu gọn ▴' : `Xem thêm ${sessions.length - COLLAPSED} bàn ▾`}
+        </button>
+      )}
       {showQr && (
         <QrModal
           title="Quét để mở CandyPot"
@@ -113,6 +135,25 @@ export function Home() {
         />
       )}
     </main>
+  )
+}
+
+/**
+ * Nhãn kiểu bàn: nhiều người = xanh + icon nhóm + mã bàn; một máy = cam + icon host.
+ * (Bàn lưu từ bản cũ chưa có `mode`: có mã = nhiều người.)
+ */
+function ModeTag({ meta }: { meta: SessionMeta }) {
+  const multi = (meta.mode ?? (meta.code ? 'multi' : 'solo')) === 'multi'
+  const mask = `url(${multi ? groupIcon : hostIcon}) center / contain no-repeat`
+  return (
+    <span
+      className={`num ml-1.5 inline-flex items-center gap-1 rounded-full px-1.5 text-xs font-bold ${
+        multi ? 'bg-sky/15 text-sky' : 'bg-orange-400/15 text-orange-400'
+      }`}
+    >
+      <span aria-hidden className="size-3 bg-current" style={{ mask, WebkitMask: mask }} />
+      {multi ? (meta.code ? `#${meta.code}` : 'Nhiều người') : '1 máy'}
+    </span>
   )
 }
 

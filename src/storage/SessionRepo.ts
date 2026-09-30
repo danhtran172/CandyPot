@@ -7,6 +7,8 @@ export interface SessionMeta {
   playerCount: number
   /** Mã bàn 5 số (bàn nhiều người). */
   code?: string
+  /** Kiểu bàn (bản cũ không có: có mã = nhiều người). */
+  mode?: 'solo' | 'multi'
 }
 
 /** Nơi lưu bàn chơi. Giai đoạn 1: localStorage; giai đoạn 2 thêm đồng bộ Firebase. */

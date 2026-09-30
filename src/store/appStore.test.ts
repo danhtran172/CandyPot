@@ -26,7 +26,7 @@ beforeEach(() => {
 
 describe('appStore — buổi & người chơi', () => {
   it('tạo buổi và lưu vào repo', () => {
-    expect(repo.list()).toEqual([{ id: session().id, name: 'Tối thứ 7', updatedAt: session().updatedAt, playerCount: 3 }])
+    expect(repo.list()).toEqual([{ id: session().id, name: 'Tối thứ 7', updatedAt: session().updatedAt, playerCount: 3, mode: 'solo' }])
   })
 
   it('thêm game đặt tên tự động', () => {
@@ -550,5 +550,20 @@ describe('appStore — tạo bàn', () => {
     const id = s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
     expect(session().code).toMatch(/^\d{5}$/)
     expect(repo.list().find((m) => m.id === id)?.code).toBe(session().code)
+  })
+})
+
+describe('LocalRepo — giữ tối đa 10 bàn', () => {
+  it('có bàn mới thì xóa bàn lâu không chơi nhất', () => {
+    const kv = new MemoryKV()
+    const r = new LocalRepo(kv)
+    const make = (i: number) => ({ id: `s${i}`, name: `Bàn ${i}`, updatedAt: i, players: [] }) as unknown as Parameters<LocalRepo['save']>[0]
+    for (let i = 1; i <= 12; i++) r.save(make(i))
+    expect(r.list().map((m) => m.id)).toEqual(['s12', 's11', 's10', 's9', 's8', 's7', 's6', 's5', 's4', 's3'])
+    expect(r.load('s1')).toBeNull()
+    expect(r.load('s3')).not.toBeNull()
+    // Lưu lại bàn cũ (vừa mở chơi tiếp) thì bàn đó được giữ
+    r.save({ ...make(3), updatedAt: 13 })
+    expect(r.list()[0].id).toBe('s3')
   })
 })

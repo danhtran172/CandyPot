@@ -4,6 +4,8 @@ import type { SessionMeta, SessionRepo } from './SessionRepo'
 type KV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 const INDEX = 'candypot:sessions'
+/** Máy chỉ giữ tối đa chừng này bàn — bàn cũ nhất (lâu không chơi) tự bị xóa khi có bàn mới. */
+export const MAX_SAVED = 10
 const sessionKey = (id: ID) => `candypot:session:${id}`
 
 export class LocalRepo implements SessionRepo {
@@ -43,8 +45,12 @@ export class LocalRepo implements SessionRepo {
       updatedAt: session.updatedAt,
       playerCount: session.players.filter((p) => !p.removed).length,
       code: session.code,
+      mode: session.mode,
     }
-    this.write(INDEX, [meta, ...this.list().filter((m) => m.id !== session.id)])
+    // Giữ bàn đang lưu + (MAX_SAVED − 1) bàn chơi gần nhất; bàn cũ hơn xóa khỏi máy
+    const others = this.list().filter((m) => m.id !== session.id)
+    others.slice(MAX_SAVED - 1).forEach((m) => this.kv.removeItem(sessionKey(m.id)))
+    this.write(INDEX, [meta, ...others.slice(0, MAX_SAVED - 1)])
   }
 
   remove(id: ID): void {
