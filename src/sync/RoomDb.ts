@@ -11,6 +11,8 @@ export interface RoomDb {
   onValue(path: string, onChange: (value: unknown) => void, onError?: (error: unknown) => void): () => void
   /** Mã các phòng dùng lần cuối (activity/{code}) ≤ cutoff, cũ nhất trước — chỉ đọc số, không tải cả phòng. */
   staleRooms(cutoff: number, limit: number): Promise<string[]>
+  /** Giữ `value` ở `path` khi còn kết nối; mất kết nối (tắt app, mất mạng, tạm ngắt) thì máy chủ tự xóa. Trả về hàm gỡ. */
+  presence?(path: string, value: unknown): () => void
   /** Tạm ngắt / nối lại kết nối mạng. */
   pause?(): void
   resume?(): void
@@ -87,6 +89,11 @@ export class MemoryRoomDb implements RoomDb {
     return () => {
       this.listeners.delete(l)
     }
+  }
+
+  presence(path: string, value: unknown) {
+    void this.update({ [path]: value })
+    return () => void this.update({ [path]: null })
   }
 
   async staleRooms(cutoff: number, limit: number) {

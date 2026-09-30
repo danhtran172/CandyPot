@@ -40,6 +40,7 @@ import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { guideSeen, guideSteps, markGuideSeen, type GuideRole } from '../guides'
 import { canHostOf, useMe } from '../me'
+import { useOnlineIds } from '../presence'
 import { hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
@@ -72,6 +73,7 @@ export function Table() {
   const players = playerMap(session)
   const net = netOf(session)
   const [me] = useMe(session)
+  const onlineIds = useOnlineIds()
   /** Điều khiển ván (mở / chốt / hủy / đổi game…): bàn một máy thì máy này; bàn nhiều người thì chỉ host. */
   const canHost = canHostOf(session, me)
   const base = `/s/${session.id}`
@@ -438,6 +440,7 @@ export function Table() {
   const seats: Seat[] = visible.map((p) => ({
     player: p,
     isMe: p.id === me,
+    online: onlineIds.has(p.id),
     total: net[p.id],
     round: round ? (roundDelta[p.id] ?? 0) : undefined,
     badge: hand ? pokerBadge(p.id) : undefined,

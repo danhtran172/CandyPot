@@ -68,6 +68,10 @@ export interface AppState {
   online: boolean | null
   /** Tạm ngắt kết nối vì app ẩn / lâu không dùng (chạm để nối lại). */
   paused: boolean
+  /** Bàn nhiều người: những người đang có máy mở bàn (chấm xanh). */
+  present: ID[]
+  /** Máy này đang mở bàn với vai `playerId` (undefined = chưa chọn / rời bàn). */
+  markPresent(playerId: ID | undefined): void
   /** Nơi đặt phòng: qua mạng (firebase) hay giả lập trên máy (local); không có = chỉ một máy. */
   roomKind: RoomBackend['kind'] | null
   /** Join bàn bằng mã 5 số: tải bàn từ phòng về máy này. Trả về id bàn, hoặc lỗi. */
@@ -212,6 +216,8 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
     const roomOf = (s: Session | null | undefined) => (rooms && s?.mode === 'multi' && s.code) || null
     let unwatch: (() => void) | null = null
     let watching: string | null = null
+    /** Đang báo có mặt trong phòng nào, với vai ai. */
+    let presence: { key: string; stop: () => void } | null = null
     /**
      * Thay đổi của máy này gửi lên phòng lần lượt, đúng thứ tự bấm, sau khi phòng sẵn sàng.
      * Trong lúc còn thay đổi chưa gửi xong thì giữ bản mới nhất từ phòng lại, gửi xong mới áp dụng —
@@ -271,6 +277,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       unwatch = null
       watching = key
       latest = null
+      set({ present: [] })
       if (!rooms || !code) return
       const failed = (e?: unknown) => {
         console.warn('CandyPot: lỗi phòng', e)
@@ -280,7 +287,10 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       enqueue(async () => {
         if (!(await rooms.claim(code, s))) await rehome(get().session ?? s)
       }, failed)
-      unwatch = rooms.watch(
+      const unwatchPresent = rooms.watchPresent?.(code, (present) => {
+        if (get().session?.code === code) set({ present })
+      })
+      const unwatchRoom = rooms.watch(
         code,
         (remote) => {
           const current = get().session
@@ -293,6 +303,10 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         },
         failed,
       )
+      unwatch = () => {
+        unwatchRoom()
+        unwatchPresent?.()
+      }
       // Mở bàn = phòng còn dùng; tiện thể dọn phòng bỏ không lâu ngày
       rooms.touch?.(code).catch(() => {})
       rooms.sweep?.().catch(() => {})
@@ -362,6 +376,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       error: null,
       online: null,
       paused: false,
+      present: [],
       roomKind: rooms?.kind ?? null,
 
       async joinRoom(code) {
@@ -410,11 +425,21 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         return raw !== null
       },
 
+      markPresent(playerId) {
+        const code = roomOf(get().session)
+        const key = code && playerId ? `${code}:${playerId}` : null
+        if (key === (presence?.key ?? null)) return
+        presence?.stop()
+        presence = null
+        if (key && code && playerId && rooms?.present) presence = { key, stop: rooms.present(code, playerId) }
+      },
+
       closeSession() {
+        get().markPresent(undefined)
         unwatch?.()
         unwatch = null
         watching = null
-        set({ session: null, error: null })
+        set({ session: null, error: null, present: [] })
       },
 
       deleteSession(id) {

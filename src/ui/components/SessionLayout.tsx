@@ -28,6 +28,14 @@ export function SessionLayout() {
     if (sid && !loaded) actions().openSession(sid)
   }, [sid, loaded])
 
+  // Bàn nhiều người: báo "đang mở bàn" (chấm xanh) khi máy này đã chọn mình là ai; rời bàn thì thôi
+  const meHere = loaded && session?.mode === 'multi' ? readMe(session.id) : null
+  const presentAs = session?.players.some((p) => p.id === meHere && !p.removed) ? (meHere ?? undefined) : undefined
+  useEffect(() => {
+    actions().markPresent(presentAs)
+  }, [presentAs, session?.code])
+  useEffect(() => () => actions().markPresent(undefined), [])
+
   // Cửa sổ khác (cùng máy) vừa sửa buổi này → nạp lại để thấy ngay
   useEffect(() => {
     if (!sid) return

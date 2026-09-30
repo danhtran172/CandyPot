@@ -9,10 +9,13 @@ export {
   goOffline,
   goOnline,
   limitToFirst,
+  onDisconnect,
   onValue,
   orderByValue,
   query,
   ref,
+  remove,
   runTransaction,
+  set,
   update,
 } from 'firebase/database'

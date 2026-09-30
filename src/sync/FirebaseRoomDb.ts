@@ -101,6 +101,35 @@ export class FirebaseRoomDb implements RoomDb {
     }
   }
 
+  presence(path: string, value: unknown) {
+    let stopped = false
+    const conn = this.connect()
+    // Mỗi lần (nối lại) kết nối: hẹn máy chủ xóa khi mất kết nối, rồi ghi
+    const announce = (online: boolean) => {
+      if (!online || stopped) return
+      conn
+        .then(async ({ sdk, db }) => {
+          const at = sdk.ref(db, path)
+          await sdk.onDisconnect(at).remove()
+          if (!stopped) await sdk.set(at, value)
+        })
+        .catch(() => {})
+    }
+    this.connListeners.add(announce)
+    if (this.online) announce(true)
+    return () => {
+      stopped = true
+      this.connListeners.delete(announce)
+      conn
+        .then(({ sdk, db }) => {
+          const at = sdk.ref(db, path)
+          void sdk.onDisconnect(at).cancel()
+          void sdk.remove(at)
+        })
+        .catch(() => {})
+    }
+  }
+
   staleRooms(cutoff: number, limit: number) {
     return this.hold(async ({ sdk, db }) => {
       const snap = await sdk.get(sdk.query(sdk.ref(db, 'activity'), sdk.orderByValue(), sdk.endAt(cutoff), sdk.limitToFirst(limit)))

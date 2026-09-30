@@ -16,6 +16,16 @@
         "$other": { ".validate": false }
       }
     },
+    "online": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && !newData.exists() && (!root.child('activity').child($code).exists() || root.child('activity').child($code).val() < now - 2592000000)",
+        "$conn": {
+          ".write": "auth != null && $code.matches(/^[0-9]{5}$/) && $conn.matches(/^[a-z0-9]{4,16}$/)",
+          ".validate": "newData.isString() && newData.val().length < 40"
+        }
+      }
+    },
     "activity": {
       ".read": "auth != null && query.orderByValue == true && query.limitToFirst <= 50",
       ".indexOn": ".value",

@@ -1,4 +1,4 @@
-import type { Session } from '../core/types'
+import type { ID, Session } from '../core/types'
 import { diffParts, fromParts, toParts, type Parts } from './parts'
 import type { RoomBackend } from './RoomBackend'
 import type { RoomDb } from './RoomDb'
@@ -14,7 +14,8 @@ interface Room {
 }
 
 /**
- * Phòng chia mẩu: `rooms/{code}` = { meta, p: { core, g_…, r_… } }; `activity/{code}` = lần dùng cuối (để dọn phòng bỏ không).
+ * Phòng chia mẩu: `rooms/{code}` = { meta, p: { core, g_…, r_… } }; `activity/{code}` = lần dùng cuối (để dọn phòng bỏ không);
+ * `online/{code}/{máy}` = người đang mở bàn trên máy đó (tự xóa khi máy mất kết nối).
  * Ghi: chỉ các mẩu vừa đổi, mỗi mẩu một transaction chạy lại đúng thay đổi trên bản mới nhất (hai máy
  * bấm cùng lúc không mất lượt). Đọc: theo dõi cả phòng — cơ sở dữ liệu chỉ gửi mẩu vừa đổi.
  */
@@ -25,11 +26,14 @@ export class PartsRoomBackend implements RoomBackend {
   /** Bản mới nhất của từng phòng nhận từ cơ sở dữ liệu. */
   private readonly cache = new Map<string, Parts>()
   private readonly touched = new Map<string, number>()
+  /** Mã kết nối của máy / tab này (một người có thể mở bàn trên nhiều máy). */
+  private readonly conn: string
 
-  constructor(db: RoomDb, kind: RoomBackend['kind'] = 'firebase', now: () => number = Date.now) {
+  constructor(db: RoomDb, kind: RoomBackend['kind'] = 'firebase', now: () => number = Date.now, conn = Math.random().toString(36).slice(2, 12)) {
     this.db = db
     this.kind = kind
     this.now = now
+    this.conn = conn
   }
 
   async claim(code: string, session: Session) {
@@ -121,6 +125,17 @@ export class PartsRoomBackend implements RoomBackend {
     await this.db.update({ [`activity/${code}`]: this.now() })
   }
 
+  present(code: string, playerId: ID) {
+    return this.db.presence?.(`online/${code}/${this.conn}`, playerId) ?? (() => {})
+  }
+
+  watchPresent(code: string, onChange: (playerIds: ID[]) => void) {
+    return this.db.onValue(`online/${code}`, (value) => {
+      const conns = (value ?? {}) as Record<string, unknown>
+      onChange([...new Set(Object.values(conns).filter((v): v is string => typeof v === 'string'))])
+    })
+  }
+
   async touch(code: string) {
     const now = this.now()
     if (now - (this.touched.get(code) ?? 0) < TOUCH_EVERY_MS) return
@@ -131,8 +146,8 @@ export class PartsRoomBackend implements RoomBackend {
   /** Dọn các phòng bỏ không quá ROOM_TTL_MS (không cần máy chủ riêng — máy nào mở app thì dọn giúp). */
   async sweep(limit = 20) {
     const stale = await this.db.staleRooms(this.now() - ROOM_TTL_MS, limit)
-    if (stale.length)
-      await this.db.update(Object.fromEntries(stale.flatMap((code) => [[`rooms/${code}`, null], [`activity/${code}`, null]])))
+    const gone = stale.flatMap((code) => [`rooms/${code}`, `online/${code}`, `activity/${code}`])
+    if (gone.length) await this.db.update(Object.fromEntries(gone.map((path) => [path, null])))
     return stale
   }
 

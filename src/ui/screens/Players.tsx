@@ -3,6 +3,7 @@ import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { canHostOf, useMe } from '../me'
+import { useOnlineIds } from '../presence'
 import { saveProfile } from '../profile'
 import { useSession } from '../components/useSession'
 import { ask, tell } from '../dialog'
@@ -10,6 +11,7 @@ import { hostVoteTally, hostVotesNeeded } from '../../core/hostVote'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
 import { RoomCode } from '../components/RoomCode'
 import { MeIcon } from '../components/MeIcon'
+import { OnlineDot } from '../components/Board'
 
 export function Players() {
   const session = useSession()
@@ -21,6 +23,7 @@ export function Players() {
 
   // "Bạn là ai" chọn lúc tạo / join bàn, không đổi ở đây — tránh máy này giả làm người khác
   const [me] = useMe(session)
+  const onlineIds = useOnlineIds()
   // Bàn nhiều người: người thường chỉ sửa được chính mình; thêm / xóa / sửa người khác là việc của host
   const canHost = canHostOf(session, me)
 
@@ -134,6 +137,7 @@ export function Players() {
               <Avatar
                 emoji={p.emoji}
                 isMe={me === p.id}
+                online={onlineIds.has(p.id)}
                 resting={!p.active}
                 name={p.name}
                 onTap={
@@ -322,12 +326,14 @@ function SwipeRow({
 function Avatar({
   emoji,
   isMe,
+  online,
   resting,
   name,
   onTap,
 }: {
   emoji: string
   isMe: boolean
+  online?: boolean
   resting?: boolean
   name: string
   onTap?: () => void
@@ -343,6 +349,7 @@ function Avatar({
       }`}
     >
       <span className={resting ? 'opacity-40' : ''}>{emoji}</span>
+      {online && <OnlineDot className="absolute -top-0.5 -left-0.5" />}
       {resting && (
         <span aria-hidden className="absolute -top-1.5 -right-2 text-sm leading-none">
           💤

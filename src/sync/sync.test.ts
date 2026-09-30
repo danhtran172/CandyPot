@@ -160,4 +160,27 @@ describe('Phòng chia mẩu — tiết kiệm dữ liệu', () => {
     expect(await rooms.sweep()).toEqual([])
     expect(await rooms.fetch(fresh)).not.toBeNull()
   })
+
+  it('chấm xanh: thấy ai đang mở bàn; rời bàn thì tắt', async () => {
+    const db = new MemoryRoomDb()
+    const host = createAppStore(new LocalRepo(new MemoryKV()), new PartsRoomBackend(db))
+    const guest = createAppStore(new LocalRepo(new MemoryKV()), new PartsRoomBackend(db))
+    host.getState().createSession('Tối thứ 7', [{ name: 'Tí', emoji: '🐱' }], 'multi')
+    await tick()
+    const { code, id, hostId } = host.getState().session!
+    host.getState().markPresent(hostId!)
+    await guest.getState().joinRoom(code!)
+    guest.getState().openSession(id)
+    guest.getState().addPlayer('Tèo', '🐶')
+    await tick()
+    const teo = guest.getState().session!.players[1].id
+    guest.getState().markPresent(teo)
+    await tick()
+    expect([...host.getState().present].sort()).toEqual([hostId, teo].sort())
+    expect([...guest.getState().present].sort()).toEqual([hostId, teo].sort())
+
+    guest.getState().closeSession()
+    await tick()
+    expect(host.getState().present).toEqual([hostId])
+  })
 })

@@ -19,6 +19,8 @@ export interface Seat {
   /** Cược lấy từ ván trước (chưa mở ván) — hiện mờ. */
   stakeDim?: boolean
   isMe?: boolean
+  /** Đang có máy mở bàn (bàn nhiều người) — chấm xanh góc trên bên trái avatar. */
+  online?: boolean
   /** Đang tới lượt (Poker) — viền sáng. */
   highlight?: boolean
   /** Đã bỏ bài (Poker) — mờ đi. */
@@ -343,6 +345,7 @@ export function Board({
                       className="absolute -right-2.5 -bottom-1 size-7 max-w-none drop-shadow-[0_0_1.5px_#fff1e0]"
                     />
                   )}
+                  {s.online && <OnlineDot className="absolute -top-0.5 -left-0.5" />}
                   {!s.player.active && (
                     <span aria-label="Tạm nghỉ" className="absolute -top-1.5 -right-2 text-base leading-none">
                       💤
@@ -422,4 +425,9 @@ export function flyCandy(from: ID, to: ID, amount: number) {
     ],
     { duration: 650, easing: 'cubic-bezier(0.3, 0.7, 0.4, 1)' },
   ).onfinish = () => el.remove()
+}
+
+/** Chấm xanh "đang mở app". */
+export function OnlineDot({ className = '' }: { className?: string }) {
+  return <span role="img" aria-label="Đang online" title="Đang online" className={`size-3 rounded-full bg-mint ring-2 ring-plum ${className}`} />
 }

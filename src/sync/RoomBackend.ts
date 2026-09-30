@@ -1,4 +1,4 @@
-import type { Session } from '../core/types'
+import type { ID, Session } from '../core/types'
 
 /**
  * Phòng chơi nhiều máy: mỗi bàn "Nhiều người join" là một phòng theo mã 5 số, chứa nguyên bàn.
@@ -17,6 +17,10 @@ export interface RoomBackend {
   update(code: string, fn: (session: Session) => Session): Promise<void>
   /** Trạng thái kết nối. Trả về hàm hủy theo dõi. */
   onConnection(onChange: (online: boolean) => void): () => void
+  /** Báo "máy này đang mở bàn, là người `playerId`" cho tới khi gỡ / mất kết nối. */
+  present?(code: string, playerId: ID): () => void
+  /** Theo dõi những người đang có máy mở bàn. */
+  watchPresent?(code: string, onChange: (playerIds: ID[]) => void): () => void
   /** Đánh dấu phòng còn được dùng (mở bàn mà không ghi gì). */
   touch?(code: string): Promise<void>
   /** Dọn phòng bỏ không lâu ngày; trả về mã các phòng đã dọn. */
