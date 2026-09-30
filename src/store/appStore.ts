@@ -5,7 +5,7 @@ import { seatedOf } from '../core/games/tienlen'
 import { xidachLimits } from '../core/games/xidach'
 import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
-import { closeTransfers, normalizeSession, potOf } from '../core/round'
+import { closeTransfers, contributions, normalizeSession, potOf } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
@@ -51,13 +51,25 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
-  // Lô tô / Poker: không bỏ kẹo vào pot lúc mở ván (mua tờ / blind tự tính)
+  // Poker / Tự do: không bỏ kẹo vào pot lúc mở ván (blind tự tính / cược bằng tay)
   const limits = game.type === 'xidach' ? xidachLimits(game) : undefined
   const clamp = (v: number) => (limits ? Math.min(limits.max, Math.max(limits.min, v)) : v)
+  // Lô tô: tự mua lại số tờ của ván trước (theo giá hiện tại, tối đa lotoMax) — chưa chốt thì ai cũng kéo lại để chỉnh
+  const lotoStakes = () => {
+    if (!prev || !price) return {}
+    const paid = contributions(prev)
+    return Object.fromEntries(
+      participants
+        .map((id) => [id, Math.min(lotoMax(game), Math.floor((paid[id] ?? 0) / (prev.bet || price))) * price] as const)
+        .filter(([, v]) => v > 0),
+    )
+  }
   const stakes =
-    game.type === 'loto' || game.type === 'poker' || game.type === 'free'
-      ? {}
-      : Object.fromEntries(active.map((id) => [id, clamp(prev?.stakes[id] ?? bet)]))
+    game.type === 'loto'
+      ? lotoStakes()
+      : game.type === 'poker' || game.type === 'free'
+        ? {}
+        : Object.fromEntries(active.map((id) => [id, clamp(prev?.stakes[id] ?? bet)]))
   return { participants, bet, bet2, stakes, dealer }
 }
 
@@ -564,7 +576,13 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
             mode === 'pot'
               ? Object.entries(stakes)
                   .filter(([, v]) => v > 0)
-                  .map(([p, v]) => ({ id: newId(), from: p, to: POT, amount: v, label: 'Cược mở ván' }))
+                  .map(([p, v]) => ({
+                    id: newId(),
+                    from: p,
+                    to: POT,
+                    amount: v,
+                    label: g.type === 'loto' ? `${v / draft.bet} tờ` : 'Cược mở ván',
+                  }))
               : [],
           transfers: [],
           tags: [],

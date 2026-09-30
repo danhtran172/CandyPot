@@ -462,6 +462,24 @@ describe('appStore — Lô tô', () => {
     s().lockBets(g)
     expect(s().setLotoTickets(g, a, 2)).toEqual(['Đã chốt — không đổi số tờ được nữa.'])
   })
+
+  it('ván mới tự mua lại số tờ của ván trước (giá mới, bỏ người nghỉ) — chưa chốt thì chỉnh được', () => {
+    const g = s().addGame('loto')
+    s().setLotoPrice(g, 5)
+    s().quickOpen(g)
+    const open = () => openRound(session(), g)!
+    s().addMove(g, a, POT, 10, '2 tờ')
+    s().addMove(g, b, POT, 5, '1 tờ')
+    s().lockBets(g)
+    s().addMove(g, POT, c, 15, 'Ăn pot')
+    s().closeRound(g)
+    s().setLotoPrice(g, 3)
+    s().updatePlayer(b, { active: false })
+    expect(s().quickOpen(g)).toEqual([])
+    expect(open().moves.map((m) => [m.from, m.to, m.amount, m.label])).toEqual([[a, POT, 6, '2 tờ']])
+    expect(s().setLotoTickets(g, a, 1)).toEqual([])
+    expect(potOf(open())).toBe(3)
+  })
 })
 
 describe('appStore — hoàn tác trao pot (pot không bao giờ âm)', () => {

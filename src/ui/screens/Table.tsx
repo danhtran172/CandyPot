@@ -123,9 +123,9 @@ export function Table() {
   const isFree = game?.type === 'free'
 
   /** Lô tô: số tờ người này đã mua trong ván đang mở. */
-  const lotoBought = (id: ID) => {
-    if (!game || !round) return 0
-    const paid = round.moves.filter((m) => m.from === id && m.to === POT).reduce((sum, m) => sum + m.amount, 0)
+  const lotoBought = (id: ID, r = round) => {
+    if (!game || !r) return 0
+    const paid = r.moves.filter((m) => m.from === id && m.to === POT).reduce((sum, m) => sum + m.amount, 0)
     return Math.floor(paid / lotoPrice(game))
   }
   /** Lô tô: người này còn mua được mấy tờ trong ván đang mở. */
@@ -254,9 +254,10 @@ export function Table() {
     if (isLoto && (to === POT || from === POT)) {
       if (from === POT) return void awardPot(to)
       if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
-      // Đã mua rồi, chưa chốt → kéo lại vào Pot để chỉnh số tờ
-      if (round && lotoBought(from) > 0) return setPending({ from, to, edit: true })
       if (!round && !openNext()) return
+      // Đã mua rồi (kể cả tự mua lại theo ván trước lúc mở ván), chưa chốt → kéo lại vào ô Mua để chỉnh số tờ
+      const now = round ?? openRound(actions().session!, game.id)
+      if (lotoBought(from, now) > 0) return setPending({ from, to, edit: true })
       return setPending({ from, to })
     }
     if (from === DEALER) {
