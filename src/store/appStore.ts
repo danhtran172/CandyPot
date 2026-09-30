@@ -41,11 +41,10 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const mod = GAMES[game.type]
   const prev = [...game.rounds].reverse().find((r) => r.kind === 'play')
   const active = session.players.filter((p) => p.active).map((p) => p.id)
+  // Người chơi ván trước (bỏ người đang nghỉ) + người mới vào bàn / vừa chơi lại (đang "chờ ván sau")
   const fromPrev = prev?.participants.filter((id) => active.includes(id))
-  const participants =
-    game.type === 'tienlen'
-      ? seatedOf(session)
-      : (fromPrev && fromPrev.length >= mod.minPlayers ? fromPrev : active).slice(0, mod.maxPlayers)
+  const joined = fromPrev ? [...fromPrev, ...active.filter((id) => !fromPrev.includes(id))] : active
+  const participants = game.type === 'tienlen' ? seatedOf(session) : joined.slice(0, mod.maxPlayers)
   const tl = game.type === 'tienlen' ? tienlenBets(game) : undefined
   const price = game.type === 'loto' ? lotoPrice(game) : undefined
   const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]

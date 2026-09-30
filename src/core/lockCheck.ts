@@ -13,7 +13,8 @@ export function lockWarnings(session: Session, game: Game, round: Round): { miss
       : contributions(round)
   const inRoom = session.players.filter((p) => !p.removed && p.id !== round.dealer)
   return {
-    missing: inRoom.filter((p) => p.active && !(paid[p.id] > 0)).map((p) => p.id),
+    // Người vào bàn giữa ván (không có trong ván) đang chờ ván sau — không nhắc
+    missing: inRoom.filter((p) => p.active && round.participants.includes(p.id) && !(paid[p.id] > 0)).map((p) => p.id),
     resting: inRoom.filter((p) => !p.active && paid[p.id] > 0).map((p) => p.id),
   }
 }

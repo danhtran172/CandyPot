@@ -27,4 +27,9 @@ describe('lockWarnings — cảnh báo khi chốt', () => {
     const r = round({ dealer: 'a', stakes: { b: 3 } })
     expect(lockWarnings(session, { type: 'xidach' } as Game, r)).toEqual({ missing: [], resting: [] })
   })
+
+  it('người vào bàn giữa ván (không có trong ván, chờ ván sau) thì không nhắc', () => {
+    const r = round({ participants: ['a'], moves: [{ id: 'm1', from: 'a', to: POT, amount: 5, label: '' }] })
+    expect(lockWarnings(session, { type: 'loto' } as Game, r)).toEqual({ missing: [], resting: [] })
+  })
 })

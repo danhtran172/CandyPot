@@ -463,6 +463,21 @@ describe('appStore — Lô tô', () => {
     expect(s().setLotoTickets(g, a, 2)).toEqual(['Đã chốt — không đổi số tờ được nữa.'])
   })
 
+  it('vào bàn lúc ván đang chơi: chưa tính ván này, ván sau tự vào', () => {
+    const g = s().addGame('loto')
+    s().quickOpen(g)
+    s().addPlayer('Dũng', '🦊')
+    const d = session().players.find((p) => p.name === 'Dũng')!.id
+    expect(openRound(session(), g)!.participants).not.toContain(d)
+    expect(s().addMove(g, d, POT, 5, '1 tờ')).toEqual(['Chỉ kéo kẹo giữa những người trong ván.'])
+    s().addMove(g, a, POT, 5, '1 tờ')
+    s().lockBets(g)
+    s().addMove(g, POT, a, 5, 'Ăn pot')
+    s().closeRound(g)
+    s().quickOpen(g)
+    expect(openRound(session(), g)!.participants).toEqual([a, b, c, d])
+  })
+
   it('ván mới tự mua lại số tờ của ván trước (giá mới, bỏ người nghỉ) — chưa chốt thì chỉnh được', () => {
     const g = s().addGame('loto')
     s().setLotoPrice(g, 5)

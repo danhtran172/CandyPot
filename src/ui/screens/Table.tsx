@@ -229,6 +229,9 @@ export function Table() {
     if (isLoto && target === POT && from !== POT)
       return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
     const to = target === BUY ? POT : target
+    // Người vào bàn giữa ván: chưa tính ván này
+    const waiter = [from, to].find((id) => waitingIds.has(id))
+    if (waiter) return flash(`${waiter === me ? 'Bạn' : players[waiter]?.name} đang chờ — vào bàn từ ván sau.`, true)
     // Bàn nhiều người: ai (kể cả host) cũng chỉ trả / cược / mua bằng kẹo của mình hoặc đòi về mình —
     // không làm thay người khác. Host chỉ thêm quyền trao pot và đổi nhà cái.
     if (!solo && from !== me && !(to === me && from !== POT && from !== DEALER)) {
@@ -519,15 +522,18 @@ export function Table() {
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
   // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
-  const visible = session.players.filter(
-    (p) => !p.removed && (seated ? seated.includes(p.id) : !round || round.participants.includes(p.id) || !p.active),
+  // Vào bàn lúc ván đang chơi → vẫn ngồi trên bàn nhưng "chờ ván sau" (không tính ván này, ván sau tự vào)
+  const visible = session.players.filter((p) => !p.removed && (seated ? seated.includes(p.id) : true))
+  const waitingIds = new Set(
+    round && !seated ? visible.filter((p) => p.active && !round.participants.includes(p.id)).map((p) => p.id) : [],
   )
 
   const seats: Seat[] = visible.map((p) => ({
     player: p,
     isMe: p.id === me,
     online: onlineIds.has(p.id),
-    round: round ? (roundDelta[p.id] ?? 0) : undefined,
+    round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
+    waiting: waitingIds.has(p.id),
     badge: hand ? pokerBadge(p.id) : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand

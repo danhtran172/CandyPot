@@ -30,6 +30,8 @@ export interface Seat {
   dealer?: boolean
   /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
   action?: ReactNode
+  /** Vào bàn lúc ván đang chơi: chưa tính ván này, tự vào từ ván sau — avatar mờ + ⏳. */
+  waiting?: boolean
 }
 
 interface Drag {
@@ -371,7 +373,7 @@ export function Board({
                         : 'border-line'
                   } ${ring(s.player.id)}`}
                 >
-                  <span aria-hidden className={`leading-none ${s.player.active ? '' : 'opacity-40'}`}>
+                  <span aria-hidden className={`leading-none ${s.player.active && !s.waiting ? '' : 'opacity-40'}`}>
                     {s.player.emoji}
                   </span>
                   {s.dealer && (
@@ -384,19 +386,28 @@ export function Board({
                     />
                   )}
                   {s.online && <OnlineDot className="absolute -top-0.5 -left-0.5" />}
-                  {!s.player.active && (
+                  {!s.player.active ? (
                     <span aria-label="Tạm nghỉ" className="absolute -top-1.5 -right-2 text-base leading-none">
                       💤
                     </span>
+                  ) : (
+                    s.waiting && (
+                      <span aria-label="Chờ ván sau" className="absolute -top-1.5 -right-2 text-base leading-none">
+                        ⏳
+                      </span>
+                    )
                   )}
                   {side !== 'below' && stake}
                 </span>
                 <span
-                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active ? '' : 'opacity-50'}`}
+                  className={`mt-1 w-full truncate text-xs font-semibold ${s.isMe ? 'text-lemon' : ''} ${s.player.active && !s.waiting ? '' : 'opacity-50'}`}
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
                 {/* Chỉ hiện được/mất của ván đang chơi — tổng cả bàn xem ở Tổng kết / Lịch sử */}
+                {s.waiting && s.player.active && (
+                  <span className="text-[10px] leading-tight font-semibold whitespace-nowrap text-muted">chờ ván sau</span>
+                )}
                 {s.round !== undefined && (
                   <span className={`num font-display text-base leading-tight font-extrabold ${toneOf(s.round)}`} title="Được/mất ván này">
                     {signed(s.round)}
