@@ -276,6 +276,13 @@ function SwipeRow({
       else if (Math.abs(dx) > 10) {
         g.swiping = true
         e.currentTarget.setPointerCapture(e.pointerId)
+        // Kéo chuột bắt đầu trên ô tên (PC): bỏ bôi chữ, trả ô về đầu dòng
+        window.getSelection()?.removeAllRanges()
+        const typing = document.activeElement
+        if (typing instanceof HTMLInputElement && e.currentTarget.contains(typing)) {
+          typing.blur()
+          typing.scrollLeft = 0
+        }
       }
       if (!g.swiping) return
     }
@@ -314,12 +321,18 @@ function SwipeRow({
         onPointerUp={up}
         onPointerCancel={up}
         onClickCapture={(e) => {
-          // Vừa vuốt, hoặc dòng đang mở → chạm chỉ để đóng, không bấm nút bên trong
-          if (suppressClick.current || open) {
+          // Vừa vuốt xong (chuột trên PC vẫn phát click khi thả) → bỏ qua, giữ nguyên dòng đang mở
+          if (suppressClick.current) {
             e.stopPropagation()
             e.preventDefault()
             suppressClick.current = false
-            if (open) onClose()
+            return
+          }
+          // Dòng đang mở → chạm chỉ để đóng, không bấm nút bên trong
+          if (open) {
+            e.stopPropagation()
+            e.preventDefault()
+            onClose()
           }
         }}
         style={{ transform: `translateX(${-offset}px)` }}
