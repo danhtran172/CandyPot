@@ -31,7 +31,7 @@ import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
-import { EngravedGameIcon, GameIcon } from '../components/GameIcon'
+import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
 import { GameName } from '../components/GameName'
 import { ask } from '../dialog'
@@ -638,7 +638,7 @@ export function Table() {
             potAfterCenter={game.type === 'loto'}
             title={
               <>
-                <EngravedGameIcon type={game.type} />
+                <GameIcon type={game.type} className="size-7" />
                 {GAMES[game.type].label}
               </>
             }
@@ -1154,7 +1154,7 @@ function TableCenter({
     const soon = GAMES[game.type].soon
     return (
       <>
-        {/* Tên + icon chế độ đã khắc chìm trên mặt bàn */}
+        {/* Tên + icon chế độ đã in trên mặt bàn */}
         <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm 💰 Pot để cược' : 'Chưa mở ván'}</span>
       </>
     )

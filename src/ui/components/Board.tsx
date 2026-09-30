@@ -105,7 +105,7 @@ export function Board({
   onBetHold?: () => void
   /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (như thả vào Pot). */
   buyBox?: { price: number }
-  /** Tên chế độ chơi (kèm icon) — in khắc chìm trên mặt bàn. */
+  /** Tên chế độ chơi (kèm icon) — in mờ (70%) trên mặt bàn. */
   title?: ReactNode
   /** Ghim sát mép trên mặt bàn (VD nút Rule ?), không trôi theo nội dung giữa bàn. */
   top?: ReactNode
@@ -248,7 +248,7 @@ export function Board({
             }`}
           >
             {title && (
-              <span className="engraved font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase">
+              <span className="font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase opacity-70">
                 {title}
               </span>
             )}

@@ -115,16 +115,3 @@ body {
   bottom: var(--kb, 0px);
   transition: bottom 0.15s ease-out;
 }
-
-/* Chữ / icon khắc chìm trên mặt bàn (tên chế độ chơi): tối hơn mặt bàn, mép dưới bắt sáng, mép trên đổ bóng */
-.engraved-icon {
-  opacity: 0.9;
-  filter: grayscale(1) brightness(0.22) contrast(1.4) drop-shadow(0 1px 0 rgb(255 241 224 / 0.2)) drop-shadow(0 -1px 1px rgb(0 0 0 / 0.55));
-}
-
-.engraved {
-  color: rgb(22 10 28 / 0.8);
-  text-shadow:
-    0 1px 0 rgb(255 241 224 / 0.2),
-    0 -1px 1px rgb(0 0 0 / 0.55);
-}
