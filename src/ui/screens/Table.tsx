@@ -1,4 +1,5 @@
 import { Children, useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
 import { lotoMax, lotoPrice } from '../../core/games/loto'
@@ -64,6 +65,8 @@ export function Table() {
   const [editLimits, setEditLimits] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [guidePick, setGuidePick] = useState(false)
+  /** Đang đánh bài trong app: popup đổi game (thay ô chọn game đã ẩn). */
+  const [gameMenu, setGameMenu] = useState(false)
   const [guide, setGuide] = useState<GuideStep[] | null>(null)
   const [toast, setToast] = useState<{ text: string; bad?: boolean } | null>(null)
 
@@ -511,7 +514,7 @@ export function Table() {
   // Lần đầu gặp một tính năng (trên máy này) → tự hướng dẫn đúng những bước chưa xem bao giờ, đang có trên màn hình
   const role: GuideRole = me && me === session.hostId ? 'host' : 'player'
   // Đang mở popup → chưa hướng dẫn (đóng popup xong mới hiện, không đè lên)
-  const busy = !!(pending || picker || pokerSheet || showLog || showMe || editBets || editPrice || editLimits || showRules || guidePick)
+  const busy = !!(gameMenu || pending || picker || pokerSheet || showLog || showMe || editBets || editPrice || editLimits || showRules || guidePick)
   useEffect(() => {
     if (!game || guide || !me || busy) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
     const t = window.setTimeout(() => {
@@ -583,6 +586,8 @@ export function Table() {
         title={session.name}
         back="/"
         right={
+          // Đang đánh bài trong app: các nút này nằm trong popup ⋯
+          cardPlay ? undefined : (
           <>
             <Link to={`${base}/players`} data-guide="players" className="rounded-full bg-plum-2 px-3 py-1.5 text-sm font-semibold">
               👥 Người chơi
@@ -602,10 +607,11 @@ export function Table() {
               ?
             </button>
           </>
+          )
         }
       />
 
-      <div data-guide="picker">
+      <div data-guide="picker" className={cardPlay ? 'hidden' : ''}>
         <GamePicker value={game?.type} onPick={pickType} locked={!canHost} />
       </div>
 
@@ -626,7 +632,7 @@ export function Table() {
         </Card>
       ) : (
         <>
-          <div className="mt-2 mb-2 flex items-center justify-between gap-2 text-sm">
+          <div className={`mt-2 mb-2 flex items-center justify-between gap-2 text-sm ${cardPlay ? 'hidden' : ''}`}>
             {round ? (
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
@@ -683,7 +689,7 @@ export function Table() {
             center={<TableCenter game={game} round={round} players={players} />}
             cornerTop={
               // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
-              withRules && (
+              !cardPlay && withRules && (
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -762,7 +768,7 @@ export function Table() {
                   }}
                   onNext={nextRound}
                   menu={
-                    <More on count={menuCount} align="right">
+                    <More on count={menuCount}>
                       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowLog(true)}>
                         📜 Trả/nhận{myRoundMoves + asking.length ? ` (${myRoundMoves + asking.length})` : ''}
                       </Button>
@@ -771,6 +777,20 @@ export function Table() {
                       </Button>
                       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/requests`)}>
                         📨 Yêu cầu{asksCount ? ` (${asksCount})` : ''}
+                      </Button>
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowRules(true)}>
+                        📖 Luật & mode bài
+                      </Button>
+                      {canHost && (
+                        <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
+                          🎮 Đổi game
+                        </Button>
+                      )}
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/players`)}>
+                        👥 Người chơi
+                      </Button>
+                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGuidePick(true)}>
+                        ❓ Hướng dẫn
                       </Button>
                       {canHost && (
                         <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
@@ -1009,6 +1029,30 @@ export function Table() {
           }}
           onClose={() => setGuidePick(false)}
         />
+      )}
+
+      {gameMenu && (
+        <div role="dialog" aria-modal="true" aria-label="Đổi game" className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/75 backdrop-blur-sm" onClick={() => setGameMenu(false)} />
+          <div className="pop relative w-full max-w-sm rounded-3xl border-2 border-sky/70 bg-plum-2 p-5 shadow-2xl">
+            <h2 className="font-display text-center text-xl font-bold">🎮 Đổi game</h2>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {GAME_ORDER.map((t) => (
+                <Button
+                  key={t}
+                  className={`flex flex-col items-center gap-1 py-3 ${game?.type === t ? 'ring-2 ring-lemon' : ''}`}
+                  onClick={() => {
+                    setGameMenu(false)
+                    pickType(t)
+                  }}
+                >
+                  <GameIcon type={t} className="size-8" />
+                  <GameName type={t} />
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {guide && <GuideTour key={guide.map((s) => s.id).join()} steps={guide} onClose={closeGuide} />}
@@ -1281,12 +1325,10 @@ function tienlenBadge(cards: TienlenCards, id: ID): string | undefined {
 function More({
   on,
   count = 0,
-  align = 'left',
   children,
 }: {
   on: boolean
   count?: number
-  align?: 'left' | 'right'
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -1295,17 +1337,19 @@ function More({
   if (!items.length) return null
   return (
     <div className="relative shrink-0">
-      {open && (
+      {open &&
+        createPortal(
         <>
-          <button type="button" aria-label="Đóng" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <button type="button" aria-label="Đóng" className="fixed inset-0 z-40 cursor-default bg-night/50" onClick={() => setOpen(false)} />
           <div
-            className={`pop absolute bottom-full ${align === 'right' ? 'right-0' : 'left-0'} z-20 mb-2 flex min-w-44 flex-col gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl`}
+            className="pop fixed inset-x-4 bottom-44 z-50 mx-auto grid max-w-sm grid-cols-2 gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl [&>*]:w-full [&>*]:whitespace-nowrap"
             onClickCapture={() => setOpen(false)}
           >
             {items}
           </div>
-        </>
-      )}
+        </>,
+          document.body,
+        )}
       <Button
         aria-label="Chức năng khác"
         aria-expanded={open}
