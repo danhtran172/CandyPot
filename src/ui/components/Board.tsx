@@ -70,8 +70,6 @@ const HEIGHT = 'clamp(420px, calc(100dvh - 270px), 640px)'
 export function Board({
   seats,
   center,
-  corner,
-  cornerRight,
   cornerTop,
   pot,
   potAfterCenter,
@@ -89,10 +87,6 @@ export function Board({
   shape?: 'oval' | 'square'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
-  /** Nút ở góc dưới bên trái bàn. */
-  corner?: ReactNode
-  /** Nút ở góc dưới bên phải bàn. */
-  cornerRight?: ReactNode
   /** Nút ở góc trên bên phải bàn (vd ⚙ cài đặt Poker). */
   cornerTop?: ReactNode
   /** Số kẹo trong pot; undefined = bàn không có pot. */
@@ -390,8 +384,6 @@ export function Board({
           })}
         </div>
 
-        {corner && <div className="absolute bottom-1 left-3 z-10">{corner}</div>}
-        {cornerRight && <div className="absolute right-3 bottom-1 z-10 flex gap-1.5">{cornerRight}</div>}
         {cornerTop && <div className="absolute top-1 right-3 z-10">{cornerTop}</div>}
       </div>
 

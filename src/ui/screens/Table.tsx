@@ -539,7 +539,7 @@ export function Table() {
   }))
 
   return (
-    <main className="pb-28">
+    <main className="pb-40">
       <TopBar
         title={session.name}
         back="/"
@@ -661,206 +661,211 @@ export function Table() {
                 </button>
               ) : undefined
             }
-            corner={
-              <button
-                type="button"
-                onClick={() => setShowLog(true)}
-                data-guide="log"
-                className="flex items-center gap-1.5 rounded-2xl border border-line/60 bg-night/70 px-2.5 py-1.5 text-xs font-semibold"
-              >
-                📜 Trả/nhận
-                {myRoundMoves + asking.length > 0 && (
-                  <span className="num rounded-full bg-lemon px-1.5 text-[10px] leading-4 text-night">
-                    {myRoundMoves + asking.length}
-                  </span>
-                )}
-              </button>
-            }
-            cornerRight={
-              // Bàn một máy: không ai xin hoàn tác / đòi kẹo qua máy khác
-              solo ? undefined : (
-                <>
-                  <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
-                  <CornerLink to={`${base}/requests`} guide="requests" icon="📨" label="Yêu cầu" count={incomingAsks(session, me).length + answeredAsks(session, me).length} />
-                </>
-              )
-            }
             onTransfer={onTransfer}
             onTap={onTap}
           />
 
 
-          <div data-guide="actions" className="fixed inset-x-0 bottom-16 z-10 mx-auto flex max-w-lg gap-2 px-4 pb-[env(safe-area-inset-bottom)]">
-            {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
-              // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
-              <div className="flex flex-1 items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-night/90 px-3 py-2 text-center text-sm text-muted">
-                {hostAway && me ? (
-                  <>
-                    ⚪ <b className="text-cream">{hostName}</b> offline
-                    <button
-                      type="button"
-                      onClick={() => confirmTakeHost(session, me)}
-                      className="ml-2 rounded-full border border-mint bg-mint/20 px-3 py-1 text-sm font-bold text-mint active:scale-95"
-                    >
-                      🛎️ Làm host
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    🛎️ <b className="text-cream">{hostName}</b> điều khiển ván
-                    {hand && actor && hand.street !== 'done' ? ` · lượt ${players[actor]?.name}` : ''}
-                  </>
+          {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
+          <div className="pointer-events-none fixed inset-x-0 bottom-16 z-10 mx-auto max-w-lg px-4 pb-[env(safe-area-inset-bottom)]">
+            <div className="mb-2 flex items-end justify-between">
+              <button
+                type="button"
+                onClick={() => setShowLog(true)}
+                data-guide="log"
+                className="pointer-events-auto flex items-center gap-1.5 rounded-2xl border border-line/60 bg-night/70 px-2.5 py-1.5 text-xs font-semibold"
+              >
+                📜 Trả/nhận
+                {myRoundMoves + asking.length > 0 && (
+                  <span className="num rounded-full bg-lemon px-1.5 text-[10px] leading-4 text-night">{myRoundMoves + asking.length}</span>
                 )}
-              </div>
-            ) : game.type === 'free' ? (
-              round ? (
-                <>
-                  {round.phase === 'betting' ? (
+              </button>
+              {/* Bàn một máy: không ai xin hoàn tác / đòi kẹo qua máy khác */}
+              {!solo && (
+                <div className="pointer-events-auto flex gap-1.5">
+                  <CornerLink to={`${base}/host`} guide="host" icon="🛎️" label="Host" count={hostTasks(session, me).length} />
+                  <CornerLink
+                    to={`${base}/requests`}
+                    guide="requests"
+                    icon="📨"
+                    label="Yêu cầu"
+                    count={incomingAsks(session, me).length + answeredAsks(session, me).length}
+                  />
+                </div>
+              )}
+            </div>
+            <div data-guide="actions" className="pointer-events-auto flex gap-2">
+              {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
+                // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
+                <div className="flex flex-1 items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-night/90 px-3 py-2 text-center text-sm text-muted">
+                  {hostAway && me ? (
                     <>
-                      <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
-                        Hủy ván
-                      </Button>
-                      {backBtn}
-                      <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
-                        Chốt cược
-                      </Button>
+                      ⚪ <b className="text-cream">{hostName}</b> offline
+                      <button
+                        type="button"
+                        onClick={() => confirmTakeHost(session, me)}
+                        className="ml-2 rounded-full border border-mint bg-mint/20 px-3 py-1 text-sm font-bold text-mint active:scale-95"
+                      >
+                        🛎️ Làm host
+                      </button>
                     </>
                   ) : (
                     <>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={unlockBets}>
-                        Bỏ chốt
-                      </Button>
-                      {backBtn}
-                      <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
-                        Kéo 💰 Pot vào người thắng
-                      </div>
+                      🛎️ <b className="text-cream">{hostName}</b> điều khiển ván
+                      {hand && actor && hand.street !== 'done' ? ` · lượt ${players[actor]?.name}` : ''}
                     </>
                   )}
-                </>
-              ) : (
-                backBtn
-              )
-            ) : game.type === 'poker' && (hand || !round) ? (
-              !hand ? (
-                <>
-                  {backBtn}
-                  <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                    Tay mới
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {hand.street === 'done' || hand.street === 'showdown' ? backBtn : null}
-                  {hand.street === 'done' ? (
-                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
+                </div>
+              ) : game.type === 'free' ? (
+                round ? (
+                  <>
+                    {round.phase === 'betting' ? (
+                      <>
+                        <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                          Hủy ván
+                        </Button>
+                        {backBtn}
+                        <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
+                          Chốt cược
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={unlockBets}>
+                          Bỏ chốt
+                        </Button>
+                        {backBtn}
+                        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
+                          Kéo 💰 Pot vào người thắng
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  backBtn
+                )
+              ) : game.type === 'poker' && (hand || !round) ? (
+                !hand ? (
+                  <>
+                    {backBtn}
+                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
                       Tay mới
                     </Button>
-                  ) : hand.street === 'showdown' ? (
-                    <Button
-                      variant="primary"
-                      className="font-display flex-1 py-1.5 text-base"
-                      onClick={() =>
-                        me === session.hostId ? setPicker('award') : flash(`Chờ ${hostName} trao pot.`, true)
-                      }
-                    >
-                      🏆 {hand.awarded.length ? `Còn ${restPot} kẹo — ai mạnh nhất tiếp?` : 'Ai bài mạnh nhất?'}
-                    </Button>
-                  ) : actor && handState ? (
-                    <>
-                      <Button variant="danger" className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
-                        Bỏ bài
+                  </>
+                ) : (
+                  <>
+                    {hand.street === 'done' || hand.street === 'showdown' ? backBtn : null}
+                    {hand.street === 'done' ? (
+                      <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={nextRound}>
+                        Tay mới
                       </Button>
+                    ) : hand.street === 'showdown' ? (
                       <Button
                         variant="primary"
-                        className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm whitespace-nowrap"
-                        onClick={() => pokerDo(toCall(hand, actor) ? { type: 'call' } : { type: 'check' })}
+                        className="font-display flex-1 py-1.5 text-base"
+                        onClick={() =>
+                          me === session.hostId ? setPicker('award') : flash(`Chờ ${hostName} trao pot.`, true)
+                        }
                       >
-                        {toCall(hand, actor)
-                          ? `Theo ${Math.min(toCall(hand, actor), remaining(handState, actor))}${toCall(hand, actor) >= remaining(handState, actor) ? ' (all-in)' : ''}`
-                          : 'Xem bài'}
+                        🏆 {hand.awarded.length ? `Còn ${restPot} kẹo — ai mạnh nhất tiếp?` : 'Ai bài mạnh nhất?'}
                       </Button>
-                      <Button
-                        className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap"
-                        disabled={!raiseOptions(handState, actor).length}
-                        onClick={() => setPokerSheet('raise')}
-                      >
-                        Tố
+                    ) : actor && handState ? (
+                      <>
+                        <Button variant="danger" className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap" onClick={() => pokerDo({ type: 'fold' })}>
+                          Bỏ bài
+                        </Button>
+                        <Button
+                          variant="primary"
+                          className="min-w-0 flex-1 truncate px-2 py-1.5 text-sm whitespace-nowrap"
+                          onClick={() => pokerDo(toCall(hand, actor) ? { type: 'call' } : { type: 'check' })}
+                        >
+                          {toCall(hand, actor)
+                            ? `Theo ${Math.min(toCall(hand, actor), remaining(handState, actor))}${toCall(hand, actor) >= remaining(handState, actor) ? ' (all-in)' : ''}`
+                            : 'Xem bài'}
+                        </Button>
+                        <Button
+                          className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap"
+                          disabled={!raiseOptions(handState, actor).length}
+                          onClick={() => setPokerSheet('raise')}
+                        >
+                          Tố
+                        </Button>
+                        <Button
+                          className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap text-berry"
+                          disabled={!remaining(handState, actor)}
+                          onClick={() => setPokerSheet('allin')}
+                        >
+                          All-in
+                        </Button>
+                      </>
+                    ) : null}
+                  </>
+                )
+              ) : game.type === 'loto' ? (
+                round ? (
+                  <>
+                    <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
+                      Hủy ván
+                    </Button>
+                    {backBtn}
+                    {round.phase === 'betting' ? (
+                      <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
+                        Chốt
                       </Button>
-                      <Button
-                        className="bg-night/90 px-2 py-1.5 text-sm whitespace-nowrap text-berry"
-                        disabled={!remaining(handState, actor)}
-                        onClick={() => setPokerSheet('allin')}
-                      >
-                        All-in
-                      </Button>
-                    </>
-                  ) : null}
+                    ) : (
+                      <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 text-center text-sm font-semibold text-lemon">
+                        {me === session.hostId ? 'Bấm 💰 Pot để trao cho người thắng' : `Chờ ${hostName} trao pot`}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {backBtn}
+                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
+                      Ván mới
+                    </Button>
+                  </>
+                )
+              ) : game.type === 'xidach' ? (
+                <>
+                  {!round && (
+                    <Button
+                      aria-label="Tùy chỉnh ván mới"
+                      className="bg-night/90 px-3 py-1.5 text-sm"
+                      onClick={() => navigate(`${base}/g/${game.id}/open`)}
+                    >
+                      ⚙
+                    </Button>
+                  )}
+                  {backBtn}
+                  {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Kết thúc (sang ván mới); chưa có ván → Ván mới */}
+                  <Button
+                    variant="primary"
+                    className="font-display flex-1 py-1.5 text-lg"
+                    onClick={round?.phase === 'betting' ? lockBets : nextRound}
+                  >
+                    {round?.phase === 'betting' ? 'Chốt cược' : round ? 'Kết thúc' : 'Ván mới'}
+                  </Button>
                 </>
-              )
-            ) : game.type === 'loto' ? (
-              round ? (
+              ) : round ? (
                 <>
                   <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
                     Hủy ván
                   </Button>
                   {backBtn}
-                  {round.phase === 'betting' ? (
-                    <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={lockBets}>
-                      Chốt
-                    </Button>
-                  ) : (
-                    <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 text-center text-sm font-semibold text-lemon">
-                      {me === session.hostId ? 'Bấm 💰 Pot để trao cho người thắng' : `Chờ ${hostName} trao pot`}
-                    </div>
-                  )}
+                  <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={closeRound}>
+                    Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
+                  </Button>
                 </>
               ) : (
                 <>
                   {backBtn}
                   <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                    Ván mới
+                    + Mở ván
                   </Button>
                 </>
-              )
-            ) : game.type === 'xidach' ? (
-              <>
-                {!round && (
-                  <Button
-                    aria-label="Tùy chỉnh ván mới"
-                    className="bg-night/90 px-3 py-1.5 text-sm"
-                    onClick={() => navigate(`${base}/g/${game.id}/open`)}
-                  >
-                    ⚙
-                  </Button>
-                )}
-                {backBtn}
-                {/* Một nút đổi theo bước: đang đặt cược → Chốt cược; đã chốt → Kết thúc (sang ván mới); chưa có ván → Ván mới */}
-                <Button
-                  variant="primary"
-                  className="font-display flex-1 py-1.5 text-lg"
-                  onClick={round?.phase === 'betting' ? lockBets : nextRound}
-                >
-                  {round?.phase === 'betting' ? 'Chốt cược' : round ? 'Kết thúc' : 'Ván mới'}
-                </Button>
-              </>
-            ) : round ? (
-              <>
-                <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
-                  Hủy ván
-                </Button>
-                {backBtn}
-                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={closeRound}>
-                  Chốt ván{game.type === 'poker' && potOf(round) > 0 ? ` (pot ${potOf(round)})` : ''}
-                </Button>
-              </>
-            ) : (
-              <>
-                {backBtn}
-                <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                  + Mở ván
-                </Button>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </>
       )}
