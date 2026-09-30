@@ -6,6 +6,7 @@ import potIcon from '../../assets/pot.webp'
 import dragCandy from '../../assets/drag-candy.webp'
 import bowtie from '../../assets/rules/bowtie.webp'
 import ticket from '../../assets/loto-ticket.webp'
+import { CardBackStack } from './CardBack'
 
 export interface Seat {
   player: Player
@@ -19,6 +20,8 @@ export interface Seat {
   stakeDim?: boolean
   /** Lô tô: số tờ đã mua trong ván, hiện trước chỗ ngồi dạng [tờ bingo màu riêng] × N. */
   tickets?: { count: number; color: string }
+  /** Bài trong app: số lá còn trên tay, hiện trước chỗ ngồi dạng xấp lưng bài. */
+  cards?: number
   isMe?: boolean
   /** Đang có máy mở bàn (bàn nhiều người) — chấm xanh góc trên bên trái avatar. */
   online?: boolean
@@ -330,7 +333,11 @@ export function Board({
             const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
-            const stake = s.tickets ? (
+            const stake = s.cards !== undefined ? (
+              <span className={`pointer-events-none absolute z-10 flex items-center rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}>
+                <CardBackStack count={s.cards} />
+              </span>
+            ) : s.tickets ? (
               <span
                 className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap ${STAKE_POS[side]}`}
                 style={{ color: s.tickets.color }}

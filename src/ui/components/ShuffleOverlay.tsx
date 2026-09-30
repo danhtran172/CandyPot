@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { ShuffleKind } from '../shuffle'
+import { CardBack } from './CardBack'
 
 const LABEL: Record<ShuffleKind, string> = { riffle: 'Đan bài', bridge: 'Bridge' }
 
@@ -18,7 +19,7 @@ export function ShuffleOverlay({ kind }: { kind: ShuffleKind }) {
       aria-label={`Đang xào bài — ${LABEL[kind]}`}
       className="shuffle-fade pointer-events-none fixed inset-0 z-40 flex flex-col items-center justify-center bg-night/55"
     >
-      <div className="relative h-24 w-14">
+      <div className="relative h-20 w-[58px]">
         {Array.from({ length: N }, (_, i) => {
           // Lá chẵn nửa trái, lá lẻ nửa phải — rơi xuống theo thứ tự i nên hai nửa đan xen nhau
           const left = i % 2 === 0
@@ -32,10 +33,10 @@ export function ShuffleOverlay({ kind }: { kind: ShuffleKind }) {
             animationDelay: `${(kind === 'bridge' ? 0.12 : 0.06) + i * (kind === 'bridge' ? 0.022 : 0.03)}s`,
           } as CSSProperties
           return (
-            <div
+            <CardBack
               key={i}
               style={style}
-              className={`${kind === 'bridge' ? 'shuffle-bridge' : 'shuffle-riffle'} absolute inset-0 origin-bottom rounded-lg border-2 border-cream/90 bg-[repeating-linear-gradient(45deg,var(--color-berry)_0_5px,var(--color-plum-2)_5px_10px)] shadow-md`}
+              className={`${kind === 'bridge' ? 'shuffle-bridge' : 'shuffle-riffle'} absolute inset-0 size-full origin-bottom drop-shadow-[0_2px_3px_rgb(0_0_0/0.45)]`}
             />
           )
         })}

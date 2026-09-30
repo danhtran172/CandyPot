@@ -573,6 +573,7 @@ export function Table() {
           ? (round ?? lastPlay)?.stakes[p.id]
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
+    cards: tlCards && !tlCards.finished.includes(p.id) ? tlCards.hands[p.id]?.length : undefined,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
     highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id),
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
@@ -1327,13 +1328,11 @@ function lotoEditOptions(current: number, max: number): number[] {
   return [...new Set([best, ...rest, 0])]
 }
 
-/** Tiến lên bài trong app: số lá còn trên tay, hoặc hạng khi đã về; bỏ lượt thì ghi rõ. */
+/** Tiến lên bài trong app: hạng khi đã về; bỏ lượt thì ghi rõ (số lá còn lại hiện bằng xấp lưng bài). */
 function tienlenBadge(cards: TienlenCards, id: ID): string | undefined {
   const place = placeOf(cards, id)
   if (place) return place
-  const n = cards.hands[id]?.length
-  if (n === undefined) return undefined
-  return `🂠 ${n}${cards.passed.includes(id) ? ' · Bỏ lượt' : ''}`
+  return cards.passed.includes(id) ? 'Bỏ lượt' : undefined
 }
 
 /** Chơi bài trong app (`on`): gom các nút phụ (Hủy ván, Ván trước…) vào một nút ⋯, bấm thì hiện ra. Không thì để nguyên. */
