@@ -78,8 +78,8 @@ export function UndoDetail({ session, undo }: { session: Session; undo: Extract<
     <>
       {move ? (
         <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
-          <Who player={players[move.from]} className="font-semibold text-sky" />→
-          <Who player={players[move.to]} className="font-semibold text-sky" />
+          <Who chip player={players[move.from]} className="font-semibold text-sky" />→
+          <Who chip player={players[move.to]} className="font-semibold text-sky" />
           <span className="candy num text-sm">{move.amount}</span>
         </div>
       ) : (

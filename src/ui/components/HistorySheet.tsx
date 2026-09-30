@@ -47,8 +47,8 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
         icon: '↩️',
         message: (
           <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
-            <Who player={players[m.from]} className="font-semibold text-sky" /> →
-            <Who player={players[m.to]} className="font-semibold text-sky" /> · {m.amount} kẹo
+            <Who chip player={players[m.from]} className="font-semibold text-sky" /> →
+            <Who chip player={players[m.to]} className="font-semibold text-sky" /> · {m.amount} kẹo
           </span>
         ),
         okLabel: 'Hoàn tác',
@@ -118,9 +118,9 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
               <ul className="rounded-2xl bg-night/40">
                 {asking.map((r) => (
                   <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2 text-sm last:border-0">
-                    <Who player={players[r.to]} className="min-w-0 font-semibold text-sky" />
+                    <Who chip player={players[r.to]} className="min-w-0 font-semibold text-sky" />
                     <span className="text-muted">đòi</span>
-                    <Who player={players[r.from]} className="min-w-0 font-semibold text-sky" />
+                    <Who chip player={players[r.from]} className="min-w-0 font-semibold text-sky" />
                     <span className="candy num ml-auto text-sm">{r.amount}</span>
                     {r.to === me && (
                       <button
@@ -164,15 +164,15 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                     <li key={m.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2 text-sm last:border-0">
                       {potView || (whole && m.from !== me && m.to !== me) ? (
                         <>
-                          <Who player={players[m.from]} className="min-w-0 font-semibold text-sky" />
+                          <Who chip player={players[m.from]} className="min-w-0 font-semibold text-sky" />
                           <span className="text-muted">→</span>
-                          <Who player={players[m.to]} className="min-w-0 font-semibold text-sky" />
+                          <Who chip player={players[m.to]} className="min-w-0 font-semibold text-sky" />
                           <span className="num font-display ml-auto text-base font-extrabold text-lemon">{m.amount}</span>
                         </>
                       ) : (
                         <>
                           <span className="text-muted">{d > 0 ? 'Nhận từ' : m.to === POT ? 'Cược vào' : 'Trả cho'}</span>
-                          <Who player={players[d > 0 ? m.from : m.to]} className="min-w-0 font-semibold text-sky" />
+                          <Who chip player={players[d > 0 ? m.from : m.to]} className="min-w-0 font-semibold text-sky" />
                           <span className={`num font-display ml-auto text-base font-extrabold ${d > 0 ? 'text-mint' : 'text-berry'}`}>
                             {signed(d)}
                           </span>

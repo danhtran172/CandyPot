@@ -76,9 +76,9 @@ export function HostTasks() {
               <ul className="rounded-2xl bg-plum">
                 {others.map((r) => (
                   <li key={r.id} className="flex items-center gap-2 border-b border-line/40 px-3 py-2.5 text-sm last:border-0">
-                    <Who player={players[r.to]} className="min-w-0 font-semibold text-sky" />
+                    <Who chip player={players[r.to]} className="min-w-0 font-semibold text-sky" />
                     <span className="text-muted">đòi</span>
-                    <Who player={players[r.from]} className="min-w-0 font-semibold text-sky" />
+                    <Who chip player={players[r.from]} className="min-w-0 font-semibold text-sky" />
                     <span className="candy num ml-auto text-sm">{r.amount}</span>
                     <span className="text-[11px] text-muted">{timeOf(r.at)}</span>
                     <button

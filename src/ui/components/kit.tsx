@@ -147,11 +147,13 @@ export function PotChip({ className = '' }: { className?: string }) {
   )
 }
 
-export function Who({ player, className = '' }: { player?: Player; className?: string }) {
+/** Avatar + tên người chơi. `chip`: đặt trong khung xanh (như khung vàng của Pot) — dùng trong các dòng A → B. */
+export function Who({ player, className = '', chip = false }: { player?: Player; className?: string; chip?: boolean }) {
   if (!player) return <span className="text-muted">?</span>
   if (player.id === POT) return <PotChip />
+  const frame = chip ? 'min-w-0 max-w-full rounded-full border border-sky/40 bg-sky/10 px-2 py-0.5 align-middle' : ''
   return (
-    <span className={`inline-flex items-center gap-1.5 ${player.active ? '' : 'opacity-60'} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 ${frame} ${player.active ? '' : 'opacity-60'} ${className}`}>
       <span aria-hidden>{player.emoji}</span>
       <span className="truncate">{player.name}</span>
     </span>
