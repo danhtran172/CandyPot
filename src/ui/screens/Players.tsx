@@ -3,7 +3,7 @@ import { actions } from '../../store'
 import { MAX_PLAYERS } from '../../core/types'
 import { EMOJIS, isPlayerUsed } from '../../store/appStore'
 import { canHostOf, useMe } from '../me'
-import { useOnlineIds } from '../presence'
+import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
 import { saveProfile } from '../profile'
 import { useSession } from '../components/useSession'
 import { ask, tell } from '../dialog'
@@ -47,11 +47,14 @@ export function Players() {
   const tally = hostVoteTally(session)
   const myVote = me ? session.hostVotes[me] : undefined
   const hostName = session.players.find((p) => p.id === session.hostId)?.name ?? 'host'
+  const hostAway = useHostAway(session, me)
 
   /** 🛎️: host chuyển host ngay; người khác bỏ phiếu bầu (bấm lại để rút). */
   const pickHost = async (id: string, playerName: string) => {
     if (id === session.hostId) return
     if (!me) return tell('Chưa chọn bạn là ai', { icon: '🙋', message: 'Chọn tên của bạn trong bàn trước đã.' })
+    // Host offline: bấm 🛎️ ở dòng của mình = nhận làm host luôn
+    if (hostAway && id === me) return confirmTakeHost(session, me)
     if (isHost) {
       if (await ask(`Chuyển host cho ${playerName}?`, { icon: '🛎️', okLabel: 'Chuyển' })) actions().setHost(id)
       return
@@ -100,6 +103,10 @@ export function Players() {
         {isHost ? (
           <>
             Bạn là host — bấm 🛎️ ở người khác để chuyển host ngay.
+          </>
+        ) : hostAway ? (
+          <>
+            ⚪ <b>{hostName}</b> đang offline — bấm 🛎️ ở <b>dòng của bạn</b> để làm host luôn, hoặc bấm ở người khác để bầu.
           </>
         ) : (
           <>
@@ -174,6 +181,8 @@ export function Players() {
                     ? `${p.name} là host`
                     : isHost
                       ? `Chuyển host cho ${p.name}`
+                      : hostAway && p.id === me
+                        ? `Làm host (${hostName} đang offline)`
                       : myVote === p.id
                         ? `Rút phiếu bầu ${p.name}`
                         : `Bầu ${p.name} làm host`
@@ -181,7 +190,7 @@ export function Players() {
                 onClick={() => pickHost(p.id, p.name)}
                 onClass="bg-mint/25 border-mint"
                 badge={tally[p.id] ? `${tally[p.id]}/${needed}` : undefined}
-                marked={myVote === p.id}
+                marked={myVote === p.id || (hostAway && p.id === me)}
               />
               {editable ? (
                 <IconToggle

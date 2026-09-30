@@ -136,6 +136,8 @@ export interface AppState {
   setHost(playerId: ID): void
   /** Người chơi bầu host mới (bấm lại để rút phiếu). Đủ phiếu thì người đó thành host. */
   voteHost(voter: ID, candidate: ID): { errors: string[]; elected: boolean }
+  /** Host cũ (`from`) offline → `playerId` nhận làm host. Chỉ đổi khi host vẫn là `from` (ai bấm trước được). */
+  takeHost(playerId: ID, from: ID | null): void
   /** Bỏ một lượt kéo (ván đang mở hoặc đã kết thúc — tính lại lời/lỗ). Chỉ host gọi trực tiếp. */
   undoMove(gameId: ID, roundId: ID, moveId: ID): string[]
   /** Người chơi xin hoàn tác một lượt — chờ host xác nhận. */
@@ -855,6 +857,10 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
 
       setHost(playerId) {
         mutate((s) => ({ ...s, hostId: playerId, hostVotes: {} }))
+      },
+
+      takeHost(playerId, from) {
+        mutate((s) => (s.hostId === from ? { ...s, hostId: playerId, hostVotes: {} } : s))
       },
 
       voteHost(voter, candidate) {

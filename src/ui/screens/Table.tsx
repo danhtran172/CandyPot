@@ -40,7 +40,7 @@ import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { guideSeen, guideSteps, markGuideSeen, type GuideRole } from '../guides'
 import { canHostOf, useMe } from '../me'
-import { useOnlineIds } from '../presence'
+import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
 import { hostTasks, incomingAsks } from '../tasks'
 
 export function Table() {
@@ -123,6 +123,7 @@ export function Table() {
     return lotoMax(game) - Math.floor(bought / lotoPrice(game))
   }
   const hostName = players[session.hostId ?? '']?.name ?? '?'
+  const hostAway = useHostAway(session, me)
 
   /** Poker: tay bài đang chơi (luật đầy đủ). */
   const hand = round?.poker
@@ -619,8 +620,23 @@ export function Table() {
             {GAMES[game.type].soon ? null : !canHost && !(hand && actor === me && hand.street !== 'showdown' && hand.street !== 'done') ? (
               // Bàn nhiều người, không phải host: mở / chốt ván do host; mình chỉ trả / đòi / cược (và Poker khi tới lượt)
               <div className="flex flex-1 items-center justify-center gap-1 rounded-2xl border border-dashed border-line bg-night/90 px-3 py-2 text-center text-sm text-muted">
-                🛎️ <b className="text-cream">{hostName}</b> điều khiển ván
-                {hand && actor && hand.street !== 'done' ? ` · lượt ${players[actor]?.name}` : ''}
+                {hostAway && me ? (
+                  <>
+                    ⚪ <b className="text-cream">{hostName}</b> offline
+                    <button
+                      type="button"
+                      onClick={() => confirmTakeHost(session, me)}
+                      className="ml-2 rounded-full border border-mint bg-mint/20 px-3 py-1 text-sm font-bold text-mint active:scale-95"
+                    >
+                      🛎️ Làm host
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    🛎️ <b className="text-cream">{hostName}</b> điều khiển ván
+                    {hand && actor && hand.street !== 'done' ? ` · lượt ${players[actor]?.name}` : ''}
+                  </>
+                )}
               </div>
             ) : game.type === 'free' ? (
               round ? (

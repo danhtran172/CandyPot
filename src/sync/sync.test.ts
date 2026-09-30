@@ -64,6 +64,22 @@ describe.each(BACKENDS)('Bàn nhiều người — đồng bộ qua phòng (%s)'
     }
   })
 
+  it('host offline: hai người cùng nhận host thì người bấm trước được', async () => {
+    const { host, guest } = twoDevices()
+    host.getState().createSession('Bàn', [{ name: 'Tí', emoji: '🐱' }, { name: 'Tèo', emoji: '🐶' }, { name: 'Bin', emoji: '🐰' }], 'multi')
+    await tick()
+    const { id } = await guest.getState().joinRoom(host.getState().session!.code!)
+    guest.getState().openSession(id!)
+    await tick()
+    const [ti, teo, bin] = host.getState().session!.players.map((p) => p.id)
+    // Tí (host) vắng; Tèo và Bin cùng bấm "Làm host" trước khi thấy nhau
+    host.getState().takeHost(teo, ti)
+    guest.getState().takeHost(bin, ti)
+    await tick()
+    expect(host.getState().session!.hostId).toBe(teo)
+    expect(guest.getState().session!.hostId).toBe(teo)
+  })
+
   it('bàn một máy không tạo phòng', async () => {
     const { rooms, host } = twoDevices()
     host.getState().createSession('Bàn', [{ name: 'Tí', emoji: '🐱' }, { name: 'Tèo', emoji: '🐶' }])
