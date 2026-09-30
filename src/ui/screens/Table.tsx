@@ -35,7 +35,8 @@ import { GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
 import { GameName } from '../components/GameName'
 import { ask } from '../dialog'
-import { Button, Card, TopBar } from '../components/kit'
+import { Button, Card, PotChip, TopBar } from '../components/kit'
+import potIcon from '../../assets/pot.webp'
 import { useSession } from '../components/useSession'
 import { playCount, playerMap, roundNumber } from '../format'
 import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
@@ -204,8 +205,12 @@ export function Table() {
     if (!pot) return flash('Pot đang trống.', true)
     const name = players[to]?.name
     const ok = await ask(`${name} thắng?`, {
-      icon: '💰',
-      message: `Trao cả pot ${pot} kẹo cho ${name} và kết thúc ván.`,
+      icon: <img src={potIcon} alt="" draggable={false} className="mx-auto size-12" />,
+      message: (
+        <>
+          Trao cả <PotChip /> {pot} kẹo cho <b className="text-cream">{name}</b> và kết thúc ván.
+        </>
+      ),
       okLabel: 'Trao pot',
     })
     if (!ok) return
@@ -232,7 +237,7 @@ export function Table() {
     if (hand && (to === POT || from === POT)) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
     if (isFree && (to === POT || from === POT)) {
       // Tự do: cược vào Pot (chưa có ván thì tự mở), kéo Pot để trao thưởng
-      if (from === POT && (!round || potOf(round) === 0)) return flash('Pot đang trống — bấm 💰 Pot để cược trước.', true)
+      if (from === POT && (!round || potOf(round) === 0)) return flash('Pot đang trống — bấm Pot để cược trước.', true)
       if (from === POT && round?.phase === 'betting') return flash('Chưa chốt cược — bấm Chốt cược rồi mới trao pot.', true)
       if (to === POT && round?.phase === 'playing') return flash('Đã chốt cược — không cược thêm được nữa.', true)
       if (to === POT && !round && !openNext()) return
@@ -348,8 +353,8 @@ export function Table() {
   /** Xì dách / Lô tô: khóa cược (mua tờ) để chơi và trả kẹo. */
   const lockBets = async () => {
     if (!game) return
-    if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — bấm 💰 Pot để mua.', true)
-    if (isFree && round && potOf(round) === 0) return flash('Chưa ai cược — bấm 💰 Pot để cược.', true)
+    if (isLoto && round && potOf(round) === 0) return flash('Chưa ai mua tờ — bấm Pot để mua.', true)
+    if (isFree && round && potOf(round) === 0) return flash('Chưa ai cược — bấm Pot để cược.', true)
     // Không chặn, chỉ nhắc: người đang chơi chưa bet / mua, người đang nghỉ mà đã bet / mua
     if (round) {
       const { missing, resting } = lockWarnings(session, game, round)
@@ -383,9 +388,9 @@ export function Table() {
     else
       flash(
         isLoto
-          ? `Đã chốt — ${hostName} bấm 💰 Pot để trao cho người thắng.`
+          ? `Đã chốt — ${hostName} bấm Pot để trao cho người thắng.`
           : isFree
-            ? 'Đã chốt cược — kéo 💰 Pot vào người thắng.'
+            ? 'Đã chốt cược — kéo Pot vào người thắng.'
             : 'Đã chốt cược — chia bài rồi bấm vào người để trả kẹo.',
       )
   }
@@ -750,7 +755,7 @@ export function Table() {
                         </Button>
                         {backBtn}
                         <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 py-2 text-center text-sm font-semibold text-lemon">
-                          Kéo 💰 Pot vào người thắng
+                          Kéo <PotChip className="mx-1" /> vào người thắng
                         </div>
                       </>
                     )}
@@ -828,7 +833,13 @@ export function Table() {
                       </Button>
                     ) : (
                       <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-lemon/60 bg-night/90 px-3 text-center text-sm font-semibold text-lemon">
-                        {me === session.hostId ? 'Bấm 💰 Pot để trao cho người thắng' : `Chờ ${hostName} trao pot`}
+                        {me === session.hostId ? (
+                          <>
+                            Bấm <PotChip className="mx-1" /> để trao cho người thắng
+                          </>
+                        ) : (
+                          `Chờ ${hostName} trao pot`
+                        )}
                       </div>
                     )}
                   </>
@@ -1152,7 +1163,7 @@ function TableCenter({
     return (
       <>
         {/* Tên + icon chế độ đã in trên mặt bàn */}
-        <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm 💰 Pot để cược' : 'Chưa mở ván'}</span>
+        <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm Pot để cược' : 'Chưa mở ván'}</span>
       </>
     )
   }

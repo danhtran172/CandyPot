@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { POT, type ID, type Option, type Player } from '../../core/types'
-import { Button, Stepper, Who } from './kit'
+import { Button, PotChip, Stepper, Who } from './kit'
 import { RuleIcon, type RuleIconName } from './RuleIcons'
 import { RecommendBadge } from './RecommendBadge'
 
@@ -108,12 +108,12 @@ export function AmountSheet({
           <div className="font-display text-center text-xl font-bold">
             {from.id === POT ? (
               <>
-                Trao pot cho <PersonChip player={to} /> bao nhiêu?
+                Trao <PotChip /> cho <PersonChip player={to} /> bao nhiêu?
               </>
             ) : to.id === POT ? (
               <>
                 {who}
-                {mine ? 'Cược' : 'cược'} bao nhiêu vào Pot?
+                {mine ? 'Cược' : 'cược'} bao nhiêu vào <PotChip />?
               </>
             ) : (
               <>

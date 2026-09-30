@@ -5,13 +5,14 @@ import { potOf } from '../../core/round'
 import { playerMap, roundNumber, signed, timeOf } from '../format'
 import { ask } from '../dialog'
 import { UndoIcon } from './UndoIcon'
+import potIcon from '../../assets/pot.webp'
 import { Who } from './kit'
 import { PingButton } from './PingButton'
 
 /**
  * Lịch sử trả/nhận của riêng mình trong một game: lời đòi đang chờ, các lượt mình trả/nhận.
  * Bàn một máy (host ghi hộ cả bàn): hiện mọi lượt của cả bàn.
- * Host bàn nhiều người có thêm tab "💰 Pot cả ván": mọi lượt cược vào / trao từ Pot của mọi người, theo từng ván.
+ * Host bàn nhiều người có thêm tab "Pot cả ván": mọi lượt cược vào / trao từ Pot của mọi người, theo từng ván.
  * Hoàn tác: host làm ngay; người khác gửi yêu cầu để host xác nhận.
  */
 export function HistorySheet({ session, game, me, onClose }: { session: Session; game: Game; me?: ID; onClose: () => void }) {
@@ -44,7 +45,12 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
     if (isHost) {
       const ok = await ask('Hoàn tác lượt này?', {
         icon: '↩️',
-        message: `${players[m.from]?.name} → ${players[m.to]?.name} · ${m.amount} kẹo`,
+        message: (
+          <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
+            <Who player={players[m.from]} className="font-semibold text-sky" /> →
+            <Who player={players[m.to]} className="font-semibold text-sky" /> · {m.amount} kẹo
+          </span>
+        ),
         okLabel: 'Hoàn tác',
       })
       if (!ok) return
@@ -75,7 +81,7 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
             {(
               [
                 ['mine', 'Của bạn'],
-                ['pot', '💰 Pot cả ván'],
+                ['pot', 'Pot cả ván'],
               ] as const
             ).map(([k, text]) => (
               <button
@@ -86,7 +92,14 @@ export function HistorySheet({ session, game, me, onClose }: { session: Session;
                 onClick={() => setView(k)}
                 className={`rounded-xl py-1.5 font-semibold ${view === k ? 'bg-plum-2 text-lemon' : 'text-muted'}`}
               >
-                {text}
+                {k === 'pot' ? (
+                  <>
+                    <img src={potIcon} alt="" draggable={false} className="mr-1 inline size-4 align-[-3px]" />
+                    {text}
+                  </>
+                ) : (
+                  text
+                )}
               </button>
             ))}
           </div>

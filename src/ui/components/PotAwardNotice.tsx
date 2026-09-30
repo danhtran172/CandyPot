@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { POT, type ID, type Session } from '../../core/types'
 import { useMe } from '../me'
 import { GameIcon } from './GameIcon'
+import { PotChip } from './kit'
 
 type Award = { key: string; to: ID; amount: number; gameId: ID }
 
@@ -74,7 +75,7 @@ export function PotAwardNotice({ session }: { session: Session }) {
             <span className="min-w-0 flex-1">
               <span className="font-display block text-lg leading-tight font-bold">
                 {l.to === me ? 'Bạn' : <span className="text-sky">{p?.emoji} {p?.name}</span>} ăn{' '}
-                <span className="candy num text-base">{l.amount}</span> kẹo từ Pot
+                <span className="candy num text-base">{l.amount}</span> kẹo từ <PotChip className="text-sm" />
               </span>
               {game && (
                 <span className="text-xs text-muted">

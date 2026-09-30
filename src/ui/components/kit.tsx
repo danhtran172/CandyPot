@@ -1,7 +1,8 @@
 import { useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { ladderStep, onLadder } from '../../core/ladder'
-import type { Player } from '../../core/types'
+import { POT, type Player } from '../../core/types'
+import potIcon from '../../assets/pot.webp'
 
 type Variant = 'primary' | 'ghost' | 'danger' | 'soft'
 
@@ -134,8 +135,21 @@ export function TopBar({ title, back, right }: { title: ReactNode; back?: string
   )
 }
 
+/** Pot như một "người" trong câu: icon Pot chính thức + chữ Pot, khung viền vàng (cùng kiểu khung tên người chơi). */
+export function PotChip({ className = '' }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border border-lemon/50 bg-lemon/10 px-2 py-0.5 align-middle font-semibold text-lemon ${className}`}
+    >
+      <img src={potIcon} alt="" draggable={false} className="size-[1.15em] max-w-none" />
+      Pot
+    </span>
+  )
+}
+
 export function Who({ player, className = '' }: { player?: Player; className?: string }) {
   if (!player) return <span className="text-muted">?</span>
+  if (player.id === POT) return <PotChip />
   return (
     <span className={`inline-flex items-center gap-1.5 ${player.active ? '' : 'opacity-60'} ${className}`}>
       <span aria-hidden>{player.emoji}</span>
