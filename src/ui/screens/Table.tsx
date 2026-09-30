@@ -637,6 +637,7 @@ export function Table() {
             pot={game.type === 'loto' || game.type === 'free' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
             potAfterCenter={game.type === 'loto'}
             betBox={game.type === 'xidach'}
+            buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}

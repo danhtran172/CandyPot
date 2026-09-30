@@ -46,7 +46,7 @@ const PLAYER_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [],
   xidach: [{ id: 'xidach-bet', demo: { kind: 'tap', at: 'bet' }, title: 'Đặt cược', text: 'Bấm ô Bet để đặt cược cho mình. Nhà cái có nơ xanh, không đặt cược.' }],
   poker: [{ id: 'poker-turn', target: 'actions', title: 'Tới lượt bạn', text: 'Người viền xanh đang tới lượt: Bỏ bài · Theo · Tố · All-in. App tự tính pot.' }],
-  loto: [{ id: 'loto-buy', demo: { kind: 'tap', at: 'pot' }, title: 'Mua tờ', text: 'Bấm Pot → chọn số tờ, app tự tính kẹo theo giá.' }],
+  loto: [{ id: 'loto-buy', demo: { kind: 'tap', at: 'buy' }, title: 'Mua tờ', text: 'Bấm ô Mua (ghi giá mỗi tờ) → chọn số tờ. Mua rồi bấm lại để đổi số tờ.' }],
   free: [{ id: 'free-bet', demo: { kind: 'tap', at: 'pot' }, title: 'Cược', text: 'Bấm Pot để cược. Số kẹo mỗi người đã cược hiện trước chỗ ngồi.' }],
 }
 
@@ -100,7 +100,7 @@ const SOLO_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [],
   xidach: [{ id: 'solo-xidach-bet', demo: { kind: 'drag', from: 'other', to: 'bet' }, title: 'Đặt cược hộ', text: 'Kéo người chơi thả vào ô Bet để đặt cược cho họ.' }],
   poker: [{ id: 'solo-poker-turn', target: 'actions', title: 'Bấm hộ lượt', text: 'Người viền xanh đang tới lượt — bấm Bỏ bài · Theo · Tố · All-in thay họ.' }],
-  loto: [{ id: 'solo-loto-buy', demo: { kind: 'drag', from: 'other', to: 'pot' }, title: 'Mua tờ hộ', text: 'Kéo người chơi thả vào Pot → chọn số tờ.' }],
+  loto: [{ id: 'solo-loto-buy', demo: { kind: 'drag', from: 'other', to: 'buy' }, title: 'Mua tờ hộ', text: 'Kéo người chơi thả vào ô Mua → chọn số tờ.' }],
   free: [{ id: 'solo-free-bet', demo: { kind: 'drag', from: 'other', to: 'pot' }, title: 'Cược hộ', text: 'Kéo người chơi thả vào Pot để cược cho họ.' }],
 }
 

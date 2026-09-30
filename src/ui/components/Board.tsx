@@ -76,6 +76,7 @@ export function Board({
   betBox,
   betLocked,
   onBetHold,
+  buyBox,
   hat,
   hatLocked,
   shape = 'oval',
@@ -99,6 +100,8 @@ export function Board({
   betLocked?: boolean
   /** Nhấn giữ ô Bet (khi đã chốt) — host bỏ chốt. */
   onBetHold?: () => void
+  /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (như thả vào Pot). */
+  buyBox?: { price: number }
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
   hat?: string
   /** Không đổi được nhà cái (không phải host) → ô 🎩 chỉ để xem. */
@@ -252,6 +255,23 @@ export function Board({
               >
                 <span className="font-display text-2xl leading-none font-bold text-sky">{betLocked ? '🔒 Bet' : 'Bet'}</span>
                 <span className="mt-1 text-[10px] text-muted">{betLocked ? 'đã chốt · host giữ để bỏ chốt' : 'bấm để đặt cược'}</span>
+              </div>
+            )}
+            {buyBox && (
+              <div
+                data-drop={POT}
+                data-guide="buy"
+                onClick={() => onTap?.(POT)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && onTap?.(POT)}
+                aria-label={`Mua tờ — ${buyBox.price} kẹo một tờ`}
+                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 border-dashed border-pink-400/70 bg-night/50 px-4 py-2 transition select-none active:scale-95 ${ring(POT)}`}
+              >
+                <span className="font-display text-2xl leading-none font-bold text-pink-400">Mua</span>
+                <span className="mt-1 text-[10px] text-muted">
+                  <b className="text-pink-300">{buyBox.price} kẹo</b> / tờ
+                </span>
               </div>
             )}
             {hat && hatLocked && (
