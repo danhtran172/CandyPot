@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'reac
 import { actions, useApp } from '../../store'
 import { RequestInbox } from './RequestInbox'
 import { WhoAmI } from './WhoAmI'
+import { PotAwardNotice } from './PotAwardNotice'
 import { readMe } from '../me'
 
 const TABS = [
@@ -81,6 +82,8 @@ export function SessionLayout() {
         </div>
       )}
       <Outlet />
+      {/* Trao pot cho ai → cả bàn thấy thông báo */}
+      <PotAwardNotice session={session} />
       {!/\/(host|requests)$/.test(pathname) && (
         <RequestInbox session={session} onOpenAll={(tab) => navigate(`/s/${sid}/${tab}`)} />
       )}
