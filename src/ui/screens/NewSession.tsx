@@ -6,13 +6,14 @@ import { EMOJIS } from '../../store/appStore'
 import { writeMe } from '../me'
 import { readProfile, saveProfile } from '../profile'
 import { Button, Card, Errors, SectionTitle, TopBar } from '../components/kit'
-import hostIcon from '../../assets/rules/host.webp'
-import groupIcon from '../../assets/rules/group.webp'
+import soloIcon from '../../assets/mode-solo.webp'
+import multiIcon from '../../assets/mode-multi.webp'
 import { RecommendBadge } from '../components/RecommendBadge'
 
 const MODES = [
-  { value: 'multi', icon: groupIcon, title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
-  { value: 'solo', icon: hostIcon, title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
+  // Cùng icon + màu với nhãn kiểu bàn ở màn chính (xanh = nhiều người, cam = một máy)
+  { value: 'multi', icon: multiIcon, tone: 'text-sky', title: 'Nhiều người join', hint: 'Mỗi người vào bằng mã 5 số.' },
+  { value: 'solo', icon: soloIcon, tone: 'text-orange-400', title: 'Một máy', hint: 'Host ghi hết cho cả bàn.' },
 ] as const
 
 interface Draft {
@@ -81,7 +82,11 @@ export function NewSession() {
           >
             {/* Kiểu đầu tiên (Nhiều người join) = nên chọn */}
             {i === 0 && <RecommendBadge />}
-            <img src={m.icon} alt="" draggable={false} className="size-9 max-w-none" />
+            <span
+              aria-hidden
+              className={`size-9 bg-current ${m.tone}`}
+              style={{ mask: `url(${m.icon}) center / contain no-repeat`, WebkitMask: `url(${m.icon}) center / contain no-repeat` }}
+            />
             <span className="font-display leading-tight font-bold">{m.title}</span>
             <span className="text-xs text-muted">{m.hint}</span>
           </button>
