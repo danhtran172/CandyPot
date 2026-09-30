@@ -7,8 +7,8 @@ import { QrModal } from '../components/QrModal'
 import { appUrl } from '../appUrl'
 import { MAX_SAVED } from '../../storage/LocalRepo'
 import type { SessionMeta } from '../../storage/SessionRepo'
-import hostIcon from '../../assets/rules/host.webp'
-import groupIcon from '../../assets/rules/group.webp'
+import soloIcon from '../../assets/mode-solo.webp'
+import multiIcon from '../../assets/mode-multi.webp'
 
 /** Danh sách bàn thu gọn: hiện chừng này bàn gần nhất, còn lại bấm "Xem thêm". */
 const COLLAPSED = 3
@@ -139,20 +139,21 @@ export function Home() {
 }
 
 /**
- * Nhãn kiểu bàn: nhiều người = xanh + icon nhóm + mã bàn; một máy = cam + icon host.
+ * Nhãn kiểu bàn: nhiều người = xanh + icon nhóm + mã bàn; một máy = cam, chỉ icon người cầm máy.
  * (Bàn lưu từ bản cũ chưa có `mode`: có mã = nhiều người.)
  */
 function ModeTag({ meta }: { meta: SessionMeta }) {
   const multi = (meta.mode ?? (meta.code ? 'multi' : 'solo')) === 'multi'
-  const mask = `url(${multi ? groupIcon : hostIcon}) center / contain no-repeat`
+  const mask = `url(${multi ? multiIcon : soloIcon}) center / contain no-repeat`
   return (
     <span
-      className={`num ml-1.5 inline-flex items-center gap-1 rounded-full px-1.5 text-xs font-bold ${
-        multi ? 'bg-sky/15 text-sky' : 'bg-orange-400/15 text-orange-400'
+      title={multi ? 'Bàn nhiều người' : 'Bàn một máy'}
+      className={`num ml-1.5 inline-flex items-center gap-1 rounded-full py-0.5 text-xs font-bold ${
+        multi ? 'bg-sky/15 px-1.5 text-sky' : 'bg-orange-400/15 px-1 text-orange-400'
       }`}
     >
-      <span aria-hidden className="size-3 bg-current" style={{ mask, WebkitMask: mask }} />
-      {multi ? (meta.code ? `#${meta.code}` : 'Nhiều người') : '1 máy'}
+      <span role="img" aria-label={multi ? 'Nhiều người' : 'Một máy'} className="size-3.5 bg-current" style={{ mask, WebkitMask: mask }} />
+      {multi && meta.code && `#${meta.code}`}
     </span>
   )
 }
