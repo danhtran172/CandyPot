@@ -78,6 +78,7 @@ export function Board({
   onBetHold,
   buyBox,
   title,
+  top,
   potScale,
   hat,
   hatLocked,
@@ -104,8 +105,10 @@ export function Board({
   onBetHold?: () => void
   /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (như thả vào Pot). */
   buyBox?: { price: number }
-  /** Tên chế độ chơi — in khắc chìm trên mặt bàn. */
-  title?: string
+  /** Tên chế độ chơi (kèm icon) — in khắc chìm trên mặt bàn. */
+  title?: ReactNode
+  /** Luôn nằm trên cùng vùng giữa bàn (VD nút Rule ?). */
+  top?: ReactNode
   /** Thu nhỏ ô Pot theo tỉ lệ này (VD 0.4 = còn 40%). */
   potScale?: number
   /** Tên nhà cái — hiện mũ 🎩 kéo được sang người khác để đổi cái. */
@@ -241,7 +244,12 @@ export function Board({
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             }`}
           >
-            {title && <span className="engraved font-display pointer-events-none text-2xl leading-none font-extrabold tracking-wider uppercase">{title}</span>}
+            {top}
+            {title && (
+              <span className="engraved font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase">
+                {title}
+              </span>
+            )}
             {!potAfterCenter && potBox}
             {betBox && (
               <div

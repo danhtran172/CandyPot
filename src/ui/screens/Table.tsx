@@ -31,7 +31,7 @@ import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
 import { PokerRaiseSheet, PokerSettingsSheet } from '../components/PokerSheets'
 import { Board, flyCandy, type Seat } from '../components/Board'
-import { GameIcon } from '../components/GameIcon'
+import { EngravedGameIcon, GameIcon } from '../components/GameIcon'
 import { GamePicker } from '../components/GamePicker'
 import { GameName } from '../components/GameName'
 import { ask } from '../dialog'
@@ -636,7 +636,25 @@ export function Table() {
             seats={seats}
             pot={game.type === 'loto' || game.type === 'free' ? (round ? potOf(round) : 0) : round && game.type === 'poker' ? potOf(round) : undefined}
             potAfterCenter={game.type === 'loto'}
-            title={GAMES[game.type].label}
+            title={
+              <>
+                <EngravedGameIcon type={game.type} />
+                {GAMES[game.type].label}
+              </>
+            }
+            top={
+              withRules && (
+                <button
+                  type="button"
+                  aria-label="Xem luật"
+                  data-guide="rule"
+                  onClick={() => setShowRules(true)}
+                  className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-0.5 text-sm font-bold text-berry transition active:scale-95"
+                >
+                  Rule ?
+                </button>
+              )
+            }
             betBox={game.type === 'xidach'}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             // Lô tô lúc mua tờ: Pot nhỏ lại 60% (ô Mua là chính), chốt rồi Pot về cỡ thường để trao
@@ -646,22 +664,7 @@ export function Table() {
             onBetHold={unlockBets}
             hat={round?.dealer ? players[round.dealer]?.name : undefined}
             hatLocked={!canHost}
-            center={
-              <>
-                {withRules && (
-                  <button
-                    type="button"
-                    aria-label="Xem luật"
-                    data-guide="rule"
-                    onClick={() => setShowRules(true)}
-                    className="font-display rounded-full border border-berry/60 bg-berry/20 px-3 py-0.5 text-sm font-bold text-berry transition active:scale-95"
-                  >
-                    Rule ?
-                  </button>
-                )}
-                <TableCenter game={game} round={round} players={players} />
-              </>
-            }
+            center={<TableCenter game={game} round={round} players={players} />}
             cornerTop={
               withRules && canHost ? (
                 <button
@@ -1151,8 +1154,7 @@ function TableCenter({
     const soon = GAMES[game.type].soon
     return (
       <>
-        {/* Tên chế độ đã khắc chìm trên mặt bàn */}
-        <GameIcon type={game.type} className="size-9" />
+        {/* Tên + icon chế độ đã khắc chìm trên mặt bàn */}
         <span className="text-xs text-muted">{soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm 💰 Pot để cược' : 'Chưa mở ván'}</span>
       </>
     )
