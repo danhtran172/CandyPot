@@ -8,16 +8,28 @@ import { useSession } from '../components/useSession'
 import { TransferList } from '../components/TransferList'
 import { Button, Card, Chip, SectionTitle, TopBar, Who } from '../components/kit'
 import { playerMap, signed, toneOf } from '../format'
+import { useMe } from '../me'
+
+/** Lọc danh sách trả kẹo: tất cả / mình phải trả ai / ai phải trả mình. */
+type Filter = 'all' | 'pay' | 'receive'
 
 export function Summary() {
   const session = useSession()
+  const [me] = useMe(session)
   const [gameId, setGameId] = useState<ID | undefined>()
+  // undefined = chưa chọn → tự chọn theo mình (đang nợ → "Tôi cần trả", được nợ → "Ai cần trả tôi")
+  const [picked, setPicked] = useState<Filter | undefined>()
   const [status, setStatus] = useState('')
   const shot = useRef<HTMLDivElement>(null)
   const players = playerMap(session)
   const net = netOf(session, gameId)
   const ranked = session.players.filter((p) => net[p.id] !== 0 || p.active).sort((a, b) => net[b.id] - net[a.id])
   const transfers = settle(net)
+  const toPay = transfers.filter((t) => t.from === me)
+  const toGet = transfers.filter((t) => t.to === me)
+  const sum = (list: typeof transfers) => list.reduce((n, t) => n + t.amount, 0)
+  const filter: Filter = !me ? 'all' : (picked ?? (toPay.length ? 'pay' : toGet.length ? 'receive' : 'all'))
+  const shown = filter === 'pay' ? toPay : filter === 'receive' ? toGet : transfers
   const scope = gameId ? session.games.find((g) => g.id === gameId)?.name : 'Cả bàn'
 
   const flash = (msg: string) => {
@@ -98,10 +110,27 @@ export function Summary() {
           >
             Trả kẹo
           </SectionTitle>
-          {transfers.length ? (
-            <TransferList transfers={transfers} players={players} />
-          ) : (
+          {me && transfers.length > 0 && (
+            <div role="radiogroup" aria-label="Lọc trả kẹo" className="-mx-1 mb-3 no-scrollbar flex gap-2 overflow-x-auto px-1 pb-1">
+              <Chip role="radio" aria-checked={filter === 'pay'} active={filter === 'pay'} tone="berry" onClick={() => setPicked('pay')}>
+                Tôi cần trả ai{toPay.length > 0 && ` · ${sum(toPay)}`}
+              </Chip>
+              <Chip role="radio" aria-checked={filter === 'receive'} active={filter === 'receive'} tone="mint" onClick={() => setPicked('receive')}>
+                Ai cần trả tôi{toGet.length > 0 && ` · ${sum(toGet)}`}
+              </Chip>
+              <Chip role="radio" aria-checked={filter === 'all'} active={filter === 'all'} onClick={() => setPicked('all')}>
+                Tất cả
+              </Chip>
+            </div>
+          )}
+          {!transfers.length ? (
             <p className="py-4 text-center text-muted">Hòa cả bàn — không ai phải trả kẹo.</p>
+          ) : shown.length ? (
+            <TransferList transfers={shown} players={players} highlight={filter === 'all' ? me : undefined} />
+          ) : (
+            <p className="py-4 text-center text-muted">
+              {filter === 'pay' ? 'Bạn không phải trả ai 🎉' : 'Không ai phải trả bạn.'}
+            </p>
           )}
         </Card>
       </div>
