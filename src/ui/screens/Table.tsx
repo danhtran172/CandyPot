@@ -394,13 +394,29 @@ export function Table() {
     else flash('Đã bỏ chốt — đặt cược lại nào.')
   }
 
+  /**
+   * Kết thúc ván mà chưa ai trả ai (lời/lỗ ván này đều bằng 0) → hỏi lại, không chặn.
+   * Poker bỏ qua (blind luôn có lượt kẹo). Trả về true = cứ kết thúc.
+   */
+  const confirmEmptyRound = async () => {
+    if (!round || round.poker) return true
+    if (Object.values(movesNet(round.moves)).some((v) => v !== 0)) return true
+    return ask('Chưa ai trả ai?', {
+      icon: '⚠️',
+      message: 'Ván này chưa có lượt trả kẹo nào — kết thúc thì ván được lưu với lời/lỗ bằng 0. Muốn bỏ ván thì bấm Hủy ván.',
+      okLabel: 'Vẫn kết thúc',
+      cancelLabel: 'Để kiểm tra',
+    })
+  }
+
   /** Xì dách: tính ván này vào lời/lỗ và mở ngay ván sau với cược cũ. */
-  const nextRound = () => {
+  const nextRound = async () => {
     if (!game) return
     if (!round) {
       openNext()
       return
     }
+    if (!(await confirmEmptyRound())) return
     const errors = actions().nextRound(game.id)
     if (errors.length) flash(errors[0], true)
     else if (game.type === 'poker') {
@@ -409,8 +425,9 @@ export function Table() {
     } else flash('Đã kết thúc ván — ván mới, đặt cược nào!')
   }
 
-  const closeRound = () => {
+  const closeRound = async () => {
     if (!game) return
+    if (!(await confirmEmptyRound())) return
     const errors = actions().closeRound(game.id)
     if (errors.length) flash(errors[0], true)
     else flash('Đã chốt ván — lời/lỗ đã cập nhật.')
