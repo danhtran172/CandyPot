@@ -19,6 +19,8 @@ export function PlayingCard({
   dim?: boolean
 }) {
   const label = cardLabel(card)
+  const rank = label.slice(0, -1)
+  const suit = label.slice(-1)
   return (
     <button
       type="button"
@@ -26,12 +28,18 @@ export function PlayingCard({
       disabled={!onClick || dim}
       aria-pressed={selected}
       aria-label={label}
-      className={`num flex shrink-0 flex-col items-start rounded-lg border bg-cream font-bold leading-none shadow transition ${
-        small ? 'h-11 w-8 px-1 py-1 text-xs' : 'h-16 w-11 px-1.5 py-1.5 text-sm'
-      } ${isRed(card) ? 'text-berry' : 'text-night'} ${selected ? '-translate-y-3 border-lemon ring-2 ring-lemon' : 'border-night/20'} ${dim ? 'opacity-30 grayscale' : ''}`}
+      className={`num relative shrink-0 rounded-lg border-2 bg-cream font-bold leading-none shadow-md transition duration-150 ${
+        small ? 'h-12 w-9' : 'h-[4.2rem] w-[2.65rem]'
+      } ${isRed(card) ? 'text-berry' : 'text-night'} ${
+        selected ? '-translate-y-2.5 border-lemon shadow-[0_0_0_2px_var(--color-lemon),0_8px_16px_rgb(0_0_0/0.4)]' : 'border-white/70'
+      } ${dim ? 'opacity-35 saturate-0' : onClick ? 'active:scale-95' : ''}`}
     >
-      <span>{label.slice(0, -1)}</span>
-      <span className={small ? 'text-sm' : 'text-lg'}>{label.slice(-1)}</span>
+      {/* Góc trên trái: hạng + chất nhỏ; giữa lá: chất to — giống các app đánh bài */}
+      <span className={`absolute top-1 left-1 flex flex-col items-center ${small ? 'text-[11px]' : 'text-sm'}`}>
+        <span className="tracking-tighter">{rank}</span>
+        <span className={small ? 'text-[10px]' : 'text-xs'}>{suit}</span>
+      </span>
+      <span className={`absolute right-1 bottom-0.5 ${small ? 'text-lg' : 'text-2xl'}`}>{suit}</span>
     </button>
   )
 }
@@ -110,27 +118,30 @@ export function TienlenPanel({
             )}
             {combo ? ` · ${COMBO_LABEL[combo.type]}` : picked.length ? ' · chưa thành bộ' : ''}
           </p>
-          <div className="mt-1 flex justify-center pt-3">
-            <div className="flex -space-x-5">
-              {hand.map((c) => (
-                <PlayingCard
-                  key={c}
-                  card={c}
-                  selected={picked.includes(c)}
-                  dim={!!playable && !playable.has(c)}
-                  onClick={() => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))}
-                />
-              ))}
-            </div>
+          {/* Không đè lá: nhiều hơn 7 lá thì xếp 2 hàng (hàng trên nhiều hơn), lá nào cũng thấy trọn */}
+          <div className="mt-1 flex flex-col items-center gap-1.5 pt-3">
+            {handRows(hand).map((row, i) => (
+              <div key={i} className="flex justify-center gap-1">
+                {row.map((c) => (
+                  <PlayingCard
+                    key={c}
+                    card={c}
+                    selected={picked.includes(c)}
+                    dim={!!playable && !playable.has(c)}
+                    onClick={() => setPicked((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
           {!myTurn && <div className="mt-2 flex justify-end">{menu}</div>}
           {myTurn && (
             <div className="mt-2 flex gap-2">
               {menu}
-              <Button className="px-3" disabled={!cards.table} onClick={() => onPass(viewer)}>
+              <Button className="px-3 whitespace-nowrap" disabled={!cards.table} onClick={() => onPass(viewer)}>
                 Bỏ lượt
               </Button>
-              <Button className="px-3" disabled={!picked.length} onClick={() => setPicked(() => [])}>
+              <Button className="px-3 whitespace-nowrap" disabled={!picked.length} onClick={() => setPicked(() => [])}>
                 Bỏ chọn
               </Button>
               <Button
@@ -183,4 +194,11 @@ export function TienlenTableCards({ cards, players }: { cards: TienlenCards; pla
 
     </div>
   )
+}
+
+/** Chia bài trên tay thành hàng vừa màn hình điện thoại: tối đa 7 lá một hàng. */
+function handRows(hand: Card[]): Card[][] {
+  if (hand.length <= 7) return [hand]
+  const top = Math.ceil(hand.length / 2)
+  return [hand.slice(0, top), hand.slice(top)]
 }
