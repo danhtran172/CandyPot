@@ -17,7 +17,7 @@ import {
 } from '../../core/games/pokerHand'
 import { contributions, movesNet, openRound, potOf } from '../../core/round'
 import { suggestOptions } from '../../core/suggest'
-import { BET, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
+import { BET, BUY, DEALER, POT, type Game, type GameType, type ID, type Option, type Player, type Round } from '../../core/types'
 import { actions } from '../../store'
 import { pokerSettingsOf } from '../../store/appStore'
 import { AmountSheet } from '../components/AmountSheet'
@@ -224,8 +224,12 @@ export function Table() {
     else flash(`${name} ăn ${pot} kẹo! Bấm Ván mới để chơi tiếp.`)
   }
 
-  const onTransfer = (from: ID, to: ID) => {
+  const onTransfer = (from: ID, target: ID) => {
     if (!game) return
+    // Lô tô: chỉ thả vào ô Mua mới mua tờ (kẹo vào Pot); thả thẳng vào Pot thì không
+    if (isLoto && target === POT && from !== POT)
+      return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
+    const to = target === BUY ? POT : target
     // Bàn nhiều người, không phải host: chỉ trả kẹo của mình hoặc đòi về mình (không làm thay người khác)
     if (!canHost && from !== me && !(to === me && from !== POT && from !== DEALER)) {
       if (from === POT) return flash(`Chờ ${hostName} trao pot.`, true)
@@ -292,6 +296,7 @@ export function Table() {
         if (me !== session.hostId) return flash(`Chờ ${hostName} trao pot cho người thắng.`, true)
         return setPicker('award')
       }
+      if (isLoto) return flash('Bấm ô Mua để mua tờ.', true)
       if (game.type === 'poker' && !round) return flash('Chưa mở ván — bấm + Mở ván trước.', true)
     }
     onTransfer(me, id)

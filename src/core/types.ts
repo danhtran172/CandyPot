@@ -11,6 +11,9 @@ export const BET = 'bet'
 /** Id đặc biệt cho mũ nhà cái (kéo sang người khác để đổi cái). */
 export const DEALER = 'dealer'
 
+/** Id đặc biệt cho ô Mua giữa bàn Lô tô — chỉ là chỗ thả để mua tờ (kẹo vẫn vào Pot). */
+export const BUY = 'buy'
+
 /** Số người tối đa hiển thị quanh bàn. */
 export const MAX_PLAYERS = 10
 

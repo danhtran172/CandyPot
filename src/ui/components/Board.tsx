@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { BET, DEALER, POT, type ID, type Player } from '../../core/types'
+import { BET, BUY, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { candyFor } from '../candyIcons'
 import potIcon from '../../assets/pot.webp'
@@ -102,7 +102,7 @@ export function Board({
   betLocked?: boolean
   /** Nhấn giữ ô Bet (khi đã chốt) — host bỏ chốt. */
   onBetHold?: () => void
-  /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (như thả vào Pot). */
+  /** Lô tô chưa chốt: ô Mua (hồng) ghi giá mỗi tờ — bấm = mua cho mình, thả người vào = mua hộ (chỉ ô này, thả vào Pot không mua). */
   buyBox?: { price: number }
   /** Tên chế độ chơi (kèm icon) — in mờ (70%) trên mặt bàn. */
   title?: ReactNode
@@ -299,14 +299,14 @@ export function Board({
             {/* Ô Mua ở cuối cột giữa — gần chỗ ngồi của mình (dưới cùng bàn) */}
             {buyBox && (
               <div
-                data-drop={POT}
+                data-drop={BUY}
                 data-guide="buy"
-                onClick={() => onTap?.(POT)}
+                onClick={() => onTap?.(BUY)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && onTap?.(POT)}
+                onKeyDown={(e) => e.key === 'Enter' && onTap?.(BUY)}
                 aria-label={`Mua tờ — ${buyBox.price} kẹo một tờ`}
-                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 border-dashed border-pink-400/70 bg-night/50 px-4 py-2 transition select-none active:scale-95 ${ring(POT)}`}
+                className={`flex cursor-pointer touch-none flex-col items-center rounded-3xl border-2 border-dashed border-pink-400/70 bg-night/50 px-4 py-2 transition select-none active:scale-95 ${ring(BUY)}`}
               >
                 <span className="font-display text-2xl leading-none font-bold text-pink-400">Mua</span>
                 <span className="mt-1 text-[10px] text-muted">
