@@ -569,9 +569,6 @@ function Bag({ shaking, small }: { shaking: boolean; small?: boolean }) {
   )
 }
 
-/** Nhớ trạng thái thu / mở tờ lô tô trên máy này. */
-const FOLD_KEY = 'candypot:loto-folded'
-
 /** Số vừa gọi chưa đánh thì sau bấy nhiêu ms bắt đầu nháy nhắc. */
 const HINT_DELAY_MS = 3000
 
@@ -687,6 +684,8 @@ export function LotoPanel({
   canShake,
   onShake,
   outside,
+  folded,
+  onFold,
   menu,
 }: {
   roundId: string
@@ -703,6 +702,9 @@ export function LotoPanel({
   onShake: () => void
   /** Số gọi ở ngoài đời: không có dãy số gọi, đánh tự do, đủ hàng là Kinh. */
   outside?: boolean
+  /** Đang thu tờ (khung gọn dưới đáy, bàn + nút thường bấm được) — Table giữ, chung với các game bài khác. */
+  folded: boolean
+  onFold: (folded: boolean) => void
   menu: ReactNode
 }) {
   const mine = (me && loto.sheets[me]) || []
@@ -713,22 +715,7 @@ export function LotoPanel({
   /** Số vừa đánh (trên tờ nào) — chạy hiệu ứng gạch. */
   const [fresh, setFresh] = useState<{ sheet: number; n: number } | undefined>()
   const [board, setBoard] = useState(false)
-  // Thu tờ lại (chỉ còn số gọi + nút) — nhớ trên máy này
-  const [folded, setFolded] = useState(() => {
-    try {
-      return localStorage.getItem(FOLD_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
-  const fold = (v: boolean) => {
-    setFolded(v)
-    try {
-      localStorage.setItem(FOLD_KEY, v ? '1' : '0')
-    } catch {
-      /* không nhớ được thì thôi */
-    }
-  }
+  const fold = onFold
   // Nhắc số vừa gọi: sau 3 giây mà chưa đánh thì ô số đó nháy nhẹ (tờ phụ có số đó thì nháy viền)
   const last = loto.called[loto.called.length - 1]
   const [hintFor, setHintFor] = useState<number | undefined>()

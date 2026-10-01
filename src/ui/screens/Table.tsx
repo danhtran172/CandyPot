@@ -36,6 +36,7 @@ import { PriceSheet } from '../components/PriceSheet'
 import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
+import { useCardsFolded } from '../cardsFold'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
 import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
 import { HOST_GRACE_MS, TURN_MS, turnStart } from '../turnClock'
@@ -145,6 +146,10 @@ export function Table() {
   /** Lô tô giấy trong app, đã chốt: đang gọi số / đánh số. */
   const lotoPlay = cardApp && game?.type === 'loto' && !!round?.loto && round.phase === 'playing'
   const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
+  /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
+  const [cardsFolded, foldCards] = useCardsFolded()
+  /** Đang mở bài: bài chiếm phần dưới (Lô tô: cả màn hình), các nút thường ẩn đi. Lô tô không mua tờ thì coi như thu. */
+  const cardOpen = cardPlay && !cardsFolded && (!lotoPlay || !!(me && round?.loto?.sheets[me]?.length))
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
@@ -699,6 +704,22 @@ export function Table() {
     dim: !!hand?.folded.includes(p.id),
   }))
 
+  /** Ai cũng thấy Hủy ván; không phải host thì bấm vào được nhắc nhờ host (host offline thì mời nhận làm host). */
+  const cancelBtn = (
+    <Button
+      variant="danger"
+      className={`bg-night/90 px-3 py-1.5 text-sm ${canHost ? '' : 'opacity-60'}`}
+      onClick={() =>
+        canHost
+          ? cancelRound()
+          : hostAway && me
+            ? confirmTakeHost(session, me)
+            : flash(`Chỉ host (${hostName}) mới hủy được ván — nhờ ${hostName} hủy giúp.`, true)
+      }
+    >
+      Hủy ván
+    </Button>
+  )
   /** Bài trong app: nút ⋯ gom các chức năng còn cần (Trả/nhận, Host, Hủy ván…). */
   const cardMenu = (
     <More on count={menuCount}>
@@ -725,32 +746,79 @@ export function Table() {
       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGuidePick(true)}>
         ❓ Hướng dẫn
       </Button>
-      {/* Ai cũng thấy Hủy ván; không phải host thì bấm vào được nhắc nhờ host (host offline thì mời nhận làm host) */}
-      <Button
-        variant="danger"
-        className={`bg-night/90 px-3 py-1.5 text-sm ${canHost ? '' : 'opacity-60'}`}
-        onClick={() =>
-          canHost
-            ? cancelRound()
-            : hostAway && me
-              ? confirmTakeHost(session, me)
-              : flash(`Chỉ host (${hostName}) mới hủy được ván — nhờ ${hostName} hủy giúp.`, true)
-        }
-      >
-        Hủy ván
-      </Button>
+      {cancelBtn}
       {backBtn}
     </More>
   )
+  /** Bài đang thu: nút ⋯ chỉ còn các thao tác của host (các nút khác đã hiện lại trên màn hình). */
+  const hostMenu = (
+    <More on>
+      {canHost && (
+        <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
+          🎮 Đổi game
+        </Button>
+      )}
+      {cancelBtn}
+      {backBtn}
+    </More>
+  )
+  /** Nút Thu bài / Mở bài. Đang thu mà tới lượt mình thì viền nháy nhắc. */
+  const cardTurnMine = !!me && (round?.tienlen?.turn === me || round?.xidach?.turn === me)
+  const foldBtn = (open: boolean) => (
+    <button
+      type="button"
+      onClick={() => foldCards(open)}
+      aria-expanded={!open}
+      className={`shrink-0 rounded-full border border-line/60 bg-night/90 px-3 py-1.5 text-xs font-semibold whitespace-nowrap ${
+        !open && cardTurnMine ? 'loto-hint-border text-lemon' : ''
+      }`}
+    >
+      {open ? 'Thu bài ▾' : 'Mở bài ▴'}
+    </button>
+  )
+  /** Thanh bài thu gọn (Tiến lên / Xì dách): trạng thái lượt, ⋯ thao tác host, Ván mới khi xong, Mở bài. */
+  const cardBar = (() => {
+    const c = round?.tienlen ?? round?.xidach
+    if (!c) return null
+    const done = c.turn === null
+    const status = shuffling
+      ? 'Đang chia bài…'
+      : done
+        ? canHost
+          ? 'Xong ván'
+          : 'Xong ván · chờ host chia ván mới'
+        : cardTurnMine
+          ? 'Tới lượt bạn!'
+          : round?.xidach && c.turn === round.xidach.dealer
+            ? `Lượt cái ${players[c.turn]?.name ?? ''}`
+            : `Lượt ${players[c.turn!]?.name ?? ''}`
+    return (
+      <section
+        data-guide="cards"
+        className="mb-2 flex items-center gap-2 rounded-3xl border border-line/60 bg-night/90 px-3 py-2 backdrop-blur"
+      >
+        {hostMenu}
+        <p className={`min-w-0 flex-1 truncate text-center text-sm ${cardTurnMine ? 'font-semibold text-lemon' : 'text-muted'}`}>
+          {status}
+        </p>
+        {done && canHost && (
+          <Button variant="primary" className="font-display px-4 py-1.5" onClick={nextRound}>
+            Ván mới
+          </Button>
+        )}
+        {foldBtn(false)}
+      </section>
+    )
+  })()
 
   return (
-    <main className={lotoPlay ? 'pb-[34rem]' : round?.tienlen || round?.xidach ? 'pb-80' : 'pb-40'}>
+    <main className={cardOpen ? (lotoPlay ? 'pb-[34rem]' : 'pb-80') : cardPlay ? 'pb-60' : 'pb-40'}>
       <TopBar
         title={session.name}
         back="/"
         right={
-          // Đang đánh bài trong app: các nút này nằm trong popup ⋯
-          cardPlay ? undefined : (
+          // Đang mở bài trong app: các nút này nằm trong popup ⋯
+          cardOpen ? undefined : (
             <>
               <Link to={`${base}/players`} data-guide="players" className="rounded-full bg-plum-2 px-3 py-1.5 text-sm font-semibold">
                 👥 Người chơi
@@ -770,7 +838,7 @@ export function Table() {
         }
       />
 
-      <div data-guide="picker" className={cardPlay ? 'hidden' : ''}>
+      <div data-guide="picker" className={cardOpen ? 'hidden' : ''}>
         <GamePicker value={game?.type} onPick={pickType} locked={!canHost} />
       </div>
 
@@ -791,7 +859,7 @@ export function Table() {
         </Card>
       ) : (
         <>
-          <div className={`mt-2 mb-2 flex items-center justify-between gap-2 text-sm ${cardPlay ? 'hidden' : ''}`}>
+          <div className={`mt-2 mb-2 flex items-center justify-between gap-2 text-sm ${cardOpen ? 'hidden' : ''}`}>
             {round ? (
               <span className="font-semibold">
                 <span className="mr-1.5 inline-block size-2 rounded-full bg-mint align-middle" />
@@ -857,7 +925,9 @@ export function Table() {
                     ? 'poker'
                     : game.type === 'xidach'
                       ? 'blackjack'
-                      : 'oval'
+                      : isFree
+                        ? 'poker'
+                        : 'oval'
             }
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
@@ -887,7 +957,7 @@ export function Table() {
             }
             cornerTop={
               // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
-              !cardPlay &&
+              !cardOpen &&
               withRules && (
                 <div className="flex w-full items-center gap-2">
                   {/* Mode chơi bài (đánh ngoài / trên app) — ai cũng thấy, host đổi */}
@@ -924,7 +994,7 @@ export function Table() {
 
           {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
           <div className="pointer-events-none fixed inset-x-0 bottom-16 z-10 mx-auto max-w-lg px-4 pb-[env(safe-area-inset-bottom)] land:right-[calc(5rem+env(safe-area-inset-right))] land:bottom-0 land:max-w-none land:pl-[calc(1rem+env(safe-area-inset-left))]">
-            {!cardPlay && (
+            {!cardOpen && (
               <div className="mb-2 flex items-end justify-between">
                 <button
                   type="button"
@@ -954,8 +1024,11 @@ export function Table() {
                 )}
               </div>
             )}
-            {cardPlay && round?.tienlen && (
-              <div className="pointer-events-auto">
+            {cardPlay && !cardOpen && cardBar && <div className="pointer-events-auto">{cardBar}</div>}
+            {cardOpen && round?.tienlen && (
+              <div className="pointer-events-auto relative">
+                {/* Tay nắm Thu bài ở mép trên khung bài */}
+                <div className="absolute -top-4 right-4 z-10">{foldBtn(true)}</div>
                 <TienlenPanel
                   round={round}
                   cards={round.tienlen}
@@ -995,12 +1068,15 @@ export function Table() {
                   }
                   outside={lotoCalling(game) === 'outside'}
                   onShake={() => me && run(actions().lotoCall(game.id, me))}
-                  menu={cardMenu}
+                  folded={!cardOpen}
+                  onFold={foldCards}
+                  menu={cardOpen ? cardMenu : hostMenu}
                 />
               </div>
             )}
-            {cardPlay && round?.xidach && (
-              <div className="pointer-events-auto">
+            {cardOpen && round?.xidach && (
+              <div className="pointer-events-auto relative">
+                <div className="absolute -top-4 right-4 z-10">{foldBtn(true)}</div>
                 <XidachPanel
                   round={round}
                   cards={round.xidach}
