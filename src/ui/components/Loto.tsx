@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { fullRows, ownerOf, type LotoState } from '../../core/games/lotoPlay'
 import { COLS, markColor, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
 import type { ID, Player } from '../../core/types'
+import { createPortal } from 'react-dom'
 import { Button } from './kit'
 import { useLandscape } from '../landscape'
 import bagIcon from '../../assets/loto-bag.webp'
@@ -775,26 +776,26 @@ export function LotoPanel({
     </div>
   ) : null
 
-  // Xoay ngang: cột trái gom số gọi + nút, bên phải bày đủ các tờ cạnh nhau (đánh trực tiếp trên tờ nào cũng được)
+  // Xoay ngang: phủ cả màn (trừ cột điều hướng) — thanh trên cùng hiện số gọi + nút; các tờ cao gần hết màn hình,
+  // nằm cạnh nhau (đánh trực tiếp trên tờ nào cũng được); túi gọi số ở góc phải dưới
   if (land) {
     const n = Math.max(1, mine.length)
-    return (
+    return createPortal(
       <section
         data-guide="cards"
-        className="mb-1 flex h-[calc(100dvh-3.5rem)] gap-3 rounded-3xl border border-line/60 bg-night/95 p-2 backdrop-blur"
+        className="fixed inset-y-0 left-0 z-30 flex flex-col bg-night pt-[env(safe-area-inset-top)] pr-2 pb-[env(safe-area-inset-bottom)] pl-[calc(0.5rem+env(safe-area-inset-left))]"
+        style={{ right: 'calc(5rem + env(safe-area-inset-right))' }}
       >
         <ChalkFilter />
         {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
-        <div className="flex w-36 shrink-0 flex-col gap-2">
+        {/* Thanh trên cùng: số vừa gọi (to) + các số trước, đếm, kiểu gạch, ⋯ */}
+        <div className="flex h-12 shrink-0 items-center gap-2">
           {outside ? (
-            <p className="text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</p>
+            <p className="min-w-0 flex-1 truncate text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</p>
           ) : (
             <>
-              <div className="flex items-center gap-1.5">
-                {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
-                {recent.length ? <Ball key={recent[0]} n={recent[0]} big fresh /> : <span className="text-xs text-muted">Chờ gọi số…</span>}
-              </div>
-              <div className="flex flex-wrap gap-1">
+              {recent.length ? <Ball key={recent[0]} n={recent[0]} mid fresh /> : <span className="text-xs text-muted">Chờ gọi số…</span>}
+              <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
                 {recent.slice(1).map((n2) => (
                   <Ball key={n2} n={n2} />
                 ))}
@@ -803,24 +804,25 @@ export function LotoPanel({
                 type="button"
                 onClick={() => setBoard(true)}
                 aria-label="Xem tất cả số đã gọi"
-                className="num self-start rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
+                className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
               >
                 {loto.called.length}/90
               </button>
             </>
           )}
           {markerPicker}
-          <span className="flex-1" />
-          {action}
-          <div className="flex justify-start">{menu}</div>
+          {menu}
         </div>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+        {/* Các tờ: cao gần hết màn hình */}
+        {/* Chừa cột bên phải cho túi / nút ở góc dưới, để không che số trên tờ */}
+        <div className={`flex min-h-0 flex-1 items-start justify-center gap-2 pb-1 ${action || (!outside && canShake) ? 'pr-24' : ''}`}>
           {mine.length ? (
             mine.map((i) => (
               <div
                 key={i}
                 className="shrink-0"
-                style={{ width: `min(calc((100dvh - 5rem) / 1.45), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
+                // Cao tờ ≈ 1.34 × rộng + các dải chữ (~4rem) → rộng sao cho tờ vừa khít chiều cao còn lại
+                style={{ width: `min(calc((100dvh - 7.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
               >
                 <SheetCard
                   sheet={papers[i]}
@@ -837,10 +839,20 @@ export function LotoPanel({
               </div>
             ))
           ) : (
-            <p className="text-sm text-muted">Bạn không mua tờ nào ván này.</p>
+            <p className="self-center text-sm text-muted">Bạn không mua tờ nào ván này.</p>
           )}
         </div>
-      </section>
+        {/* Góc phải dưới: KINH / chờ xác nhận / Ván mới, và túi gọi số */}
+        <div className="pointer-events-none absolute right-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex items-end gap-2">
+          {action && <div className="pointer-events-auto flex w-44 drop-shadow-[0_6px_14px_rgb(0_0_0/0.6)]">{action}</div>}
+          {!outside && canShake && (
+            <div className="pointer-events-auto rounded-full bg-night/80 p-1.5 shadow-[0_6px_18px_rgb(0_0_0/0.6)]">
+              <BagButton onShake={onShake} ready={shakeReady} />
+            </div>
+          )}
+        </div>
+      </section>,
+      document.body,
     )
   }
 
