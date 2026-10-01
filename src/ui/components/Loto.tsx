@@ -139,23 +139,25 @@ export function SheetCard({
   hint?: number
 }) {
   const color = sheetColor(index)
+  // Màu ô trống pha với màu giấy cho chìm, như mực in trên giấy
+  const muted = `color-mix(in srgb, ${color} 62%, #b9ab8f)`
   const ink = markColor(index)
   const [shake, setShake] = useState<number | null>(null)
   /** Ô số: nền trắng ngà, số đen to đậm (kiểu tờ in) — hàng kinh nền vàng. */
   const numCell = (win: boolean) =>
-    `relative grid place-items-center bg-[#fffdf6] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
+    `relative grid place-items-center bg-[#f7f0e1] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
       small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[15px]'
     } ${win ? '!bg-lemon' : ''}`
   /** Dải chữ trang trí giữa các khối, như tờ in. */
   const band = (text: string, italic?: boolean) =>
     !small && (
-      <div className={`py-0.5 text-center text-[10px] font-bold tracking-wide ${italic ? 'italic' : 'uppercase'}`} style={{ color }}>
+      <div className={`py-0.5 text-center text-[10px] font-bold tracking-wide ${italic ? 'italic' : 'uppercase'}`} style={{ color: muted }}>
         {text}
       </div>
     )
   return (
-    // Không viền: tờ là nền giấy trắng, các khối kẻ ô đen mảnh
-    <div className={`bg-[#fffdf6] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
+    // Không viền: tờ giấy ngà, các khối kẻ ô đen mảnh; phủ vân giấy lên cả tờ
+    <div className={`relative overflow-hidden bg-[#f7f0e1] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
       {band(`CandyPot · Tờ ${sheetName(index)}`)}
       {[0, 1, 2].map((b) => (
         <div key={b}>
@@ -166,12 +168,8 @@ export function SheetCard({
                 const marked = n !== null && !!marks?.includes(n)
                 const win = winRow === row
                 return n === null ? (
-                  // Ô trống: màu của tờ, hoa văn hình thoi nhỏ
-                  <span
-                    key={`${row}-${c}`}
-                    className={small ? 'h-2' : 'aspect-[3/4]'}
-                    style={{ background: `${ORNAMENT} center / 60% no-repeat, ${color}` } as CSSProperties}
-                  />
+                  // Ô trống: chỉ tô màu của tờ (màu chìm)
+                  <span key={`${row}-${c}`} className={small ? 'h-2' : 'aspect-[3/4]'} style={{ background: muted } as CSSProperties} />
                 ) : !onMark || small ? (
                   // Chỉ để xem (bảng mua tờ / tờ phía sau): không bấm được
                   <span key={`${row}-${c}`} className={numCell(win)}>
@@ -206,14 +204,10 @@ export function SheetCard({
         </div>
       ))}
       {band('Lô tô CandyPot')}
+      <span aria-hidden className="paper-grain pointer-events-none absolute inset-0" />
     </div>
   )
 }
-
-/** Hoa văn ô trống (hình thoi trắng nhỏ có chấm giữa) — một ảnh dùng chung. */
-const ORNAMENT = `url("data:image/svg+xml,${encodeURIComponent(
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 2l8 8-8 8-8-8z' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.4'/><path d='M10 7l3 3-3 3-3-3z' fill='white' fill-opacity='.5'/></svg>",
-)}")`
 
 /**
  * Mua tờ: xem từng tờ (hiện đủ số), lướt / bấm ‹ › hoặc chạm màu để chuyển tờ, một nút để mua.
@@ -379,6 +373,9 @@ function Bag({ shaking, small }: { shaking: boolean; small?: boolean }) {
   )
 }
 
+/** Nhớ trạng thái thu / mở tờ lô tô trên máy này. */
+const FOLD_KEY = 'candypot:loto-folded'
+
 /** Số vừa gọi chưa đánh thì sau bấy nhiêu ms bắt đầu nháy nhắc. */
 const HINT_DELAY_MS = 3000
 
@@ -505,6 +502,22 @@ export function LotoPanel({
   const [marks, setMarks] = useMarks(roundId, me)
   const [marker, setMarker] = useState<Marker>(readMarker)
   const [fresh, setFresh] = useState<number | undefined>()
+  // Thu tờ lại (chỉ còn số gọi + nút) — nhớ trên máy này
+  const [folded, setFolded] = useState(() => {
+    try {
+      return localStorage.getItem(FOLD_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const fold = (v: boolean) => {
+    setFolded(v)
+    try {
+      localStorage.setItem(FOLD_KEY, v ? '1' : '0')
+    } catch {
+      /* không nhớ được thì thôi */
+    }
+  }
   // Nhắc số vừa gọi: sau 3 giây mà chưa đánh thì ô số đó nháy nhẹ (tờ phụ có số đó thì nháy viền)
   const last = loto.called[loto.called.length - 1]
   const [hintFor, setHintFor] = useState<number | undefined>()
@@ -554,9 +567,20 @@ export function LotoPanel({
           <span className="flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
         )}
         <span className="num shrink-0 text-[11px] text-muted">{loto.called.length}/90</span>
+        {mine.length > 0 && (
+          <button
+            type="button"
+            onClick={() => fold(!folded)}
+            aria-expanded={!folded}
+            // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
+            className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold ${folded && hint !== undefined && mine.some((i) => papers[i].some((r) => r.includes(hint))) ? 'loto-hint-border' : ''}`}
+          >
+            {folded ? 'Mở tờ ▴' : 'Thu tờ ▾'}
+          </button>
+        )}
       </div>
 
-      {mine.length ? (
+      {mine.length && folded ? null : mine.length ? (
         <>
           {/* Chọn tờ đang xem + phấn / hạt dưa */}
           <div className="mt-2 flex items-center gap-1.5">
