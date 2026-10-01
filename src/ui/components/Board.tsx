@@ -25,6 +25,8 @@ export interface Seat {
   tickets?: { count: number; color: string }
   /** Bài trong app: số lá còn trên tay, hiện trước chỗ ngồi dạng xấp lưng bài. */
   cards?: number
+  /** Xì dách, lượt cái: xấp bài của con chạm được như chạm avatar (để xét); `ready` = xét được ngay → viền sáng. */
+  checkable?: 'ready' | 'blocked'
   /** Bài đã lật cho cả bàn xem (Xì dách: đã được xét / bài cái) — thay cho xấp lưng bài. */
   faceUp?: number[]
   /** Làm nổi bật bài lật (bài của cái). */
@@ -570,7 +572,10 @@ export function Board({
               </span>
             ) : s.cards !== undefined ? (
               <span
-                className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}
+                className={`absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]} ${
+                  // Chạm được (xét) thì nhận chạm — chạm nổi lên chỗ ngồi như chạm avatar
+                  s.checkable ? `cursor-pointer ${s.checkable === 'ready' ? 'ring-2 ring-lemon/80' : ''}` : 'pointer-events-none'
+                }`}
               >
                 <CardBackStack count={s.cards} />
                 {/* Xì dách: tiền cược nằm cạnh xấp bài */}

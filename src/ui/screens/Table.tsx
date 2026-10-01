@@ -31,7 +31,7 @@ import { pairsFor, sheetSet } from '../../core/games/lotoSheets'
 
 /** Máy gọi số lô tô: mỗi bấy nhiêu ms một số. */
 const LOTO_AUTO_MS = 5000
-import { describe, resultText, type XidachCards } from '../../core/games/xidachPlay'
+import { check as checkXidach, describe, resultText, type XidachCards } from '../../core/games/xidachPlay'
 import { PriceSheet } from '../components/PriceSheet'
 import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
@@ -343,10 +343,20 @@ export function Table() {
     if (!game || !me) return
     // Bấm avatar của mình → 💤 tạm nghỉ / chơi lại + lời/lỗ của mình từng ván (Trả/nhận ở nút riêng)
     if (id === me) return setShowMe(true)
-    // Xì dách bài trong app: cái tới lượt chạm vào một con = xét người đó
+    // Xì dách bài trong app: cái tới lượt chạm vào một con (avatar hoặc xấp bài) = xét người đó — hỏi lại trước khi lật
     if (round?.xidach && round.xidach.dealer === me && round.xidach.turn === me && round.xidach.order.includes(id)) {
-      if (round.xidach.settled[id]) return flash(`Đã xét ${players[id]?.name} rồi.`, true)
-      return void run(actions().xidachCheck(game.id, me, id))
+      const name = players[id]?.name ?? '?'
+      if (round.xidach.settled[id]) return flash(`Đã xét ${name} rồi.`, true)
+      // Chưa xét được (vd cái chưa đủ 15) → báo luôn, không hỏi
+      const dry = checkXidach(round.xidach, me, id)
+      if (typeof dry === 'string') return flash(dry, true)
+      const gameId = game.id
+      void ask(`Xét ${name}?`, {
+        icon: '🃏',
+        message: `Lật bài ${name} (${round.xidach.hands[id]?.length ?? 0} lá) ra so với bài cái — xét rồi không rút lại được.`,
+        okLabel: 'Xét',
+      }).then((ok) => ok && run(actions().xidachCheck(gameId, me, id)))
+      return
     }
     if (id === DEALER) return canHost ? setPicker('dealer') : flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
     if (id === POT) {
@@ -686,6 +696,13 @@ export function Table() {
     // Xì dách: bài đã được xét / bài cái đã lật thì cả bàn thấy; bài cái làm nổi bật
     faceUp: xdCards && !shuffling && xidachShown(xdCards, p.id) ? xdCards.hands[p.id] : undefined,
     faceUpGlow: !!xdCards && xdCards.dealer === p.id,
+    // Cái tới lượt: xấp bài con chưa xét chạm được (như avatar); viền sáng khi xét được ngay (cái đã đủ điểm)
+    checkable:
+      !!xdCards && !shuffling && xdCards.dealer === me && xdCards.turn === me && xdCards.order.includes(p.id) && !xdCards.settled[p.id]
+        ? !!me && typeof checkXidach(xdCards, me, p.id) !== 'string'
+          ? 'ready'
+          : 'blocked'
+        : undefined,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
     highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id) || (!!xdCards && xdCards.turn === p.id),
     turnClock: turnKey && turnNow?.turn === p.id ? turnKey : undefined,

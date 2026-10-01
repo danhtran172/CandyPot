@@ -171,7 +171,7 @@ export function XidachPanel({
       ? isDealer
         ? short
           ? `Lượt cái — chưa đủ ${DEALER_MIN}: rút thêm (Xét tất lúc này là chịu non)`
-          : 'Lượt cái — chạm vào người chơi để xét, hoặc Xét tất'
+          : 'Lượt cái — chạm avatar hoặc bài người chơi để xét, hoặc Xét tất'
         : short
           ? `Lượt bạn — chưa đủ ${PLAYER_MIN}, dằn bây giờ là non`
           : 'Lượt bạn — rút thêm hoặc đẩy bài lên để dằn'
@@ -302,7 +302,7 @@ export function XidachPanel({
         )}
         {myTurn && isDealer && (
           <>
-            <p className="flex-1 text-center text-[11px] text-muted">Chạm người chơi để xét lẻ</p>
+            <p className="flex-1 text-center text-[11px] text-muted">Chạm avatar hoặc bài người chơi để xét lẻ</p>
             <Button variant="primary" className="font-display px-4 text-lg" onClick={onCheckAll}>
               Xét tất
             </Button>
