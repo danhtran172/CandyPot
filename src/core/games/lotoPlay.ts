@@ -14,6 +14,10 @@ export interface LotoState {
   called: number[]
   /** Người kinh (thắng): tờ, hàng. */
   winner?: { id: ID; sheet: number; row: number }
+  /** Gọi ở ngoài: có người báo kinh, đang chờ host xác nhận. */
+  pending?: { id: ID; sheet: number; row: number }
+  /** Gọi ở ngoài: lần báo kinh gần nhất bị host bác (của ai). */
+  rejected?: ID
 }
 
 export const emptyLoto = (caller: ID | null): LotoState => ({ sheets: {}, caller, called: [] })
@@ -56,14 +60,29 @@ export function fullRows(sheet: Sheet, called: number[]): number[] {
 
 /**
  * Kinh: tờ của mình, hàng đã đủ 5 số được gọi, chưa ai kinh trước.
- * `outside` = số gọi ở ngoài đời (app không biết số nào đã gọi) → tin theo hàng người chơi đã đánh.
+ * `outside` = số gọi ở ngoài đời (app không biết số nào đã gọi) → chưa tính ngay, chờ host xác nhận (`judge`).
  */
 export function claim(s: LotoState, sheets: Sheet[], playerId: ID, sheet: number, row: number, outside = false): LotoState | string {
   if (s.winner) return s.winner.id === playerId ? 'Bạn đã kinh rồi.' : 'Có người kinh trước rồi.'
   if (!s.sheets[playerId]?.includes(sheet)) return 'Tờ này không phải của bạn.'
   const paper = sheets[sheet]
   if (!paper || row < 0 || row >= ROWS) return 'Không có hàng này.'
-  const missing = outside ? [] : rowNumbers(paper, row).filter((n) => !s.called.includes(n))
+  if (outside) {
+    if (s.pending) return s.pending.id === playerId ? 'Đang chờ host xác nhận kinh của bạn.' : 'Đang chờ host xác nhận kinh của người khác.'
+    const next = { ...s, pending: { id: playerId, sheet, row } }
+    delete next.rejected
+    return next
+  }
+  const missing = rowNumbers(paper, row).filter((n) => !s.called.includes(n))
   if (missing.length) return `Chưa kinh — số ${missing.join(', ')} chưa được gọi.`
   return { ...s, winner: { id: playerId, sheet, row } }
+}
+
+/** Host xác nhận lần báo kinh đang chờ: đúng thì người đó thắng, sai thì bỏ (ghi lại để báo người báo). */
+export function judge(s: LotoState, ok: boolean): LotoState | string {
+  if (!s.pending) return 'Không có ai đang chờ xác nhận kinh.'
+  if (s.winner) return 'Đã có người kinh rồi.'
+  const next: LotoState = ok ? { ...s, winner: s.pending } : { ...s, rejected: s.pending.id }
+  delete next.pending
+  return next
 }

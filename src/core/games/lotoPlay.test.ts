@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { callNumber, claim, emptyLoto, fullRows, pickSheets, remaining, type LotoState } from './lotoPlay'
+import { callNumber, claim, emptyLoto, fullRows, judge, pickSheets, remaining, type LotoState } from './lotoPlay'
 import { rowNumbers, sheetSet } from './lotoSheets'
 
 const ok = (r: LotoState | string) => {
@@ -40,7 +40,14 @@ describe('lotoPlay', () => {
   it('gọi ở ngoài: kinh theo hàng đã đánh, không cần số trong app', () => {
     const s = ok(pickSheets(emptyLoto('h'), 'a', [0], 2, 12))
     expect(claim(s, sheets, 'a', 0, 2)).toMatch(/chưa được gọi/)
-    expect(ok(claim(s, sheets, 'a', 0, 2, true)).winner).toEqual({ id: 'a', sheet: 0, row: 2 })
+    const p = ok(claim(s, sheets, 'a', 0, 2, true))
+    // Chưa tính: chờ host xác nhận
+    expect(p.winner).toBeUndefined()
+    expect(p.pending).toEqual({ id: 'a', sheet: 0, row: 2 })
+    expect(claim(p, sheets, 'a', 0, 3, true)).toMatch(/chờ host/)
+    const no = ok(judge(p, false))
+    expect([no.pending, no.rejected, no.winner]).toEqual([undefined, 'a', undefined])
+    expect(ok(judge(ok(claim(no, sheets, 'a', 0, 2, true)), true)).winner).toEqual({ id: 'a', sheet: 0, row: 2 })
   })
 })
 

@@ -26,7 +26,7 @@ import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { XidachCenter, XidachPanel } from '../components/XidachPanel'
-import { LotoCenter, LotoPanel, LotoWinner, SheetPicker } from '../components/Loto'
+import { LotoCenter, LotoJudge, LotoPanel, LotoWinner, SheetPicker } from '../components/Loto'
 import { pairsFor, sheetSet } from '../../core/games/lotoSheets'
 
 /** Máy gọi số lô tô: mỗi bấy nhiêu ms một số. */
@@ -1352,6 +1352,17 @@ export function Table() {
           players={players}
           onSave={(ids) => actions().lotoPickSheets(game.id, me, ids)}
           onClose={() => setSheetPicker(false)}
+        />
+      )}
+
+      {/* Gọi ở ngoài: có người báo kinh → host xác nhận */}
+      {lotoPlay && canHost && round?.loto?.pending && !round.loto.winner && lotoPapers && (
+        <LotoJudge
+          loto={round.loto}
+          papers={lotoPapers}
+          players={players}
+          pot={potOf(round)}
+          onJudge={(ok) => run(actions().lotoJudge(game!.id, ok))}
         />
       )}
 

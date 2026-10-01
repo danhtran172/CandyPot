@@ -753,7 +753,12 @@ export function LotoPanel({
       ))}
     </div>
   )
-  const action = winner ? (
+  const pending = loto.pending
+  const action = pending && !winner ? (
+    <p className={`flex-1 rounded-2xl px-2 py-2 text-center text-xs font-semibold ${pending.id === me ? 'animate-pulse bg-lemon/15 text-lemon' : 'text-muted'}`}>
+      {pending.id === me ? 'Đã báo KINH — chờ host xác nhận…' : `${players[pending.id]?.name} báo kinh — chờ host xác nhận`}
+    </p>
+  ) : winner ? (
     isHost ? (
       <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
         Ván mới
@@ -762,9 +767,12 @@ export function LotoPanel({
       <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
     )
   ) : ready ? (
-    <Button variant="primary" className="font-display loto-kinh flex-1 text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
-      KINH!
-    </Button>
+    <div className="flex flex-1 flex-col gap-1">
+      {loto.rejected === me && <p className="text-center text-[11px] font-semibold text-berry">Host chưa công nhận lần kinh vừa rồi.</p>}
+      <Button variant="primary" className="font-display loto-kinh text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
+        KINH!
+      </Button>
+    </div>
   ) : null
 
   // Xoay ngang: cột trái gom số gọi + nút, bên phải bày đủ các tờ cạnh nhau (đánh trực tiếp trên tờ nào cũng được)
@@ -983,25 +991,58 @@ export function LotoPanel({
 
       <div className="mt-2 flex items-center gap-2">
         {menu}
-        {winner ? (
-          isHost ? (
-            <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
-              Ván mới
-            </Button>
-          ) : (
-            <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
-          )
-        ) : ready ? (
-          <Button variant="primary" className="font-display loto-kinh flex-1 text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
-            KINH!
-          </Button>
-        ) : (
+        {action ?? (
           <p className="flex-1 text-center text-[11px] text-muted">
+            {loto.rejected === me && <b className="text-berry">Host chưa công nhận lần kinh vừa rồi. </b>}
             {outside ? 'Chạm số để đánh' : 'Chạm số đã gọi để đánh'} · đủ 5 số một hàng là Kinh
           </p>
         )}
       </div>
     </section>
+  )
+}
+
+/** Gọi ở ngoài: có người báo kinh → host đối chiếu hàng đó với số đã kêu rồi xác nhận. */
+export function LotoJudge({
+  loto,
+  papers,
+  players,
+  pot,
+  onJudge,
+}: {
+  loto: LotoState
+  papers: Sheet[]
+  players: Record<ID, Player>
+  pot: number
+  onJudge: (ok: boolean) => void
+}) {
+  const p = loto.pending!
+  return (
+    <div role="alertdialog" aria-modal="true" aria-label="Xác nhận kinh" className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+      <div className="absolute inset-0 bg-night/75" />
+      <div className="pop relative w-full max-w-sm rounded-3xl border-2 border-lemon bg-plum p-4 text-center shadow-[0_0_40px_rgb(255_210_63/0.35)]">
+        <p className="font-display text-2xl font-extrabold text-lemon">{players[p.id]?.name} báo KINH!</p>
+        <p className="text-xs text-muted">
+          Tờ {sheetName(p.sheet)} · hàng {p.row + 1} — so với các số đã kêu rồi xác nhận
+        </p>
+        <div className="mt-3 flex justify-center gap-1.5">
+          {rowNumbers(papers[p.sheet], p.row).map((n) => (
+            <Ball key={n} n={n} mid />
+          ))}
+        </div>
+        <div className="mx-auto mt-3 w-44">
+          <SheetCard sheet={papers[p.sheet]} index={p.sheet} winRow={p.row} />
+        </div>
+        <div className="mt-4 flex gap-2">
+          <Button variant="danger" className="flex-1" onClick={() => onJudge(false)}>
+            Sai, không tính
+          </Button>
+          <Button variant="primary" className="flex-1" onClick={() => onJudge(true)}>
+            Đúng · trao pot{pot ? ` ${pot}` : ''}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }
 

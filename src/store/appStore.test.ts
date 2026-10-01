@@ -712,3 +712,27 @@ describe('appStore — Lô tô giấy trong app', () => {
     expect(open().moves.at(-1)).toMatchObject({ from: POT, to: z, amount: 15 })
   })
 })
+
+describe('appStore — Lô tô gọi ở ngoài', () => {
+  it('báo kinh chưa ăn pot; host bác thì thôi, host xác nhận thì trao pot', () => {
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
+    const [x, y] = session().players.map((p) => p.id)
+    const g = s().addGame('loto')
+    s().setCardMode(g, 'app')
+    s().openRound(g, { participants: [x, y], bet: 5, stakes: {}, dealer: null })
+    const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    s().lotoPickSheets(g, y, [0])
+    s().lotoPickSheets(g, x, [1])
+    s().lockBets(g)
+    expect(s().lotoClaim(g, y, 0, 0)).toEqual([])
+    expect(open().loto!.pending).toEqual({ id: y, sheet: 0, row: 0 })
+    expect(potOf(open())).toBe(10)
+    expect(s().lotoJudge(g, false)).toEqual([])
+    expect(open().loto!.rejected).toBe(y)
+    expect(potOf(open())).toBe(10)
+    s().lotoClaim(g, y, 0, 0)
+    expect(s().lotoJudge(g, true)).toEqual([])
+    expect(open().loto!.winner).toEqual({ id: y, sheet: 0, row: 0 })
+    expect(potOf(open())).toBe(0)
+  })
+})

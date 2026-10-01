@@ -9,7 +9,7 @@ import { closeTransfers, contributions, normalizeSession, potOf } from '../core/
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { autoXidach, check as checkXidach, checkAll as checkAllXidach, dealXidach, draw as drawXidach, newPayouts as xidachPayouts, stand as standXidach, type XidachCards } from '../core/games/xidachPlay'
-import { callNumber as callLoto, claim as claimLoto, emptyLoto, pickSheets, remaining as lotoRemaining, type LotoState } from '../core/games/lotoPlay'
+import { callNumber as callLoto, claim as claimLoto, judge as judgeLoto, emptyLoto, pickSheets, remaining as lotoRemaining, type LotoState } from '../core/games/lotoPlay'
 import { pairsFor, sheetSet } from '../core/games/lotoSheets'
 import { autoMove as autoTienlen, deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
@@ -150,6 +150,8 @@ export interface AppState {
   lotoCall(gameId: ID, by: ID): string[]
   /** Lô tô (giấy trong app): kinh — đúng thì trao cả pot. */
   lotoClaim(gameId: ID, playerId: ID, sheet: number, row: number): string[]
+  /** Lô tô gọi ở ngoài: host xác nhận lần báo kinh đang chờ (đúng → trao pot; sai → không tính). */
+  lotoJudge(gameId: ID, ok: boolean): string[]
   /** Xì dách: mức cược tối thiểu / tối đa. */
   setXidachLimits(gameId: ID, min: number, max: number): string[]
   /** Đánh bài thật ngoài đời / dùng bài trong app (áp dụng từ ván sau; ván chưa chia thì chia luôn). */
@@ -1174,8 +1176,26 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           if (!r.loto) return r
           const next: LotoState | string = claimLoto(r.loto, papers, playerId, sheet, row, outside)
           if (typeof next === 'string') return r
+          // Gọi ở ngoài: mới báo kinh, chờ host xác nhận rồi mới trao pot
+          if (!next.winner) return { ...r, loto: next }
           const pot = potOf(r)
           return { ...r, loto: next, moves: pot > 0 ? [...r.moves, { ...award, amount: pot }] : r.moves }
+        })
+        return []
+      },
+
+      lotoJudge(gameId, ok) {
+        const open = openOf(gameId)
+        if (!open?.loto) return ['Ván này không chơi giấy trong app.']
+        const first = judgeLoto(open.loto, ok)
+        if (typeof first === 'string') return [first]
+        const award = { id: newId(), from: POT, to: open.loto.pending!.id, amount: 0, label: 'Kinh! Ăn pot' }
+        mapRound(gameId, open.id, (r) => {
+          if (!r.loto) return r
+          const next = judgeLoto(r.loto, ok)
+          if (typeof next === 'string') return r
+          const pot = potOf(r)
+          return next.winner && pot > 0 ? { ...r, loto: next, moves: [...r.moves, { ...award, to: next.winner.id, amount: pot }] } : { ...r, loto: next }
         })
         return []
       },
