@@ -9,6 +9,7 @@ import ticket from '../../assets/loto-ticket.webp'
 import { CardBackStack } from './CardBack'
 import { PlayingCard } from './TienlenPanel'
 import { TURN_MS, turnStart } from '../turnClock'
+import { useLandscape } from '../landscape'
 
 export interface Seat {
   player: Player
@@ -150,6 +151,22 @@ function WoodLeg({ side }: { side: 'left' | 'right' }) {
   )
 }
 
+/** Bàn xì dách: nửa bầu dục, cạnh thẳng bên trái (chỗ nhà cái), cung bên phải. */
+const BJ_RADIUS = '0 100% 100% 0 / 0 50% 50% 0'
+/** Đệm tay vịn da đen dọc theo cung. */
+const BJ_RAIL = {
+  borderRadius: BJ_RADIUS,
+  background: 'radial-gradient(ellipse at 30% 35%, #3a3a3a, #121212 65%, #050505)',
+  boxShadow: 'inset 0 2px 0 rgb(255 255 255 / 0.18), inset 0 -3px 6px rgb(0 0 0 / 0.6), 0 8px 0 #000, 0 22px 30px rgb(0 0 0 / 0.55)',
+}
+const BJ_FELT = {
+  borderRadius: BJ_RADIUS,
+  background: 'radial-gradient(ellipse at 25% 50%, #1f8048 0%, #136137 55%, #0b4023 100%)',
+  boxShadow: 'inset 0 0 26px rgb(0 0 0 / 0.55)',
+}
+/** Màu phỉnh trong khay của nhà cái. */
+const BJ_CHIPS = ['#d62828', '#f7f7f7', '#2b9348', '#1d3557', '#111', '#ffb703']
+
 /** Đế trụ bàn Poker: thân trụ đen, hai bậc đế rộng dần. */
 function PokerPedestal() {
   return (
@@ -206,8 +223,9 @@ export function Board({
   onTap,
 }: {
   seats: Seat[]
-  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh (`wood`: vuông bằng gỗ, Tiến lên), hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval. */
-  shape?: 'oval' | 'square' | 'wood' | 'plastic' | 'poker'
+  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh (`wood`: vuông bằng gỗ, Tiến lên), hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval;
+   * hay bàn xì dách bán nguyệt: nhà cái ngồi giữa cạnh thẳng bên trái, người chơi dọc theo cung bên phải. */
+  shape?: 'oval' | 'square' | 'wood' | 'plastic' | 'poker' | 'blackjack'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Nút ở góc trên bên phải bàn (Rule ? + ⚙ cài đặt). */
@@ -317,6 +335,28 @@ export function Board({
   const n = ordered.length
   const size = sizeFor(n)
   const square = shape === 'square' || shape === 'wood'
+  const land = useLandscape()
+  // Bàn xì dách: nhà cái ngồi giữa cạnh thẳng bên trái (kể cả khi mình là cái); người chơi dọc theo cung từ trên xuống,
+  // mình (nếu không làm cái) ở cuối cung phía dưới. `angle` = hướng nhìn từ tâm bàn (để đặt bài / cược về phía bàn).
+  const blackjack = (() => {
+    if (shape !== 'blackjack') return undefined
+    const pos = new Map<ID, { left: number; top: number; angle: number }>()
+    const dealer = ordered.find((s) => s.dealer)
+    if (dealer) pos.set(dealer.player.id, { left: 9, top: 47, angle: Math.PI })
+    const arc = ordered.filter((s) => s !== dealer)
+    // ordered bắt đầu từ mình → đưa mình xuống cuối cung
+    const seq = arc[0]?.isMe ? [...arc.slice(1), arc[0]] : arc
+    // Ít người thì cung hẹp lại (không dồn về hai đầu sát cạnh nhà cái): 2 người ±40°, 3 người ±55°, từ 4 người ±70°.
+    // Xoay ngang bàn dẹt: người chơi quây quanh đầu cong bên phải (giữa bàn dồn sang trái), cung rộng tới ±80°
+    const span = land ? Math.min(80, 40 + 20 * (seq.length - 1)) : Math.min(70, 25 + 15 * (seq.length - 1))
+    const [cx, rx, ry] = land ? [58, 30, 42] : [16, 68, 38]
+    seq.forEach((s, j) => {
+      const t = seq.length === 1 ? 0.5 : j / (seq.length - 1)
+      const angle = ((-span + 2 * span * t) * Math.PI) / 180
+      pos.set(s.player.id, { left: cx + rx * Math.cos(angle), top: 47 + ry * Math.sin(angle), angle })
+    })
+    return pos
+  })()
 
   const potBox = pot !== undefined && (
     <div
@@ -353,7 +393,34 @@ export function Board({
           style={square ? { width: 'var(--board-w)' } : undefined}
         >
           {/* Mặt bàn */}
-          {shape === 'poker' ? (
+          {shape === 'blackjack' ? (
+            <div className="absolute top-[14%] right-[18%] bottom-[20%] left-[16%]">
+              {/* Đệm da đen dọc cung → mặt nỉ xanh (cạnh nhà cái chỉ một gờ mỏng) */}
+              <div className="absolute inset-0" style={BJ_RAIL}>
+                <div className="absolute top-[13px] right-[13px] bottom-[13px] left-[5px]" style={BJ_FELT}>
+                  {/* Hai đường kẻ vàng mờ song song với cung, như vạch bảo hiểm trên bàn thật */}
+                  <span
+                    className="absolute top-[16%] right-[14%] bottom-[16%] left-0 border border-l-0 border-[#d4a72c]/35"
+                    style={{ borderRadius: BJ_RADIUS }}
+                  />
+                  <span
+                    className="absolute top-[22%] right-[20%] bottom-[22%] left-0 border border-l-0 border-[#d4a72c]/25"
+                    style={{ borderRadius: BJ_RADIUS }}
+                  />
+                  {/* Khay phỉnh của nhà cái sát cạnh thẳng */}
+                  <span className="absolute top-1/2 left-1 flex h-[26%] w-[10%] min-w-5 -translate-y-1/2 flex-col gap-[2px] rounded-sm bg-black/60 p-[2px] shadow-[inset_0_1px_3px_rgb(0_0_0/0.8)]">
+                    {BJ_CHIPS.map((c) => (
+                      <span
+                        key={c}
+                        className="flex-1 rounded-[2px]"
+                        style={{ background: `linear-gradient(90deg, ${c}, color-mix(in srgb, ${c} 60%, #fff), ${c})` }}
+                      />
+                    ))}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : shape === 'poker' ? (
             <div className="absolute inset-x-[17%] top-[16%] bottom-[22%]">
               <PokerPedestal />
               {/* Tay vịn da → viền bạc → mặt nỉ (có đường kẻ mờ chỗ đặt cược) */}
@@ -389,10 +456,14 @@ export function Board({
           )}
           <div
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
-              square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
+              square
+                ? 'inset-[26%]'
+                : shape === 'blackjack'
+                  ? 'top-[24%] right-[24%] bottom-[28%] left-[25%] land:right-[42%] land:left-[21%]'
+                  : 'inset-x-[22%] top-[23%] bottom-[29%]'
             } ${
               // Bàn nhựa đỏ / nỉ xanh / gỗ: chữ xám mờ khó đọc trên nền màu → sáng lên
-              shape === 'plastic' || shape === 'poker' || shape === 'wood' ? '[&_.text-muted]:text-white/80' : ''
+              shape === 'plastic' || shape === 'poker' || shape === 'wood' || shape === 'blackjack' ? '[&_.text-muted]:text-white/80' : ''
             }`}
           >
             {title && (
@@ -473,11 +544,12 @@ export function Board({
           {ordered.map((s, i) => {
             // Bàn vuông ≤ 4 người: mỗi người một cạnh (tôi cạnh dưới; 3 người = dưới, trái, phải; 2 người = dưới, trên)
             const sideSlots = square && n <= 4 ? SQUARE_SIDES[n] : undefined
-            const angle = sideSlots ? (Math.PI / 2) * sideSlots[i] + Math.PI / 2 : Math.PI / 2 + (2 * Math.PI * i) / n
+            const bj = blackjack?.get(s.player.id)
+            const angle = bj ? bj.angle : sideSlots ? (Math.PI / 2) * sideSlots[i] + Math.PI / 2 : Math.PI / 2 + (2 * Math.PI * i) / n
             // Bàn vuông đông hơn 4 người: chiếu hướng ngồi lên cạnh hình vuông
             const edge = square ? Math.max(Math.abs(Math.cos(angle)), Math.abs(Math.sin(angle))) : 1
-            const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
-            const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
+            const left = bj ? bj.left : square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
+            const top = bj ? bj.top : square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side =
               Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
