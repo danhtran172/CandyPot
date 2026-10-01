@@ -18,10 +18,12 @@ export const LOTO_PRICE = 5
 /** Mỗi người mua tối đa bao nhiêu tờ một ván (mặc định). */
 export const LOTO_MAX = 2
 
-/** Cách gọi số khi chơi giấy trong app: túi (người gọi lắc), máy gọi, hay gọi ở ngoài. */
+/** Cách gọi số khi chơi giấy trong app: túi (người gọi lắc), máy gọi, hay gọi ở ngoài (mặc định). */
 export type LotoCalling = 'bag' | 'auto' | 'outside'
 export function lotoCalling(game: Game): LotoCalling {
-  return game.lotoOutside ? 'outside' : game.lotoAuto ? 'auto' : 'bag'
+  if (game.lotoOutside === false) return game.lotoAuto ? 'auto' : 'bag'
+  // Chưa chọn (hoặc đã chọn gọi ở ngoài) → gọi ở ngoài; game cũ đã bật máy gọi thì giữ máy gọi
+  return game.lotoOutside === undefined && game.lotoAuto ? 'auto' : 'outside'
 }
 
 export function lotoMax(game: Game): number {

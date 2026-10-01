@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { GAMES } from '../core/games'
-import { lotoMax, lotoPrice } from '../core/games/loto'
+import { lotoCalling, lotoMax, lotoPrice } from '../core/games/loto'
 import { seatedOf } from '../core/games/tienlen'
 import { xidachLimits } from '../core/games/xidach'
 import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
@@ -1166,7 +1166,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const open = openOf(gameId)
         if (!g || !open?.loto) return ['Ván này không chơi giấy trong app.']
         const papers = sheetSet(g.id, pairsFor(open.participants.length, lotoMax(g)))
-        const outside = !!g.lotoOutside
+        const outside = lotoCalling(g) === 'outside'
         const first = claimLoto(open.loto, papers, playerId, sheet, row, outside)
         if (typeof first === 'string') return [first]
         const award = { id: newId(), from: POT, to: playerId, amount: 0, label: 'Kinh! Ăn pot' }

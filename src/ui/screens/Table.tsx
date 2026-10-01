@@ -2,7 +2,7 @@ import { Children, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
-import { lotoMax, lotoPrice } from '../../core/games/loto'
+import { lotoCalling, lotoMax, lotoPrice } from '../../core/games/loto'
 import { seatedOf } from '../../core/games/tienlen'
 import { xidachBetOptions } from '../../core/games/xidach'
 import {
@@ -624,7 +624,7 @@ export function Table() {
   // Máy gọi số: máy của người gọi tự lắc mỗi vài giây (người gọi offline thì máy host gọi thay)
   const lotoCaller = round?.loto?.caller ?? null
   const autoCalling =
-    lotoPlay && !!game?.lotoAuto && !game.lotoOutside && !!round?.loto && !round.loto.winner && round.loto.called.length < 90 &&
+    lotoPlay && !!game && lotoCalling(game) === 'auto' && !!round?.loto && !round.loto.winner && round.loto.called.length < 90 &&
     (lotoCaller === me || (canHost && !!lotoCaller && !onlineIds.has(lotoCaller)))
   useEffect(() => {
     if (!autoCalling || !game || !lotoCaller) return
@@ -843,8 +843,8 @@ export function Table() {
                   loto={round.loto}
                   players={players}
                   me={me ?? null}
-                  auto={!!game.lotoAuto}
-                  outside={!!game.lotoOutside}
+                  auto={lotoCalling(game) === 'auto'}
+                  outside={lotoCalling(game) === 'outside'}
                   canPickCaller={canHost}
                   onShake={() => me && run(actions().lotoCall(game.id, me))}
                   onPickCaller={() => (canHost ? setPicker('caller') : flash(`Chỉ host (${hostName}) mới đổi người gọi số.`, true))}
@@ -962,8 +962,8 @@ export function Table() {
                   onClaim={(sheet, row) => me && run(actions().lotoClaim(game.id, me, sheet, row))}
                   onNext={nextRound}
                   onWarn={(msg) => flash(msg, true)}
-                  canShake={!!me && round.loto.caller === me && !game.lotoAuto && !game.lotoOutside && !round.loto.winner && round.loto.called.length < 90}
-                  outside={!!game.lotoOutside}
+                  canShake={!!me && round.loto.caller === me && lotoCalling(game) === 'bag' && !round.loto.winner && round.loto.called.length < 90}
+                  outside={lotoCalling(game) === 'outside'}
                   onShake={() => me && run(actions().lotoCall(game.id, me))}
                   menu={cardMenu}
                 />

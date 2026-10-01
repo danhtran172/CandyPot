@@ -691,6 +691,7 @@ describe('appStore — Lô tô giấy trong app', () => {
     const [x, y, z] = session().players.map((p) => p.id)
     const g = s().addGame('loto')
     s().setCardMode(g, 'app')
+    s().setLotoCalling(g, 'bag')
     expect(s().openRound(g, { participants: [x, y, z], bet: 5, stakes: {}, dealer: null })).toEqual([])
     const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
     expect(s().lotoPickSheets(g, y, [0, 1])).toEqual([])

@@ -43,3 +43,15 @@ describe('lotoPlay', () => {
     expect(ok(claim(s, sheets, 'a', 0, 2, true)).winner).toEqual({ id: 'a', sheet: 0, row: 2 })
   })
 })
+
+describe('lotoCalling — cách gọi số', () => {
+  it('mặc định gọi ở ngoài; chọn rồi thì theo lựa chọn; game cũ bật máy gọi thì giữ', async () => {
+    const { lotoCalling } = await import('./loto')
+    const g = (x: object) => ({ id: 'g', type: 'loto', name: '', rounds: [], ...x }) as never
+    expect(lotoCalling(g({}))).toBe('outside')
+    expect(lotoCalling(g({ lotoOutside: false }))).toBe('bag')
+    expect(lotoCalling(g({ lotoOutside: false, lotoAuto: true }))).toBe('auto')
+    expect(lotoCalling(g({ lotoAuto: true }))).toBe('auto')
+    expect(lotoCalling(g({ lotoOutside: true, lotoAuto: false }))).toBe('outside')
+  })
+})
