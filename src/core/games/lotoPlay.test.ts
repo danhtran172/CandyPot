@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { callNumber, claim, emptyLoto, fullRows, judge, pickSheets, remaining, type LotoState } from './lotoPlay'
+import { callNumber, claim, emptyLoto, fullRows, judge, pickSheets, remaining, setWaiting, waitRows, type LotoState } from './lotoPlay'
 import { rowNumbers, sheetSet } from './lotoSheets'
 
 const ok = (r: LotoState | string) => {
@@ -48,6 +48,25 @@ describe('lotoPlay', () => {
     const no = ok(judge(p, false))
     expect([no.pending, no.rejected, no.winner]).toEqual([undefined, 'a', undefined])
     expect(ok(judge(ok(claim(no, sheets, 'a', 0, 2, true)), true)).winner).toEqual({ id: 'a', sheet: 0, row: 2 })
+  })
+})
+
+describe('lotoPlay — đợi', () => {
+  const sheets = sheetSet('g', 6)
+  it('hàng có 4/5 số là đợi; báo / thôi báo; kinh rồi thì thôi', () => {
+    const row = rowNumbers(sheets[0], 3)
+    expect(waitRows(sheets[0], row.slice(0, 3))).not.toContain(3)
+    expect(waitRows(sheets[0], row.slice(0, 4))).toContain(3)
+    let s = ok(pickSheets(emptyLoto('h'), 'a', [0], 2, 12))
+    s = ok(pickSheets(s, 'b', [1], 2, 12))
+    expect(setWaiting(s, 'c', true)).toMatch(/không mua/)
+    s = ok(setWaiting(s, 'a', true))
+    s = ok(setWaiting(s, 'b', true))
+    s = ok(setWaiting(s, 'a', true))
+    expect(s.waiting).toEqual(['b', 'a'])
+    s = ok(setWaiting(s, 'b', false))
+    expect(s.waiting).toEqual(['a'])
+    expect(setWaiting({ ...s, winner: { id: 'a', sheet: 0, row: 3 } }, 'b', true)).toMatch(/kinh/)
   })
 })
 

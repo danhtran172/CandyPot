@@ -1,5 +1,5 @@
 import type { ID } from '../types'
-import { rowNumbers, ROWS, type Sheet } from './lotoSheets'
+import { PER_ROW, rowNumbers, ROWS, type Sheet } from './lotoSheets'
 
 /**
  * Lô tô chơi bằng giấy trong app: mỗi người chọn tờ trong bộ giấy (không trùng), người gọi số lắc túi ra từng số,
@@ -18,6 +18,8 @@ export interface LotoState {
   pending?: { id: ID; sheet: number; row: number }
   /** Gọi ở ngoài: lần báo kinh gần nhất bị host bác (của ai). */
   rejected?: ID
+  /** Ai đang đợi (có hàng đã đánh 4/5 số), theo thứ tự bắt đầu đợi — cả bàn được báo. */
+  waiting?: ID[]
 }
 
 export const emptyLoto = (caller: ID | null): LotoState => ({ sheets: {}, caller, called: [] })
@@ -76,6 +78,19 @@ export function claim(s: LotoState, sheets: Sheet[], playerId: ID, sheet: number
   const missing = rowNumbers(paper, row).filter((n) => !s.called.includes(n))
   if (missing.length) return `Chưa kinh — số ${missing.join(', ')} chưa được gọi.`
   return { ...s, winner: { id: playerId, sheet, row } }
+}
+
+/** Các hàng đã có ít nhất 4/5 số trong `done` (đang đợi một số nữa là kinh). */
+export function waitRows(sheet: Sheet, done: number[]): number[] {
+  return Array.from({ length: ROWS }, (_, r) => r).filter((r) => rowNumbers(sheet, r).filter((n) => done.includes(n)).length >= PER_ROW - 1)
+}
+
+/** Người chơi báo đang đợi / thôi đợi. */
+export function setWaiting(s: LotoState, playerId: ID, on: boolean): LotoState | string {
+  if (s.winner) return 'Đã có người kinh — ván xong.'
+  if (!s.sheets[playerId]?.length) return 'Bạn không mua tờ nào ván này.'
+  const others = (s.waiting ?? []).filter((id) => id !== playerId)
+  return { ...s, waiting: on ? [...others, playerId] : others }
 }
 
 /** Host xác nhận lần báo kinh đang chờ: đúng thì người đó thắng, sai thì bỏ (ghi lại để báo người báo). */

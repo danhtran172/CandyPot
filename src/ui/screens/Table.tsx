@@ -1,4 +1,4 @@
-import { Children, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
@@ -646,6 +646,14 @@ export function Table() {
   /** Lô tô giấy trong app: bộ giấy của game (cố định theo mã game, đủ cho cả bàn mua tối đa). */
   const lotoPairs = cardApp && isLoto && game ? pairsFor((round?.participants ?? visible).length, lotoMax(game)) : 0
   const lotoPapers = useMemo(() => (game && lotoPairs ? sheetSet(game.id, lotoPairs) : null), [game?.id, lotoPairs]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Lô tô: báo cả bàn mình đang đợi — giữ cố định để LotoPanel không gọi lại mỗi lần vẽ
+  const gameIdNow = game?.id
+  const lotoWaiting = useCallback(
+    (on: boolean) => {
+      if (gameIdNow && me) actions().lotoWaiting(gameIdNow, me, on)
+    },
+    [gameIdNow, me],
+  )
   // Máy gọi số: máy của người gọi tự lắc mỗi vài giây (người gọi offline thì máy host gọi thay)
   const lotoCaller = round?.loto?.caller ?? null
   const autoCalling =
@@ -677,7 +685,15 @@ export function Table() {
     round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
     waiting: waitingIds.has(p.id),
     pop: pops[p.id],
-    badge: hand ? pokerBadge(p.id) : tlCards ? tienlenBadge(tlCards, p.id) : xdCards ? xidachBadge(xdCards, p.id) : undefined,
+    badge: hand
+      ? pokerBadge(p.id)
+      : tlCards
+        ? tienlenBadge(tlCards, p.id)
+        : xdCards
+          ? xidachBadge(xdCards, p.id)
+          : lotoPlay && round?.loto?.waiting?.includes(p.id) && !round.loto.winner
+            ? '🔔 Đang đợi'
+            : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
       ? hand.streetBets[p.id] || undefined
@@ -1106,6 +1122,7 @@ export function Table() {
                   players={players}
                   isHost={canHost}
                   onClaim={(sheet, row) => me && run(actions().lotoClaim(game.id, me, sheet, row))}
+                  onWaiting={lotoWaiting}
                   onNext={nextRound}
                   onWarn={(msg) => flash(msg, true)}
                   canShake={

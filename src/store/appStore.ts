@@ -9,7 +9,16 @@ import { closeTransfers, contributions, normalizeSession, potOf } from '../core/
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { autoXidach, check as checkXidach, checkAll as checkAllXidach, dealXidach, draw as drawXidach, newPayouts as xidachPayouts, stand as standXidach, type XidachCards } from '../core/games/xidachPlay'
-import { callNumber as callLoto, claim as claimLoto, judge as judgeLoto, emptyLoto, pickSheets, remaining as lotoRemaining, type LotoState } from '../core/games/lotoPlay'
+import {
+  callNumber as callLoto,
+  claim as claimLoto,
+  judge as judgeLoto,
+  emptyLoto,
+  pickSheets,
+  remaining as lotoRemaining,
+  setWaiting as setLotoWaiting,
+  type LotoState,
+} from '../core/games/lotoPlay'
 import { pairsFor, sheetSet } from '../core/games/lotoSheets'
 import { autoMove as autoTienlen, deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
@@ -144,6 +153,8 @@ export interface AppState {
   setLotoCalling(gameId: ID, mode: 'bag' | 'auto' | 'outside'): string[]
   /** Lô tô (giấy trong app, chưa chốt): chọn tờ trong bộ giấy — tự tính kẹo theo số tờ. */
   lotoPickSheets(gameId: ID, playerId: ID, sheets: number[]): string[]
+  /** Lô tô: báo cả bàn mình đang đợi (có hàng đã đánh 4/5 số) / thôi đợi. */
+  lotoWaiting(gameId: ID, playerId: ID, on: boolean): string[]
   /** Lô tô (giấy trong app): đổi người gọi số. */
   lotoSetCaller(gameId: ID, playerId: ID): string[]
   /** Lô tô (giấy trong app): người gọi lắc túi ra một số. */
@@ -1180,6 +1191,20 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           if (!next.winner) return { ...r, loto: next }
           const pot = potOf(r)
           return { ...r, loto: next, moves: pot > 0 ? [...r.moves, { ...award, amount: pot }] : r.moves }
+        })
+        return []
+      },
+
+      lotoWaiting(gameId, playerId, on) {
+        const open = openOf(gameId)
+        if (!open?.loto) return ['Ván này không chơi giấy trong app.']
+        if (!!open.loto.waiting?.includes(playerId) === on) return []
+        const first = setLotoWaiting(open.loto, playerId, on)
+        if (typeof first === 'string') return [first]
+        mapRound(gameId, open.id, (r) => {
+          if (!r.loto) return r
+          const next = setLotoWaiting(r.loto, playerId, on)
+          return typeof next === 'string' ? r : { ...r, loto: next }
         })
         return []
       },

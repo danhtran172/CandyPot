@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { fullRows, ownerOf, type LotoState } from '../../core/games/lotoPlay'
+import { fullRows, ownerOf, waitRows, type LotoState } from '../../core/games/lotoPlay'
 import { COLS, markColor, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
 import type { ID, Player } from '../../core/types'
 import { createPortal } from 'react-dom'
@@ -680,6 +680,7 @@ export function LotoPanel({
   players,
   isHost,
   onClaim,
+  onWaiting,
   onNext,
   onWarn,
   canShake,
@@ -696,6 +697,8 @@ export function LotoPanel({
   players: Record<ID, Player>
   isHost: boolean
   onClaim: (sheet: number, row: number) => void
+  /** Báo cả bàn mình đang đợi / thôi đợi (tự gọi khi có hàng đánh đủ 4/5 số). */
+  onWaiting: (on: boolean) => void
   onNext: () => void
   onWarn: (msg: string) => void
   /** Mình là người gọi (lắc thủ công): túi số nằm ngay đầu khung. */
@@ -739,6 +742,36 @@ export function LotoPanel({
     return null
   })()
   const winner = loto.winner
+
+  // Đợi: có hàng đã đánh 4/5 số → báo cả bàn (đổi thì báo lại)
+  const waitingNow = !winner && mine.some((i) => waitRows(papers[i], marksOf(i)).length > 0)
+  const published = !!me && !!loto.waiting?.includes(me)
+  useEffect(() => {
+    if (waitingNow !== published) onWaiting(waitingNow)
+  }, [waitingNow, published, onWaiting])
+  // Người khác vừa đợi → thông báo vài giây (người đợi sau cùng); mở bàn lúc ai đó đã đợi sẵn thì không báo lại
+  const lastWaiting = (loto.waiting ?? []).filter((id) => id !== me).at(-1)
+  const [announced, setAnnounced] = useState(lastWaiting)
+  useEffect(() => {
+    if (lastWaiting === undefined || lastWaiting === announced) return
+    navigator.vibrate?.(60)
+    const t = window.setTimeout(() => setAnnounced(lastWaiting), 4000)
+    return () => window.clearTimeout(t)
+  }, [lastWaiting, announced])
+  const notice = !winner && lastWaiting !== undefined && lastWaiting !== announced ? lastWaiting : undefined
+  const waitBanner =
+    notice &&
+    createPortal(
+      <div
+        role="status"
+        className="pointer-events-none fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 flex justify-center px-4"
+      >
+        <span key={notice} className="pop rounded-full border-2 border-lemon bg-plum-2 px-4 py-2 text-sm font-bold text-lemon shadow-2xl">
+          🔔 {players[notice]?.name ?? '?'} đang đợi!
+        </span>
+      </div>,
+      document.body,
+    )
 
   // Vừa có hàng kinh được → rung nhẹ nhắc
   const buzzed = useRef(false)
@@ -886,6 +919,7 @@ export function LotoPanel({
         className="fixed inset-0 z-30 flex flex-col bg-night pt-[env(safe-area-inset-top)] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[calc(0.5rem+env(safe-area-inset-left))]"
       >
         <ChalkFilter />
+        {waitBanner}
         {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
         {/* Thanh trên cùng: số gọi, đếm, (ngang: kiểu gạch), thu tờ, ⋯ */}
         <div className="flex h-14 shrink-0 items-center gap-2">
@@ -992,6 +1026,7 @@ export function LotoPanel({
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-2 pb-2 backdrop-blur">
       <ChalkFilter />
+      {waitBanner}
       {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
       <div className="flex items-center gap-2">
         {!outside && canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
