@@ -12,7 +12,7 @@ export type Marker = 'cross' | 'chalk' | 'seed'
 const MARKERS: [Marker, string][] = [
   ['cross', 'Dấu X'],
   ['chalk', 'Phấn'],
-  ['seed', 'Hạt dưa'],
+  ['seed', 'Hướng dương'],
 ]
 const MARKER_KEY = 'candypot:loto-marker'
 function readMarker(): Marker {
@@ -31,17 +31,24 @@ function saveMarker(m: Marker) {
   }
 }
 
-/** Số đã đánh trên máy này (đánh tay, mỗi ván một danh sách). */
+/**
+ * Số đã đánh trên máy này — riêng từng tờ (đánh tờ này không tự đánh tờ khác dù có cùng số), mỗi ván một bộ.
+ * Trả về: số đã đánh của một tờ, và đánh / bỏ đánh một số trên một tờ.
+ */
 function useMarks(roundId: string, me: ID | null) {
-  const key = `candypot:loto-marks:${roundId}:${me ?? ''}`
-  const [marks, setMarks] = useState<number[]>(() => {
+  const key = `candypot:loto-marks2:${roundId}:${me ?? ''}`
+  const [marks, setMarks] = useState<Record<number, number[]>>(() => {
     try {
-      return JSON.parse(localStorage.getItem(key) ?? '[]') as number[]
+      const v: unknown = JSON.parse(localStorage.getItem(key) ?? '{}')
+      return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<number, number[]>) : {}
     } catch {
-      return []
+      return {}
     }
   })
-  const save = (next: number[]) => {
+  const of = (sheet: number) => marks[sheet] ?? []
+  const toggle = (sheet: number, n: number) => {
+    const list = of(sheet)
+    const next = { ...marks, [sheet]: list.includes(n) ? list.filter((x) => x !== n) : [...list, n] }
     setMarks(next)
     try {
       localStorage.setItem(key, JSON.stringify(next))
@@ -49,14 +56,17 @@ function useMarks(roundId: string, me: ID | null) {
       /* chế độ riêng tư */
     }
   }
-  return [marks, save] as const
+  return [of, toggle] as const
 }
 
 /**
  * Dấu đánh trên một số, màu tương phản với màu tờ.
- * - Dấu X: hai nét chéo. - Phấn: một nét gạch xéo, nét phấn nhòe. - Hạt dưa: hạt đen đặt lên số.
+ * - Dấu X: hai nét chéo. - Phấn: một nét gạch xéo, nét phấn nhòe. - Hướng dương: hạt hướng dương (đen sọc trắng) đặt lên số.
  * Vừa đánh (`fresh`) thì nét được vẽ ra / hạt rơi xuống cho rõ.
  */
+/** Hình hạt hướng dương: thon dài, đầu nhọn phía trên, đuôi tròn. */
+const SEED = 'M20 2 C26.5 9 28.5 21 26.5 31 C25 37.5 15 37.5 13.5 31 C11.5 21 13.5 9 20 2 Z'
+
 function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: string; fresh?: boolean }) {
   if (kind === 'seed') {
     const rot = (n * 73) % 360
@@ -68,24 +78,30 @@ function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: strin
         style={{ rotate: `${rot}deg` }}
       >
         <defs>
-          <radialGradient id="seed" cx="0.38" cy="0.32" r="0.75">
-            <stop offset="0" stopColor="#5a3a30" />
-            <stop offset="0.55" stopColor="#1c0d0a" />
+          <radialGradient id="seed" cx="0.38" cy="0.3" r="0.8">
+            <stop offset="0" stopColor="#4a4a4a" />
+            <stop offset="0.6" stopColor="#161616" />
             <stop offset="1" stopColor="#000" />
           </radialGradient>
         </defs>
-        {/* Viền sáng mỏng quanh hạt để nổi trên giấy và trên số */}
+        {/* Hạt hướng dương: thon dài, đầu nhọn; viền sáng mỏng để nổi trên giấy và trên số */}
+        <path d={SEED} fill="none" stroke="#fffaf0" strokeWidth="3.2" strokeOpacity="0.9" />
+        <path d={SEED} fill="url(#seed)" stroke="#2a2a2a" strokeWidth="1.2" />
+        {/* Sọc trắng xám chạy dọc hạt */}
+        <g fill="none" stroke="#d9d4c7" strokeLinecap="round" strokeWidth="1.5">
+          <path d="M20 6 C21.5 15 21.5 25 20 34" strokeOpacity="0.8" />
+          <path d="M17.6 9 C15.6 16 15.4 25 16.8 32" strokeOpacity="0.65" />
+          <path d="M22.4 9 C24.4 16 24.6 25 23.2 32" strokeOpacity="0.65" />
+        </g>
+        {/* Vệt bóng */}
         <path
-          d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z"
+          d="M15.2 12 C13.6 17 13.6 22 14.6 26"
           fill="none"
-          stroke="#fffaf0"
-          strokeWidth="3.2"
-          strokeOpacity="0.9"
+          stroke="#fff"
+          strokeOpacity="0.55"
+          strokeWidth="1.6"
+          strokeLinecap="round"
         />
-        <path d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z" fill="url(#seed)" stroke="#8a3b2c" strokeWidth="1.4" />
-        {/* Gờ giữa hạt + vệt bóng */}
-        <path d="M20 9 C22 17 22 26 20 33" fill="none" stroke="#a0533f" strokeOpacity="0.55" strokeWidth="1.2" />
-        <path d="M16 12 C13.5 18 13.5 24 15.5 29" fill="none" stroke="#fff" strokeOpacity="0.7" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
     )
   }
@@ -183,7 +199,10 @@ export function SheetCard({
   /** Dải chữ trang trí giữa các khối, như tờ in. */
   const band = (text: string, italic?: boolean) =>
     !small && (
-      <div className={`truncate py-0.5 text-center text-[10px] font-bold tracking-wide land:text-[9px] ${italic ? 'italic' : 'uppercase'}`} style={{ color: muted }}>
+      <div
+        className={`truncate py-0.5 text-center text-[10px] font-bold tracking-wide land:text-[9px] ${italic ? 'italic' : 'uppercase'}`}
+        style={{ color: muted }}
+      >
         {text}
       </div>
     )
@@ -432,9 +451,15 @@ export function SheetPicker({
             <div className="mt-1 flex flex-wrap gap-1.5">
               {mine.length ? (
                 mine.map((m) => (
-                  <span key={m} className="flex items-center overflow-hidden rounded-full border border-line/60 bg-night/60 text-xs font-semibold">
+                  <span
+                    key={m}
+                    className="flex items-center overflow-hidden rounded-full border border-line/60 bg-night/60 text-xs font-semibold"
+                  >
                     <button type="button" onClick={() => setAt(m)} className="flex items-center gap-1.5 py-1 pr-1 pl-1">
-                      <span className="grid size-5 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: sheetColor(m) }}>
+                      <span
+                        className="grid size-5 place-items-center rounded-full text-[10px] font-extrabold text-white"
+                        style={{ background: sheetColor(m) }}
+                      >
                         {(m % 2) + 1}
                       </span>
                       {sheetName(m)}
@@ -641,7 +666,7 @@ export function LotoCenter({
 
 /**
  * Thanh dưới đáy lúc chơi: các số vừa gọi, tờ của mình (nhiều tờ thì một tờ ở trước, các tờ kia nhỏ, mờ, nằm sau),
- * chọn phấn / hạt dưa, Kinh! khi đủ một hàng.
+ * chọn phấn / hạt hướng dương, Kinh! khi đủ một hàng.
  */
 export function LotoPanel({
   roundId,
@@ -677,9 +702,10 @@ export function LotoPanel({
   const mine = (me && loto.sheets[me]) || []
   const [front, setFront] = useState(0)
   const current = mine[Math.min(front, mine.length - 1)]
-  const [marks, setMarks] = useMarks(roundId, me)
+  const [marksOf, toggleMark] = useMarks(roundId, me)
   const [marker, setMarker] = useState<Marker>(readMarker)
-  const [fresh, setFresh] = useState<number | undefined>()
+  /** Số vừa đánh (trên tờ nào) — chạy hiệu ứng gạch. */
+  const [fresh, setFresh] = useState<{ sheet: number; n: number } | undefined>()
   const [board, setBoard] = useState(false)
   // Thu tờ lại (chỉ còn số gọi + nút) — nhớ trên máy này
   const [folded, setFolded] = useState(() => {
@@ -705,13 +731,15 @@ export function LotoPanel({
     const t = window.setTimeout(() => setHintFor(last), HINT_DELAY_MS)
     return () => window.clearTimeout(t)
   }, [last])
-  const hint = !outside && hintFor === last && last !== undefined && !marks.includes(last) && !loto.winner ? last : undefined
+  /** Tờ `i` có số `n` mà chưa đánh. */
+  const unmarked = (i: number, n: number) => papers[i].some((r) => r.includes(n)) && !marksOf(i).includes(n)
+  const hint = !outside && hintFor === last && last !== undefined && mine.some((i) => unmarked(i, last)) && !loto.winner ? last : undefined
   const shakeReady = useShakeReady(loto.called.length)
   const recent = loto.called.slice(-7).reverse()
   /** Hàng đánh đủ 5 số (đã gọi) — kinh được. */
   const ready = (() => {
     for (const i of mine) {
-      const rows = fullRows(papers[i], marks).filter((r) => outside || rowNumbers(papers[i], r).every((n) => loto.called.includes(n)))
+      const rows = fullRows(papers[i], marksOf(i)).filter((r) => outside || rowNumbers(papers[i], r).every((n) => loto.called.includes(n)))
       if (rows.length) return { sheet: i, row: rows[0] }
     }
     return null
@@ -728,15 +756,19 @@ export function LotoPanel({
   }, [ready])
 
   const land = useLandscape()
-  const markOn = winner
-    ? undefined
-    : (n: number) => {
-        const on = !marks.includes(n)
-        setFresh(on ? n : undefined)
-        setMarks(on ? [...marks, n] : marks.filter((x) => x !== n))
-      }
+  const markOn = (sheet: number) =>
+    winner
+      ? undefined
+      : (n: number) => {
+          setFresh(marksOf(sheet).includes(n) ? undefined : { sheet, n })
+          toggleMark(sheet, n)
+        }
   const markerPicker = (
-    <div role="radiogroup" aria-label="Đánh số bằng" className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap">
+    <div
+      role="radiogroup"
+      aria-label="Đánh số bằng"
+      className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap"
+    >
       {MARKERS.map(([v, label]) => (
         <button
           key={v}
@@ -755,26 +787,29 @@ export function LotoPanel({
     </div>
   )
   const pending = loto.pending
-  const action = pending && !winner ? (
-    <p className={`flex-1 rounded-2xl px-2 py-2 text-center text-xs font-semibold ${pending.id === me ? 'animate-pulse bg-lemon/15 text-lemon' : 'text-muted'}`}>
-      {pending.id === me ? 'Đã báo KINH — chờ host xác nhận…' : `${players[pending.id]?.name} báo kinh — chờ host xác nhận`}
-    </p>
-  ) : winner ? (
-    isHost ? (
-      <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
-        Ván mới
-      </Button>
-    ) : (
-      <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
-    )
-  ) : ready ? (
-    <div className="flex flex-1 flex-col gap-1">
-      {loto.rejected === me && <p className="text-center text-[11px] font-semibold text-berry">Host chưa công nhận lần kinh vừa rồi.</p>}
-      <Button variant="primary" className="font-display loto-kinh text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
-        KINH!
-      </Button>
-    </div>
-  ) : null
+  const action =
+    pending && !winner ? (
+      <p
+        className={`flex-1 rounded-2xl px-2 py-2 text-center text-xs font-semibold ${pending.id === me ? 'animate-pulse bg-lemon/15 text-lemon' : 'text-muted'}`}
+      >
+        {pending.id === me ? 'Đã báo KINH — chờ host xác nhận…' : `${players[pending.id]?.name} báo kinh — chờ host xác nhận`}
+      </p>
+    ) : winner ? (
+      isHost ? (
+        <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
+          Ván mới
+        </Button>
+      ) : (
+        <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
+      )
+    ) : ready ? (
+      <div className="flex flex-1 flex-col gap-1">
+        {loto.rejected === me && <p className="text-center text-[11px] font-semibold text-berry">Host chưa công nhận lần kinh vừa rồi.</p>}
+        <Button variant="primary" className="font-display loto-kinh text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
+          KINH!
+        </Button>
+      </div>
+    ) : null
 
   const foldBtn = mine.length > 0 && (
     <button
@@ -783,7 +818,7 @@ export function LotoPanel({
       aria-expanded={!folded}
       // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
       className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold whitespace-nowrap ${
-        folded && hint !== undefined && mine.some((i) => papers[i].some((r) => r.includes(hint))) ? 'loto-hint-border' : ''
+        folded && hint !== undefined && mine.some((i) => unmarked(i, hint)) ? 'loto-hint-border' : ''
       }`}
     >
       {folded ? 'Mở tờ ▴' : 'Thu tờ ▾'}
@@ -824,13 +859,13 @@ export function LotoPanel({
   const sheetProps = (i: number) => ({
     sheet: papers[i],
     index: i,
-    marks,
+    marks: marksOf(i),
     called: outside ? undefined : loto.called,
     marker,
-    freshMark: fresh,
+    freshMark: fresh?.sheet === i ? fresh.n : undefined,
     hint,
     winRow: winner?.id === me && winner.sheet === i ? winner.row : undefined,
-    onMark: markOn,
+    onMark: markOn(i),
     onWarn: (x: number) => onWarn(`Số ${x} chưa được gọi — chưa đánh được.`),
   })
 
@@ -884,7 +919,9 @@ export function LotoPanel({
                 key={i}
                 className="shrink-0"
                 // Cao tờ ≈ 1.34 × rộng + các dải chữ (~4rem) → rộng sao cho tờ vừa khít chiều cao còn lại
-                style={{ width: `min(calc((100dvh - 8rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
+                style={{
+                  width: `min(calc((100dvh - 8rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))`,
+                }}
               >
                 <SheetCard {...sheetProps(i)} />
               </div>
@@ -895,7 +932,9 @@ export function LotoPanel({
           <div className="flex min-h-0 flex-1 items-center justify-center pb-16">
             <div
               className="relative h-fit"
-              style={{ width: `min(${n > 1 ? 88 : 94}%, calc((100dvh - 12rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34))` }}
+              style={{
+                width: `min(${n > 1 ? 88 : 94}%, calc((100dvh - 12rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34))`,
+              }}
             >
               {mine
                 .map((i, k) => ({ i, k }))
@@ -911,10 +950,10 @@ export function LotoPanel({
                     className="absolute inset-x-0 top-3 origin-left cursor-pointer transition-transform"
                     style={{ transform: `translateX(${(depth + 1) * 9}%) scale(${1 - (depth + 1) * 0.06})`, zIndex: 5 - depth }}
                   >
-                    <div className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}>
+                    <div className={`rounded-md ${hint !== undefined && unmarked(i, hint) ? 'loto-hint-border' : ''}`}>
                       {/* Tờ phụ: tối đi chứ không trong suốt */}
                       <div className="brightness-50 saturate-[0.7]">
-                        <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
+                        <SheetCard sheet={papers[i]} index={i} marks={marksOf(i)} marker={marker} />
                       </div>
                     </div>
                   </div>
@@ -926,7 +965,9 @@ export function LotoPanel({
           </div>
         )}
         {/* Góc dưới: (dọc) dòng nhắc bên trái; KINH / chờ xác nhận / Ván mới và túi gọi số ở góc phải */}
-        {!land && !action && <div className="pointer-events-none absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 max-w-[60%]">{hintLine}</div>}
+        {!land && !action && (
+          <div className="pointer-events-none absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 max-w-[60%]">{hintLine}</div>
+        )}
         <div className="pointer-events-none absolute right-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex items-end gap-2">
           {action && <div className="pointer-events-auto flex w-44 drop-shadow-[0_6px_14px_rgb(0_0_0/0.6)]">{action}</div>}
           {!outside && canShake && (
@@ -976,7 +1017,12 @@ export function LotoJudge({
 }) {
   const p = loto.pending!
   return (
-    <div role="alertdialog" aria-modal="true" aria-label="Xác nhận kinh" className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-label="Xác nhận kinh"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-5"
+    >
       <div className="absolute inset-0 bg-night/75" />
       <div className="pop relative w-full max-w-sm rounded-3xl border-2 border-lemon bg-plum p-4 text-center shadow-[0_0_40px_rgb(255_210_63/0.35)]">
         <p className="font-display text-2xl font-extrabold text-lemon">{players[p.id]?.name} báo KINH!</p>

@@ -215,7 +215,7 @@ body {
   }
 }
 
-/* Lô tô: hiệu ứng gạch số — nét vẽ ra, ô nảy nhẹ, hạt dưa rơi xuống */
+/* Lô tô: hiệu ứng gạch số — nét vẽ ra, ô nảy nhẹ, hạt hướng dương rơi xuống */
 @media (prefers-reduced-motion: no-preference) {
   .mark-draw path {
     stroke-dasharray: 100;
