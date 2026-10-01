@@ -3,6 +3,7 @@ import { fullRows, ownerOf, type LotoState } from '../../core/games/lotoPlay'
 import { COLS, markColor, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
 import type { ID, Player } from '../../core/types'
 import { Button } from './kit'
+import bagIcon from '../../assets/loto-bag.webp'
 
 /** Cách đánh dấu số trên tờ. */
 export type Marker = 'cross' | 'chalk' | 'seed'
@@ -409,18 +410,16 @@ function CalledBoard({ called, onClose }: { called: number[]; onClose: () => voi
   )
 }
 
-/** Cái túi đựng số (vẽ tay). */
+/** Cái túi đựng số. */
 function Bag({ shaking, small }: { shaking: boolean; small?: boolean }) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden className={`${small ? 'size-11' : 'size-16'} drop-shadow-[0_4px_6px_rgb(0_0_0/0.4)] ${shaking ? 'loto-bag-shake' : ''}`}>
-      <path d="M22 16 C18 22 8 30 8 44 C8 56 18 60 32 60 C46 60 56 56 56 44 C56 30 46 22 42 16 Z" fill="#c8915a" stroke="#7a5230" strokeWidth="2" />
-      <path d="M14 40 C24 44 40 44 50 40" fill="none" stroke="#7a5230" strokeOpacity="0.4" strokeWidth="2" />
-      <path d="M20 16 C26 12 38 12 44 16" fill="none" stroke="#7a5230" strokeWidth="4" strokeLinecap="round" />
-      <path d="M24 14 L18 6 M40 14 L46 6" stroke="#e8d3a8" strokeWidth="2" strokeLinecap="round" />
-      <text x="32" y="47" textAnchor="middle" fontSize="13" fontWeight="800" fill="#fff1e0" opacity="0.9">
-        1–90
-      </text>
-    </svg>
+    <img
+      src={bagIcon}
+      alt=""
+      aria-hidden
+      draggable={false}
+      className={`${small ? 'size-11' : 'size-16'} drop-shadow-[0_4px_6px_rgb(0_0_0/0.4)] ${shaking ? 'loto-bag-shake' : ''}`}
+    />
   )
 }
 
