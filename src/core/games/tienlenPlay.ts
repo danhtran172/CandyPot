@@ -37,7 +37,7 @@ export interface TienlenCards {
 }
 
 /** Mỗi lượt có bấy nhiêu giây; hết giờ tự bỏ lượt (vòng mới thì tự đánh lá nhỏ nhất). */
-export const TURN_SECONDS = 20
+export const TURN_SECONDS = 40
 
 export type ComboType = 'single' | 'pair' | 'triple' | 'quad' | 'straight' | 'pairs'
 export interface Combo {
