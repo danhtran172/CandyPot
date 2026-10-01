@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beats, comboOf, deal, pass, payouts, play, playableCards, type Card, type TienlenCards } from './tienlenPlay'
+import { autoMove, beats, comboOf, deal, pass, payouts, play, playableCards, suggestWith, type Card, type TienlenCards } from './tienlenPlay'
 
 /** Lá theo hạng + chất: c('3♠') … c('2♥'). */
 const R = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
@@ -71,5 +71,38 @@ describe('playableCards — lá đi được', () => {
   it('chặn sảnh 3 lá: lá trong sảnh 3 lá to hơn', () => {
     const hand = cs('6♠ 7♦ 8♣ K♥')
     expect([...playableCards(hand, cs('4♠ 5♠ 6♦'))].sort((a, b) => a - b)).toEqual(cs('6♠ 7♦ 8♣'))
+  })
+})
+
+describe('suggestWith — chạm lá tự chọn bộ chặn', () => {
+  it('chặn đôi: lấy lá chạm + lá cùng hạng nhỏ nhất đủ chặn', () => {
+    expect(suggestWith(cs('7♠ 9♣ 9♥ 9♦ K♠'), cs('8♠ 8♥'), c('9♥'))).toEqual(cs('9♣ 9♥'))
+    expect(suggestWith(cs('7♠ 9♣ K♠'), cs('8♠ 8♥'), c('9♣'))).toBeNull()
+  })
+  it('chặn sảnh 3 lá: sảnh nhỏ nhất có lá chạm', () => {
+    expect(suggestWith(cs('4♠ 5♣ 6♦ 7♥ 8♠'), cs('3♠ 4♥ 5♥'), c('7♥'))).toEqual(cs('5♣ 6♦ 7♥'))
+  })
+  it('chặn sảnh cùng lá cao nhất: chọn lá chất to hơn', () => {
+    expect(suggestWith(cs('3♣ 4♣ 5♠ 5♥'), cs('3♠ 4♠ 5♦'), c('4♣'))).toEqual(cs('3♣ 4♣ 5♥'))
+  })
+  it('heo: tứ quý chặt', () => {
+    expect(suggestWith(cs('6♠ 6♣ 6♦ 6♥ 9♠'), cs('2♠'), c('6♦'))).toEqual(cs('6♠ 6♣ 6♦ 6♥'))
+  })
+  it('vòng mới: không gợi ý', () => {
+    expect(suggestWith(cs('6♠ 6♣'), null, c('6♠'))).toBeNull()
+  })
+})
+
+describe('autoMove — hết giờ', () => {
+  it('đang phải chặn thì bỏ lượt; vòng mới thì đánh lá nhỏ nhất', () => {
+    const s: TienlenCards = { hands: { a: cs('3♠ 5♥'), b: cs('4♠ 9♥') }, order: ['a', 'b'], turn: 'a', table: null, passed: [], finished: [] }
+    const s1 = ok(autoMove(s, 'a'))
+    expect(s1.table?.cards).toEqual(cs('3♠'))
+    expect(s1.step).toBe(1)
+    const s2 = ok(autoMove(s1, 'b'))
+    // b bỏ lượt → hết vòng, a đi vòng mới
+    expect(s2.table).toBeNull()
+    expect(s2.turn).toBe('a')
+    expect(s2.step).toBe(2)
   })
 })

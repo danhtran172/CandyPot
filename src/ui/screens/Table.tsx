@@ -31,6 +31,7 @@ import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
 import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
+import { HOST_GRACE_MS, TURN_MS, turnStart } from '../turnClock'
 import { placeOf, type TienlenCards } from '../../core/games/tienlenPlay'
 import { PrevRoundIcon } from '../components/PrevRoundIcon'
 import { GuideTour } from '../components/GuideTour'
@@ -559,6 +560,19 @@ export function Table() {
   )
 
   const tlCards = round?.tienlen
+  // Đồng hồ lượt (bài trong app): hết giờ thì máy của người tới lượt tự bỏ lượt / đánh lá nhỏ nhất;
+  // máy đó mất mạng thì host làm thay sau thêm một chút. Chưa tính giờ lúc đang xào / chia bài.
+  const turnKey = cardPlay && round && tlCards?.turn && !shuffling ? `${round.id}:${tlCards.step ?? 0}` : null
+  useEffect(() => {
+    if (!turnKey || !game || !tlCards?.turn) return
+    const turn = tlCards.turn
+    const step = tlCards.step ?? 0
+    const mine = turn === me
+    if (!mine && !canHost) return
+    const wait = turnStart(turnKey) + TURN_MS + (mine ? 0 : HOST_GRACE_MS) - Date.now()
+    const t = window.setTimeout(() => actions().tienlenTimeout(game.id, turn, step), Math.max(0, wait))
+    return () => window.clearTimeout(t)
+  }, [turnKey, me, canHost]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Số lá hiện ở chỗ ngồi: đang chia thì theo số lá đã đáp xuống (chia đều theo vòng), xong thì số lá thật. */
   const seatCards = (c: TienlenCards, id: ID) => {
     const real = c.hands[id]?.length
@@ -588,6 +602,7 @@ export function Table() {
     cards: tlCards && !tlCards.finished.includes(p.id) ? seatCards(tlCards, p.id) : undefined,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
     highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id),
+    turnClock: turnKey && tlCards?.turn === p.id ? turnKey : undefined,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
       hand && p.id === me ? (
@@ -793,6 +808,7 @@ export function Table() {
                     if (errors.length) flash(errors[0], true)
                   }}
                   dealing={!!shuffling}
+                  turnKey={turnKey}
                   onNext={nextRound}
                   menu={
                     <More on count={menuCount}>

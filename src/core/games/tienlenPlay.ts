@@ -32,7 +32,12 @@ export interface TienlenCards {
   finished: ID[]
   /** Ván đầu: nước đầu tiên phải có 3♠. */
   mustOpen?: boolean
+  /** Số nước đã đi (tăng mỗi lần đánh / bỏ lượt) — nhận diện lượt hiện tại cho đồng hồ đếm giờ. */
+  step?: number
 }
+
+/** Mỗi lượt có bấy nhiêu giây; hết giờ tự bỏ lượt (vòng mới thì tự đánh lá nhỏ nhất). */
+export const TURN_SECONDS = 20
 
 export type ComboType = 'single' | 'pair' | 'triple' | 'quad' | 'straight' | 'pairs'
 export interface Combo {
@@ -126,7 +131,8 @@ function nextAfter(s: TienlenCards, id: ID, ok: (p: ID) => boolean): ID | null {
 }
 
 /** Sau một nước (đánh / bỏ lượt): xong ván, hết vòng, hay tới người kế. */
-function advance(s: TienlenCards, from: ID): TienlenCards {
+function advance(prev: TienlenCards, from: ID): TienlenCards {
+  const s = { ...prev, step: (prev.step ?? 0) + 1 }
   const alive = live(s)
   if (alive.length <= 1) return { ...s, finished: [...s.finished, ...alive], turn: null, table: null, passed: [] }
   const by = s.table?.by
@@ -164,6 +170,64 @@ export function pass(s: TienlenCards, id: ID): TienlenCards | string {
   if (s.turn !== id) return 'Chưa tới lượt.'
   if (!s.table) return 'Vòng mới — bạn phải đánh.'
   return advance({ ...s, passed: [...s.passed, id] }, id)
+}
+
+/** Hết giờ: đang phải chặn thì bỏ lượt; vòng mới thì đánh lá nhỏ nhất (ván đầu đó là 3♠). */
+export function autoMove(s: TienlenCards, id: ID): TienlenCards | string {
+  if (s.turn !== id) return 'Chưa tới lượt.'
+  if (s.table) return pass(s, id)
+  const hand = s.hands[id] ?? []
+  if (!hand.length) return 'Hết bài.'
+  return play(s, id, [hand[0]])
+}
+
+/**
+ * Chạm một lá khi đang phải chặn: tự chọn bộ nhỏ nhất có lá đó chặn được bàn
+ * (cùng loại trước, không có thì hàng chặt heo). Vòng mới hoặc không có bộ nào → null.
+ */
+export function suggestWith(hand: Card[], table: Card[] | null, card: Card, mustOpen = false): Card[] | null {
+  const prev = table ? comboOf(table) : null
+  if (!prev || !hand.includes(card)) return null
+  const byRank: Card[][] = Array.from({ length: 13 }, () => [])
+  for (const c of [...hand].sort((a, b) => a - b)) byRank[rankOf(c)].push(c)
+  const r = rankOf(card)
+  const wants: { type: ComboType; size: number }[] = [{ type: prev.type, size: prev.size }]
+  if (prev.type !== 'quad') wants.push({ type: 'quad', size: 4 })
+  for (const n of [3, 4, 5, 6]) if (prev.type !== 'pairs' || prev.size !== n) wants.push({ type: 'pairs', size: n })
+  /** Mọi cách lấy k lá từ list. */
+  const choose = (list: Card[], k: number): Card[][] =>
+    k === 0 ? [[]] : list.flatMap((c, i) => choose(list.slice(i + 1), k - 1).map((rest) => [c, ...rest]))
+  /** Ứng viên bộ chứa `card`, mỗi hạng lấy `per` lá: hạng thường lấy lá nhỏ nhất, hạng cao nhất thử mọi cách (để vừa đủ chặn). */
+  const build = (ranks: number[], per: number): Card[][] => {
+    const top = ranks[ranks.length - 1]
+    let acc: Card[][] = [[]]
+    for (const rank of ranks) {
+      const all = byRank[rank]
+      const others = rank === r ? all.filter((c) => c !== card) : all
+      const need = rank === r ? per - 1 : per
+      if (others.length < need) return []
+      const opts = (rank === top ? choose(others, need) : [others.slice(0, need)]).map((o) => (rank === r ? [card, ...o] : o))
+      acc = acc.flatMap((x) => opts.map((o) => [...x, ...o]))
+    }
+    return acc
+  }
+  let best: { cards: Card[]; pri: number; top: Card } | null = null
+  wants.forEach(({ type, size }, pri) => {
+    const windows: { ranks: number[]; per: number }[] = []
+    if (type === 'single' || type === 'pair' || type === 'triple' || type === 'quad') windows.push({ ranks: [r], per: size })
+    else if (r < TWO)
+      for (let a = Math.max(0, r - size + 1); a <= r && a + size - 1 < TWO; a++)
+        windows.push({ ranks: Array.from({ length: size }, (_, i) => a + i), per: type === 'pairs' ? 2 : 1 })
+    for (const w of windows)
+      for (const cards of build(w.ranks, w.per)) {
+        const combo = comboOf(cards)
+        if (!combo || combo.type !== type || !cards.includes(card)) continue
+        if (mustOpen && !cards.includes(THREE_SPADES)) continue
+        if (!beats(prev, combo)) continue
+        if (!best || pri < best.pri || (pri === best.pri && combo.top < best.top)) best = { cards, pri, top: combo.top }
+      }
+  })
+  return best ? (best as { cards: Card[] }).cards.sort((a, b) => a - b) : null
 }
 
 /** Hạng từng người khi ván bài xong. */

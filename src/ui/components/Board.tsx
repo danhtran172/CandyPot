@@ -7,6 +7,7 @@ import dragCandy from '../../assets/drag-candy.webp'
 import bowtie from '../../assets/rules/bowtie.webp'
 import ticket from '../../assets/loto-ticket.webp'
 import { CardBackStack } from './CardBack'
+import { TURN_MS, turnStart } from '../turnClock'
 
 export interface Seat {
   player: Player
@@ -27,6 +28,8 @@ export interface Seat {
   online?: boolean
   /** Đang tới lượt (Poker) — viền sáng. */
   highlight?: boolean
+  /** Bài trong app: đang tới lượt người này — mã lượt để vẽ vòng đếm giờ quanh avatar. */
+  turnClock?: string
   /** Đã bỏ bài (Poker) — mờ đi. */
   dim?: boolean
   /** Nhà cái (Xì dách) — gắn nơ ở góc dưới bên phải avatar. */
@@ -394,6 +397,7 @@ export function Board({
                       className="absolute -right-2.5 -bottom-1 size-7 max-w-none drop-shadow-[0_0_1.5px_#fff1e0]"
                     />
                   )}
+                  {s.turnClock && <TurnRing key={s.turnClock} turnKey={s.turnClock} />}
                   {s.online && <OnlineDot className="absolute -top-0.5 -left-0.5" />}
                   {!s.player.active ? (
                     <span aria-label="Tạm nghỉ" className="absolute -top-1.5 -right-2 text-base leading-none">
@@ -503,4 +507,29 @@ export function OnlineDot({ className = '' }: { className?: string }) {
 function TicketIcon({ color }: { color: string }) {
   const mask = `url(${ticket}) center / contain no-repeat`
   return <span aria-hidden className="size-5 shrink-0" style={{ backgroundColor: color, mask, WebkitMask: mask }} />
+}
+
+/** Vòng đếm giờ quanh avatar: cạn dần theo thời gian lượt, chuyển đỏ lúc sắp hết. */
+function TurnRing({ turnKey }: { turnKey: string }) {
+  const arc = useRef<SVGCircleElement>(null)
+  useEffect(() => {
+    const el = arc.current
+    if (!el) return
+    const elapsed = Date.now() - turnStart(turnKey)
+    const a = el.animate(
+      [
+        { strokeDashoffset: 0, stroke: '#3ddc97' },
+        { strokeDashoffset: 0.7, stroke: '#ffd23f', offset: 0.7 },
+        { strokeDashoffset: 1, stroke: '#ff5c7a' },
+      ],
+      { duration: TURN_MS, delay: -elapsed, fill: 'both' },
+    )
+    return () => a.cancel()
+  }, [turnKey])
+  return (
+    <svg aria-hidden viewBox="0 0 40 40" className="pointer-events-none absolute -inset-1.5 size-[calc(100%+12px)] -rotate-90">
+      <circle cx="20" cy="20" r="19" fill="none" stroke="rgb(0 0 0 / 0.35)" strokeWidth="2.5" />
+      <circle ref={arc} cx="20" cy="20" r="19" fill="none" strokeWidth="2.5" strokeLinecap="round" pathLength={1} strokeDasharray="1 1" />
+    </svg>
+  )
 }

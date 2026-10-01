@@ -8,7 +8,7 @@ import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, contributions, normalizeSession, potOf } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
-import { deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
+import { autoMove as autoTienlen, deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
 import type { RoomBackend } from '../sync/RoomBackend'
@@ -142,6 +142,8 @@ export interface AppState {
   /** Tiến lên (bài trong app): đánh bộ bài / bỏ lượt / trả kẹo theo hạng. */
   tienlenPlay(gameId: ID, playerId: ID, cards: number[]): string[]
   tienlenPass(gameId: ID, playerId: ID): string[]
+  /** Hết giờ lượt `step` của người này: tự bỏ lượt / đánh lá nhỏ nhất. Lượt đã qua (máy khác đi rồi) thì thôi. */
+  tienlenTimeout(gameId: ID, playerId: ID, step: number): string[]
   tienlenPayout(gameId: ID): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
@@ -750,6 +752,25 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const r = passTienlen(open.tienlen, playerId)
         if (typeof r === 'string') return [r]
         mapRound(gameId, open.id, (x) => (x.tienlen ? { ...x, tienlen: r } : x))
+        return []
+      },
+
+      tienlenTimeout(gameId, playerId, step) {
+        const open = openOf(gameId)
+        if (!open?.tienlen) return ['Ván này không chia bài trong app.']
+        if (open.tienlen.turn !== playerId || (open.tienlen.step ?? 0) !== step) return []
+        // Tính trên bản mới nhất (kể cả lúc chạy lại trên phòng): lượt đã đổi thì không làm gì
+        mapRound(gameId, open.id, (x) => {
+          const t = x.tienlen
+          if (!t || t.turn !== playerId || (t.step ?? 0) !== step) return x
+          const r = autoTienlen(t, playerId)
+          if (typeof r === 'string') return x
+          const paid = x.moves.some((m) => m.label.startsWith('Bài:'))
+          const pay = paid
+            ? []
+            : tienlenPayouts(r, x.bet, x.bet2 ?? x.bet).map((p) => ({ id: newId(), from: p.from, to: p.to, amount: p.amount, label: `Bài: ${p.label}` }))
+          return { ...x, tienlen: r, moves: [...x.moves, ...pay] }
+        })
         return []
       },
 
