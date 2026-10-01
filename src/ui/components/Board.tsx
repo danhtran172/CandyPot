@@ -63,13 +63,30 @@ const STAKE_POS = {
   right: 'left-[calc(100%+6px)] top-1/2 -translate-y-1/2',
   left: 'right-[calc(100%+6px)] top-1/2 -translate-y-1/2',
   // Xoay ngang (bàn thấp): người ngồi cạnh trên / dưới đặt chip sang bên phải, không đè giữa bàn
-  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2 land:bottom-auto land:left-[calc(100%+6px)] land:top-1/2 land:translate-x-0 land:-translate-y-1/2',
+  above:
+    'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2 land:bottom-auto land:left-[calc(100%+6px)] land:top-1/2 land:translate-x-0 land:-translate-y-1/2',
   below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2 land:left-[calc(100%+6px)] land:top-1/2 land:translate-x-0 land:-translate-y-1/2',
 } as const
 
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
 /** Bàn vuông: cạnh cho từng người theo số người (0 = dưới, 1 = trái, 2 = trên, 3 = phải — chiều kim đồng hồ). */
 const SQUARE_SIDES: Record<number, number[]> = { 1: [0], 2: [0, 2], 3: [0, 1, 3], 4: [0, 1, 2, 3] }
+
+/** Hoa văn mặt bàn nhựa: lưới mảnh, ngôi sao 4 cánh ở mỗi giao điểm — vẽ 2 lớp (sáng lệch lên, tối lệch xuống) cho nổi gờ. */
+const PLASTIC_STAR = 'M18 9 L19 17 L27 18 L19 19 L18 27 L17 19 L9 18 L17 17 Z'
+const plasticTile = (color: string, dy: number) =>
+  `<g transform="translate(0 ${dy})" fill="${color}" stroke="${color}" stroke-width="0.6"><path d="${PLASTIC_STAR}" stroke="none"/><path d="M0 18H9M27 18H36M18 0V9M18 27V36" fill="none"/></g>`
+const PLASTIC_PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36">${plasticTile('rgba(255,255,255,0.16)', -0.7)}${plasticTile('rgba(80,0,0,0.28)', 0.7)}</svg>`,
+)}")`
+/** Mặt bàn nhựa đỏ (Lô tô): hoa văn + ánh bóng trên nền đỏ; viền gờ sáng, dày bên dưới, bóng đổ xuống sàn. */
+const PLASTIC_TOP = {
+  background: `radial-gradient(ellipse at 30% 20%, rgb(255 255 255 / 0.22), transparent 55%), ${PLASTIC_PATTERN}, linear-gradient(180deg, #e63335, #c81e24 60%, #b5171d)`,
+  backgroundSize: 'auto, 36px 36px, auto',
+  backgroundPosition: 'center',
+  boxShadow:
+    'inset 0 0 0 5px rgb(255 255 255 / 0.07), inset 0 0 0 6px rgb(120 0 0 / 0.35), inset 0 2px 0 rgb(255 255 255 / 0.45), 0 9px 0 #8f1015, 0 22px 30px rgb(0 0 0 / 0.55)',
+}
 
 function sizeFor(n: number) {
   if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
@@ -103,8 +120,8 @@ export function Board({
   onTap,
 }: {
   seats: Seat[]
-  /** Hình bàn: oval (mặc định) hoặc vuông — 4 người ngồi 4 cạnh. */
-  shape?: 'oval' | 'square'
+  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh, hay bàn nhựa đỏ chữ nhật (Lô tô) — ngồi quanh như oval. */
+  shape?: 'oval' | 'square' | 'plastic'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Nút ở góc trên bên phải bàn (Rule ? + ⚙ cài đặt). */
@@ -202,15 +219,14 @@ export function Board({
   }
 
   const ring = (id: ID) =>
-    hover === id && drag?.from !== id
-      ? 'ring-4 ring-mint scale-110'
-      : drag?.moved && drag.from === id
-        ? 'ring-4 ring-lemon'
-        : ''
+    hover === id && drag?.from !== id ? 'ring-4 ring-mint scale-110' : drag?.moved && drag.from === id ? 'ring-4 ring-lemon' : ''
 
   // "Tôi" ở dưới cùng, những người khác xếp đều theo chiều kim đồng hồ
   // Giữ đúng thứ tự ngồi (chiều kim đồng hồ), xoay để "tôi" ở dưới cùng
-  const meAt = Math.max(0, seats.findIndex((s) => s.isMe))
+  const meAt = Math.max(
+    0,
+    seats.findIndex((s) => s.isMe),
+  )
   const ordered = [...seats.slice(meAt), ...seats.slice(0, meAt)]
   const n = ordered.length
   const size = sizeFor(n)
@@ -243,22 +259,31 @@ export function Board({
         {/* Bàn vuông: khung vuông giữa vùng bàn — mặt bàn và ghế đặt theo khung này */}
         <div
           className={
-            square ? 'absolute top-[48%] left-1/2 aspect-square -translate-x-1/2 -translate-y-1/2 land:aspect-auto land:h-full' : 'absolute inset-0'
+            square
+              ? 'absolute top-[48%] left-1/2 aspect-square -translate-x-1/2 -translate-y-1/2 land:aspect-auto land:h-full'
+              : 'absolute inset-0'
           }
           // Xoay ngang: bàn "vuông" thành chữ nhật trải hết bề ngang
           style={square ? { width: 'var(--board-w)' } : undefined}
         >
           {/* Mặt bàn */}
-          <div
-            className={`absolute border-2 border-line shadow-[inset_0_0_40px_rgb(0_0_0/0.45)] ${
-              square
-                ? 'inset-[22%] rounded-[2rem] bg-[radial-gradient(circle_at_center,#3b2147_0%,#2b1734_75%)]'
-                : 'inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)]'
-            }`}
-          />
+          {shape === 'plastic' ? (
+            <div className="absolute inset-x-[19%] top-[17%] bottom-[25%] rounded-[1.4rem]" style={PLASTIC_TOP} />
+          ) : (
+            <div
+              className={`absolute border-2 border-line shadow-[inset_0_0_40px_rgb(0_0_0/0.45)] ${
+                square
+                  ? 'inset-[22%] rounded-[2rem] bg-[radial-gradient(circle_at_center,#3b2147_0%,#2b1734_75%)]'
+                  : 'inset-x-[17%] top-[16%] bottom-[22%] rounded-[50%] bg-[radial-gradient(ellipse_at_center,#3b2147_0%,#2b1734_70%)]'
+              }`}
+            />
+          )}
           <div
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
+            } ${
+              // Bàn nhựa đỏ: chữ xám mờ khó đọc trên nền đỏ → sáng lên
+              shape === 'plastic' ? '[&_.text-muted]:text-white/80' : ''
             }`}
           >
             {title && (
@@ -345,7 +370,8 @@ export function Board({
             const left = square ? 50 + 40 * (Math.cos(angle) / edge) : 50 + 40 * Math.cos(angle)
             const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
-            const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
+            const side =
+              Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
             const stake = s.faceUp?.length ? (
               <span
                 className={`pointer-events-none absolute z-10 flex items-center rounded-xl py-1 pr-1.5 pl-1 whitespace-nowrap ${STAKE_POS[side]} ${
@@ -362,7 +388,9 @@ export function Board({
                 {s.stake !== undefined && <span className="num ml-1 text-xs font-bold text-lemon">{s.stake}</span>}
               </span>
             ) : s.cards !== undefined ? (
-              <span className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}>
+              <span
+                className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}
+              >
                 <CardBackStack count={s.cards} />
                 {/* Xì dách: tiền cược nằm cạnh xấp bài */}
                 {s.stake !== undefined && (
@@ -381,15 +409,17 @@ export function Board({
                 <TicketIcon color={s.tickets.color} />
                 <span className="num">× {s.tickets.count}</span>
               </span>
-            ) : s.stake !== undefined && (
-              <span
-                className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
-                  s.stakeDim ? 'opacity-45' : ''
-                }`}
-              >
-                <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
-                <span className="num">× {s.stake}</span>
-              </span>
+            ) : (
+              s.stake !== undefined && (
+                <span
+                  className={`pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full bg-night/80 py-0.5 pr-2 pl-1 text-xs font-bold whitespace-nowrap text-lemon ${STAKE_POS[side]} ${
+                    s.stakeDim ? 'opacity-45' : ''
+                  }`}
+                >
+                  <img src={candyFor(s.player.id)} alt="" className="size-5" draggable={false} />
+                  <span className="num">× {s.stake}</span>
+                </span>
+              )
             )
             return (
               <div
@@ -532,7 +562,9 @@ export function flyCandy(from: ID, to: ID, amount: number) {
 
 /** Chấm xanh "đang mở app". */
 export function OnlineDot({ className = '' }: { className?: string }) {
-  return <span role="img" aria-label="Đang online" title="Đang online" className={`size-3 rounded-full bg-mint ring-2 ring-plum ${className}`} />
+  return (
+    <span role="img" aria-label="Đang online" title="Đang online" className={`size-3 rounded-full bg-mint ring-2 ring-plum ${className}`} />
+  )
 }
 
 /** Tờ lô tô (hình bingo) tô theo màu của từng người. */
