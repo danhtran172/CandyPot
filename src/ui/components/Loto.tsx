@@ -153,6 +153,9 @@ function ChalkFilter() {
   )
 }
 
+/** Tỉ lệ cao / rộng của một tờ (mọi thứ trong tờ co giãn theo bề ngang nên tỉ lệ không đổi). */
+const SHEET_RATIO = 1.51
+
 /**
  * Một tờ lô tô: 9 hàng × 9 cột, ô trống tô màu của tờ, ô số nền kem.
  * Chạm số đã gọi để đánh / bỏ đánh; số chưa gọi thì báo (lắc ô).
@@ -194,67 +197,70 @@ export function SheetCard({
   /** Ô số: nền trắng ngà, số đen to đậm (kiểu tờ in) — hàng kinh nền vàng. */
   const numCell = (win: boolean) =>
     `relative grid place-items-center bg-[#f7f0e1] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
-      small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[15px] land:text-[12px]'
+      small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[5.2cqw]'
     } ${win ? '!bg-lemon' : ''}`
-  /** Dải chữ trang trí giữa các khối, như tờ in. */
+  /** Dải chữ trang trí giữa các khối, như tờ in. Chữ, lề tính theo bề ngang tờ (cqw) → tờ to nhỏ thế nào cũng giữ đúng tỉ lệ. */
   const band = (text: string, italic?: boolean) =>
     !small && (
       <div
-        className={`truncate py-0.5 text-center text-[10px] font-bold tracking-wide land:text-[9px] ${italic ? 'italic' : 'uppercase'}`}
+        className={`truncate py-[0.6cqw] text-center text-[3cqw] leading-[1.3] font-bold tracking-wide ${italic ? 'italic' : 'uppercase'}`}
         style={{ color: muted }}
       >
         {text}
       </div>
     )
   return (
-    // Không viền: tờ giấy ngà, các khối kẻ ô đen mảnh; phủ vân giấy lên cả tờ
-    <div className={`relative isolate overflow-hidden bg-[#f7f0e1] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
-      {band(`CandyPot · Tờ ${sheetName(index)}`)}
-      {[0, 1, 2].map((b) => (
-        <div key={b}>
-          <div className="grid gap-px bg-[#1a1a1a] p-px" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
-            {[0, 1, 2].flatMap((i) =>
-              sheet[b * 3 + i].map((n, c) => {
-                const row = b * 3 + i
-                const marked = n !== null && !!marks?.includes(n)
-                const win = winRow === row
-                return n === null ? (
-                  // Ô trống: chỉ tô màu của tờ (màu chìm)
-                  <span key={`${row}-${c}`} className={small ? 'h-2' : 'aspect-[3/4]'} style={{ background: muted } as CSSProperties} />
-                ) : !onMark || small ? (
-                  // Chỉ để xem (bảng mua tờ / tờ phía sau): không bấm được
-                  <span key={`${row}-${c}`} className={numCell(win)}>
-                    {n}
-                    {marked && !small && <Mark n={n} kind={marker ?? 'cross'} color={ink} />}
-                  </span>
-                ) : (
-                  <button
-                    key={`${row}-${c}`}
-                    type="button"
-                    aria-label={`Số ${n}${marked ? ' — đã đánh' : ''}`}
-                    aria-pressed={marked}
-                    onAnimationEnd={() => setShake(null)}
-                    onClick={() => {
-                      if (called && !called.includes(n) && !marked) {
-                        setShake(n)
-                        return onWarn?.(n)
-                      }
-                      onMark(n)
-                    }}
-                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''} ${marked && freshMark === n ? 'mark-pop' : ''} ${!marked && hint === n ? 'loto-hint' : ''}`}
-                  >
-                    {n}
-                    {marked && <Mark n={n} kind={marker ?? 'cross'} color={ink} fresh={freshMark === n} />}
-                  </button>
-                )
-              }),
-            )}
+    // Không viền: tờ giấy ngà, các khối kẻ ô đen mảnh; phủ vân giấy lên cả tờ.
+    // Khung là container: mọi thứ bên trong co giãn theo bề ngang → tờ luôn đúng một tỉ lệ ngang / dọc (SHEET_RATIO)
+    <div className={`@container relative isolate overflow-hidden bg-[#f7f0e1] shadow-lg ${small ? 'rounded' : 'rounded-md'}`}>
+      <div className={small ? 'p-0.5' : 'px-[1.2cqw] pb-[0.6cqw]'}>
+        {band(`CandyPot · Tờ ${sheetName(index)}`)}
+        {[0, 1, 2].map((b) => (
+          <div key={b}>
+            <div className="grid gap-px bg-[#1a1a1a] p-px" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
+              {[0, 1, 2].flatMap((i) =>
+                sheet[b * 3 + i].map((n, c) => {
+                  const row = b * 3 + i
+                  const marked = n !== null && !!marks?.includes(n)
+                  const win = winRow === row
+                  return n === null ? (
+                    // Ô trống: chỉ tô màu của tờ (màu chìm)
+                    <span key={`${row}-${c}`} className={small ? 'h-2' : 'aspect-[3/4]'} style={{ background: muted } as CSSProperties} />
+                  ) : !onMark || small ? (
+                    // Chỉ để xem (bảng mua tờ / tờ phía sau): không bấm được
+                    <span key={`${row}-${c}`} className={numCell(win)}>
+                      {n}
+                      {marked && !small && <Mark n={n} kind={marker ?? 'cross'} color={ink} />}
+                    </span>
+                  ) : (
+                    <button
+                      key={`${row}-${c}`}
+                      type="button"
+                      aria-label={`Số ${n}${marked ? ' — đã đánh' : ''}`}
+                      aria-pressed={marked}
+                      onAnimationEnd={() => setShake(null)}
+                      onClick={() => {
+                        if (called && !called.includes(n) && !marked) {
+                          setShake(n)
+                          return onWarn?.(n)
+                        }
+                        onMark(n)
+                      }}
+                      className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''} ${marked && freshMark === n ? 'mark-pop' : ''} ${!marked && hint === n ? 'loto-hint' : ''}`}
+                    >
+                      {n}
+                      {marked && <Mark n={n} kind={marker ?? 'cross'} color={ink} fresh={freshMark === n} />}
+                    </button>
+                  )
+                }),
+              )}
+            </div>
+            {b === 0 && band('Lô tô · vui là chính')}
+            {b === 1 && band('Phúc lộc đầy nhà', true)}
           </div>
-          {b === 0 && band('Lô tô · vui là chính')}
-          {b === 1 && band('Phúc lộc đầy nhà', true)}
-        </div>
-      ))}
-      {band('Lô tô CandyPot')}
+        ))}
+        {band('Lô tô CandyPot')}
+      </div>
       {/* Vân giấy nằm dưới dấu đánh (dấu vẫn đậm, rõ) */}
       <span aria-hidden className="paper-grain pointer-events-none absolute inset-0 z-[1]" />
     </div>
@@ -918,9 +924,9 @@ export function LotoPanel({
               <div
                 key={i}
                 className="shrink-0"
-                // Cao tờ ≈ 1.34 × rộng + các dải chữ (~4rem) → rộng sao cho tờ vừa khít chiều cao còn lại
+                // Tờ giữ tỉ lệ SHEET_RATIO → rộng sao cho tờ vừa khít chiều cao còn lại (trừ thanh trên)
                 style={{
-                  width: `min(calc((100dvh - 8rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))`,
+                  width: `min(calc((100dvh - 4rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / ${SHEET_RATIO}), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))`,
                 }}
               >
                 <SheetCard {...sheetProps(i)} />
@@ -933,7 +939,7 @@ export function LotoPanel({
             <div
               className="relative h-fit"
               style={{
-                width: `min(${n > 1 ? 88 : 94}%, calc((100dvh - 12rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34))`,
+                width: `min(${n > 1 ? 88 : 94}%, calc((100dvh - 10rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / ${SHEET_RATIO}))`,
               }}
             >
               {mine
