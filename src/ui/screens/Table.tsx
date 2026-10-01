@@ -26,7 +26,7 @@ import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { PriceSheet } from '../components/PriceSheet'
-import { LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
+import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
@@ -731,7 +731,12 @@ export function Table() {
             cornerTop={
               // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
               !cardPlay && withRules && (
-                <div className="flex items-center gap-2">
+                <div className="flex w-full items-center gap-2">
+                  {/* Mode chơi bài (đánh ngoài / trên app) — ai cũng thấy, host đổi */}
+                  {CARD_GAMES.includes(game.type) && (
+                    <CardModePill game={game} isHost={canHost} online={!solo} onBlocked={(msg) => flash(msg, true)} />
+                  )}
+                  <span className="flex-1" />
                   <button
                     type="button"
                     aria-label="Xem luật"
@@ -1130,7 +1135,6 @@ export function Table() {
       {editBets && game && (
         <TienlenBetSheet
           game={game}
-          online={!solo}
           onDone={(saved) => {
             setEditBets(false)
             if (saved) flash('Đã đổi Rule.')

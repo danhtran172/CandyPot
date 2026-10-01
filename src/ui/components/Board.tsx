@@ -458,7 +458,7 @@ export function Board({
           })}
         </div>
 
-        {cornerTop && <div className="absolute top-1 right-3 z-10">{cornerTop}</div>}
+        {cornerTop && <div className="absolute top-1 right-3 left-3 z-10 flex justify-end">{cornerTop}</div>}
       </div>
 
       {drag?.moved && (

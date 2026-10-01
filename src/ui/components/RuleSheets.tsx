@@ -250,6 +250,53 @@ export function RulesSheet({
   )
 }
 
+/**
+ * Nút gạt mode chơi bài gọn đặt ngay trên bàn (ai trong bàn cũng thấy mode đang chọn).
+ * Host bấm để đổi; người khác bấm thì được nhắc chỉ host đổi; bàn một máy thì nhắc bài trong app cần bàn online.
+ */
+export function CardModePill({
+  game,
+  isHost,
+  online,
+  onBlocked,
+}: {
+  game: Game
+  isHost: boolean
+  online: boolean
+  onBlocked: (msg: string) => void
+}) {
+  const mode = online ? (game.cardMode ?? 'real') : 'real'
+  const opts = [
+    { v: 'real' as const, label: 'Đánh ngoài', hint: 'Bài ngoài đời, app tính kẹo' },
+    { v: 'app' as const, label: 'Trên app', hint: 'App chia bài, đánh trên máy' },
+  ]
+  return (
+    <div role="radiogroup" aria-label="Mode chơi bài" data-guide="card-mode" className="flex rounded-full border border-line/60 bg-night/70 p-0.5 text-xs font-bold">
+      {opts.map((o) => (
+        <button
+          key={o.v}
+          type="button"
+          role="radio"
+          aria-checked={mode === o.v}
+          title={o.hint}
+          onClick={() => {
+            if (mode === o.v) return
+            if (!online) return onBlocked('Bài trong app chỉ dùng ở bàn online (Nhiều người join).')
+            if (!isHost) return onBlocked('Chỉ host đổi mode chơi bài.')
+            const errors = actions().setCardMode(game.id, o.v)
+            if (errors.length) onBlocked(errors[0])
+          }}
+          className={`rounded-full px-2.5 py-1 whitespace-nowrap transition ${
+            mode === o.v ? 'bg-lemon text-night' : `text-muted ${isHost && online ? 'active:scale-95' : ''}`
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** Hai mode chơi bài: đánh thực tế (bài ngoài đời, app chỉ tính kẹo) / dùng bài trong app. Host đổi. */
 export function CardModeSwitch({ game, isHost, online }: { game: Game; isHost: boolean; online: boolean }) {
   const mode = online ? (game.cardMode ?? 'real') : 'real'
