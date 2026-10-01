@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { autoMove, beats, comboOf, deal, pass, payouts, play, playableCards, suggestWith, type Card, type TienlenCards } from './tienlenPlay'
+import { arrangeHand, autoMove, beats, comboOf, deal, pass, payouts, play, playableCards, suggestWith, type Card, type TienlenCards } from './tienlenPlay'
 
 /** Lá theo hạng + chất: c('3♠') … c('2♥'). */
 const R = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
@@ -104,5 +104,19 @@ describe('autoMove — hết giờ', () => {
     expect(s2.table).toBeNull()
     expect(s2.turn).toBe('a')
     expect(s2.step).toBe(2)
+  })
+})
+
+describe('arrangeHand — xếp bài', () => {
+  const hand = cs('3♠ 4♥ 5♦ 6♣ 9♠ 9♥ J♣ K♠ K♣ K♦ K♥ 2♥ A♦')
+  it('theo số / theo chất', () => {
+    expect(arrangeHand(hand, 'rank')).toEqual([...hand].sort((x, y) => x - y))
+    expect(arrangeHand(hand, 'suit').map((x) => x % 4)).toEqual([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3])
+  })
+  it('theo bộ: rác → đôi → sảnh → tứ quý', () => {
+    expect(arrangeHand(hand, 'combo')).toEqual(cs('J♣ A♦ 2♥ 9♠ 9♥ 3♠ 4♥ 5♦ 6♣ K♠ K♣ K♦ K♥'))
+  })
+  it('theo bộ: đôi thông trước sảnh', () => {
+    expect(arrangeHand(cs('5♠ 5♥ 6♠ 6♥ 7♣ 7♦ 8♠'), 'combo')).toEqual(cs('8♠ 5♠ 5♥ 6♠ 6♥ 7♣ 7♦'))
   })
 })

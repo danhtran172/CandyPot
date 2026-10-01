@@ -281,3 +281,64 @@ export function playableCards(hand: Card[], table: Card[] | null, mustOpen = fal
   }
   return out
 }
+
+/** Cách xếp bài trên tay (chỉ đổi thứ tự hiển thị trên máy mình). */
+export type HandSort = 'rank' | 'combo' | 'suit'
+export const HAND_SORT_LABEL: Record<HandSort, string> = { rank: 'Theo số', combo: 'Theo bộ', suit: 'Theo chất' }
+
+/**
+ * Xếp lại bài trên tay.
+ * - rank: nhỏ → lớn.
+ * - suit: gom theo chất (♠ ♣ ♦ ♥), trong chất nhỏ → lớn.
+ * - combo: tách sẵn thành bộ — rác bên trái, rồi đôi, sám, sảnh, đôi thông, tứ quý bên phải
+ *   (lấy lần lượt tứ quý → đôi thông → sảnh dài nhất → sám → đôi, còn lại là rác).
+ */
+export function arrangeHand(hand: Card[], mode: HandSort): Card[] {
+  const asc = [...hand].sort((a, b) => a - b)
+  if (mode === 'rank') return asc
+  if (mode === 'suit') return asc.sort((a, b) => suitOf(a) - suitOf(b) || a - b)
+  let left = asc
+  const byRank = () => {
+    const m: Card[][] = Array.from({ length: 13 }, () => [])
+    for (const c of left) m[rankOf(c)].push(c)
+    return m
+  }
+  const take = (cs: Card[]) => {
+    left = left.filter((c) => !cs.includes(c))
+    return cs
+  }
+  /** Đoạn hạng liên tiếp dài nhất (không có 2) mà hạng nào cũng có ≥ per lá. */
+  const longestRun = (per: number, min: number): number[] | null => {
+    const m = byRank()
+    let best: number[] | null = null
+    let run: number[] = []
+    for (let r = 0; r <= TWO; r++) {
+      if (r < TWO && m[r].length >= per) run.push(r)
+      else {
+        if (run.length >= min && (!best || run.length > best.length)) best = run
+        run = []
+      }
+    }
+    return best
+  }
+  const quads: Card[][] = []
+  const pairRuns: Card[][] = []
+  const straights: Card[][] = []
+  const triples: Card[][] = []
+  const pairs: Card[][] = []
+  for (const g of byRank()) if (g.length === 4) quads.push(take(g))
+  for (let run = longestRun(2, 3); run; run = longestRun(2, 3)) {
+    const m = byRank()
+    pairRuns.push(take(run.flatMap((r) => m[r].slice(0, 2))))
+  }
+  for (let run = longestRun(1, 3); run; run = longestRun(1, 3)) {
+    const m = byRank()
+    // Hạng có đôi / sám thì lấy lá nhỏ nhất cho sảnh, để lại lá to
+    straights.push(take(run.map((r) => m[r][0])))
+  }
+  for (const g of byRank()) {
+    if (g.length === 3) triples.push(take(g))
+    else if (g.length === 2) pairs.push(take(g))
+  }
+  return [...left, ...pairs.flat(), ...triples.flat(), ...straights.flat(), ...pairRuns.flat(), ...quads.flat()]
+}

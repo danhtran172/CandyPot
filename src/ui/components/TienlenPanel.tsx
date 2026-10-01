@@ -1,19 +1,33 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  arrangeHand,
   beats,
   cardLabel,
   comboOf,
   COMBO_LABEL,
+  HAND_SORT_LABEL,
   isRed,
   placeOf,
   playableCards,
   suggestWith,
   type Card,
+  type HandSort,
   type TienlenCards,
 } from '../../core/games/tienlenPlay'
 import type { ID, Player, Round } from '../../core/types'
 import { TURN_MS, useTurnLeft } from '../turnClock'
 import { Button } from './kit'
+
+const SORTS: HandSort[] = ['rank', 'combo', 'suit']
+const SORT_KEY = 'candypot:handSort'
+const readSort = (): HandSort => {
+  try {
+    const v = localStorage.getItem(SORT_KEY) as HandSort | null
+    return v && SORTS.includes(v) ? v : 'rank'
+  } catch {
+    return 'rank'
+  }
+}
 
 /** Một lá bài. */
 export function PlayingCard({
@@ -101,7 +115,18 @@ export function TienlenPanel({
   const name = (id: ID) => players[id]?.name ?? '?'
   const done = cards.turn === null
   const paid = round.moves.some((m) => m.label.startsWith('Bài:'))
-  const hand = viewer ? (cards.hands[viewer] ?? []) : []
+  // Cách xếp bài trên tay — nhớ trên máy này
+  const [sort, setSort] = useState<HandSort>(readSort)
+  const nextSort = () => {
+    const v = SORTS[(SORTS.indexOf(sort) + 1) % SORTS.length]
+    setSort(v)
+    try {
+      localStorage.setItem(SORT_KEY, v)
+    } catch {
+      /* chế độ riêng tư: không nhớ được, vẫn xếp */
+    }
+  }
+  const hand = viewer ? arrangeHand(cards.hands[viewer] ?? [], sort) : []
   const picked = sel.filter((c) => hand.includes(c))
   const myTurn = !!viewer && cards.turn === viewer
   const combo = comboOf(picked)
@@ -180,6 +205,16 @@ export function TienlenPanel({
               )}
               {combo ? ` · ${COMBO_LABEL[combo.type]}` : picked.length ? ' · chưa thành bộ' : ''}
             </p>
+            {hand.length > 1 && (
+              <button
+                type="button"
+                onClick={nextSort}
+                aria-label={`Xếp bài: ${HAND_SORT_LABEL[sort]} — chạm để đổi`}
+                className="shrink-0 rounded-full border border-line bg-plum-2 px-2 py-0.5 font-semibold text-cream active:scale-95"
+              >
+                Xếp · {HAND_SORT_LABEL[sort]}
+              </button>
+            )}
             {secs !== null && (
               <span
                 aria-label={`Còn ${secs} giây`}
