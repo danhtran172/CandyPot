@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { CARD_GAMES, GAMES } from '../../core/games'
-import { lotoMax, lotoPrice } from '../../core/games/loto'
+import { lotoCalling, lotoMax, lotoPrice } from '../../core/games/loto'
 import { XIDACH_MAX_MULTIPLIER, xidachLimits } from '../../core/games/xidach'
 import { tienlenBets, tienlenPigs } from '../../core/suggest'
 import type { Game } from '../../core/types'
@@ -98,10 +98,10 @@ export function SettingsModal({
 export function LotoSettingsSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
   const [price, setPrice] = useState(lotoPrice(game))
   const [max, setMax] = useState(lotoMax(game))
-  const [auto, setAuto] = useState(!!game.lotoAuto)
+  const [calling, setCalling] = useState(lotoCalling(game))
   const [error, setError] = useState<string | null>(null)
   const save = () => {
-    const errors = [...actions().setLotoSettings(game.id, price, max), ...actions().setLotoAuto(game.id, auto)]
+    const errors = [...actions().setLotoSettings(game.id, price, max), ...actions().setLotoCalling(game.id, calling)]
     if (errors.length) setError(errors[0])
     else onDone(true)
   }
@@ -109,22 +109,23 @@ export function LotoSettingsSheet({ game, onDone }: { game: Game; onDone: (saved
     <SettingsModal title="⚙ Lô tô" hint="Mua N tờ thì bỏ N × giá kẹo vào Pot." error={error} onSave={save} onClose={() => onDone(false)}>
       <SettingRow icon="price" label="Giá" hint="kẹo mỗi tờ" value={price} onChange={setPrice} />
       <SettingRow icon="max" label="Tối đa" hint="tờ mỗi người một ván" value={max} onChange={setMax} />
-      {/* Chơi giấy trong app: người gọi lắc túi thủ công, hay máy tự gọi mỗi 5 giây */}
+      {/* Chơi giấy trong app: người gọi lắc túi, máy tự gọi mỗi 5 giây, hay gọi ở ngoài đời (đánh tự do) */}
       <div className="mt-3">
         <p className="text-sm font-semibold">Gọi số</p>
-        <div className="mt-1 grid grid-cols-2 gap-2">
+        <div className="mt-1 grid grid-cols-3 gap-2">
           {(
             [
-              [false, 'Thủ công', 'Người gọi giữ túi lắc ra từng số'],
-              [true, 'Máy gọi', 'Tự ra một số mỗi 5 giây'],
+              ['bag', 'Lắc túi', 'Người gọi giữ túi lắc ra số'],
+              ['auto', 'Máy gọi', 'Tự ra một số mỗi 5 giây'],
+              ['outside', 'Gọi ở ngoài', 'Kêu số ngoài đời, đánh tự do'],
             ] as const
           ).map(([v, label, hint]) => (
             <button
               key={label}
               type="button"
-              aria-pressed={auto === v}
-              onClick={() => setAuto(v)}
-              className={`rounded-2xl border px-2 py-2 text-left transition ${auto === v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'}`}
+              aria-pressed={calling === v}
+              onClick={() => setCalling(v)}
+              className={`rounded-2xl border px-2 py-2 text-left transition ${calling === v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'}`}
             >
               <div className="text-sm font-bold">{label}</div>
               <div className="text-[11px] text-muted">{hint}</div>

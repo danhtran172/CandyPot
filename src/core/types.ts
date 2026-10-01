@@ -129,6 +129,8 @@ export interface Game {
   lotoMax?: number
   /** Lô tô (giấy trong app): máy tự gọi số (true) hay người gọi lắc túi thủ công (mặc định). */
   lotoAuto?: boolean
+  /** Lô tô (giấy trong app): số gọi ở ngoài đời — không dùng túi, đánh số tự do (không bắt buộc số đã gọi). */
+  lotoOutside?: boolean
   /** Xì dách: mức cược tối thiểu / tối đa (mặc định 1 và 5 × min). */
   xidachLimits?: { min: number; max: number }
   /** Cách chơi bài: real = đánh bài thật ngoài đời (mặc định); app = dùng bài trong app. */

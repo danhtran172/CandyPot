@@ -140,6 +140,8 @@ export interface AppState {
   setLotoSettings(gameId: ID, price: number, max: number): string[]
   /** Lô tô (giấy trong app): máy tự gọi số hay người gọi lắc thủ công. */
   setLotoAuto(gameId: ID, auto: boolean): string[]
+  /** Lô tô (giấy trong app): cách gọi số — túi / máy gọi / gọi ở ngoài. */
+  setLotoCalling(gameId: ID, mode: 'bag' | 'auto' | 'outside'): string[]
   /** Lô tô (giấy trong app, chưa chốt): chọn tờ trong bộ giấy — tự tính kẹo theo số tờ. */
   lotoPickSheets(gameId: ID, playerId: ID, sheets: number[]): string[]
   /** Lô tô (giấy trong app): đổi người gọi số. */
@@ -1101,6 +1103,12 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         return []
       },
 
+      setLotoCalling(gameId, mode) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        mapGame(gameId, (x) => ({ ...x, lotoAuto: mode === 'auto', lotoOutside: mode === 'outside' }))
+        return []
+      },
+
       setLotoAuto(gameId, auto) {
         if (!game(gameId)) return ['Không tìm thấy game.']
         mapGame(gameId, (x) => ({ ...x, lotoAuto: auto }))
@@ -1158,12 +1166,13 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const open = openOf(gameId)
         if (!g || !open?.loto) return ['Ván này không chơi giấy trong app.']
         const papers = sheetSet(g.id, pairsFor(open.participants.length, lotoMax(g)))
-        const first = claimLoto(open.loto, papers, playerId, sheet, row)
+        const outside = !!g.lotoOutside
+        const first = claimLoto(open.loto, papers, playerId, sheet, row, outside)
         if (typeof first === 'string') return [first]
         const award = { id: newId(), from: POT, to: playerId, amount: 0, label: 'Kinh! Ăn pot' }
         mapRound(gameId, open.id, (r) => {
           if (!r.loto) return r
-          const next: LotoState | string = claimLoto(r.loto, papers, playerId, sheet, row)
+          const next: LotoState | string = claimLoto(r.loto, papers, playerId, sheet, row, outside)
           if (typeof next === 'string') return r
           const pot = potOf(r)
           return { ...r, loto: next, moves: pot > 0 ? [...r.moves, { ...award, amount: pot }] : r.moves }

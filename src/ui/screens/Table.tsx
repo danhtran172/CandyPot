@@ -624,7 +624,7 @@ export function Table() {
   // Máy gọi số: máy của người gọi tự lắc mỗi vài giây (người gọi offline thì máy host gọi thay)
   const lotoCaller = round?.loto?.caller ?? null
   const autoCalling =
-    lotoPlay && !!game?.lotoAuto && !!round?.loto && !round.loto.winner && round.loto.called.length < 90 &&
+    lotoPlay && !!game?.lotoAuto && !game.lotoOutside && !!round?.loto && !round.loto.winner && round.loto.called.length < 90 &&
     (lotoCaller === me || (canHost && !!lotoCaller && !onlineIds.has(lotoCaller)))
   useEffect(() => {
     if (!autoCalling || !game || !lotoCaller) return
@@ -844,6 +844,7 @@ export function Table() {
                   players={players}
                   me={me ?? null}
                   auto={!!game.lotoAuto}
+                  outside={!!game.lotoOutside}
                   canPickCaller={canHost}
                   onShake={() => me && run(actions().lotoCall(game.id, me))}
                   onPickCaller={() => (canHost ? setPicker('caller') : flash(`Chỉ host (${hostName}) mới đổi người gọi số.`, true))}
@@ -961,7 +962,8 @@ export function Table() {
                   onClaim={(sheet, row) => me && run(actions().lotoClaim(game.id, me, sheet, row))}
                   onNext={nextRound}
                   onWarn={(msg) => flash(msg, true)}
-                  canShake={!!me && round.loto.caller === me && !game.lotoAuto && !round.loto.winner && round.loto.called.length < 90}
+                  canShake={!!me && round.loto.caller === me && !game.lotoAuto && !game.lotoOutside && !round.loto.winner && round.loto.called.length < 90}
+                  outside={!!game.lotoOutside}
                   onShake={() => me && run(actions().lotoCall(game.id, me))}
                   menu={cardMenu}
                 />

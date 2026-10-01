@@ -54,13 +54,16 @@ export function fullRows(sheet: Sheet, called: number[]): number[] {
   return Array.from({ length: ROWS }, (_, r) => r).filter((r) => rowNumbers(sheet, r).every((n) => called.includes(n)))
 }
 
-/** Kinh: tờ của mình, hàng đã đủ 5 số được gọi, chưa ai kinh trước. */
-export function claim(s: LotoState, sheets: Sheet[], playerId: ID, sheet: number, row: number): LotoState | string {
+/**
+ * Kinh: tờ của mình, hàng đã đủ 5 số được gọi, chưa ai kinh trước.
+ * `outside` = số gọi ở ngoài đời (app không biết số nào đã gọi) → tin theo hàng người chơi đã đánh.
+ */
+export function claim(s: LotoState, sheets: Sheet[], playerId: ID, sheet: number, row: number, outside = false): LotoState | string {
   if (s.winner) return s.winner.id === playerId ? 'Bạn đã kinh rồi.' : 'Có người kinh trước rồi.'
   if (!s.sheets[playerId]?.includes(sheet)) return 'Tờ này không phải của bạn.'
   const paper = sheets[sheet]
   if (!paper || row < 0 || row >= ROWS) return 'Không có hàng này.'
-  const missing = rowNumbers(paper, row).filter((n) => !s.called.includes(n))
+  const missing = outside ? [] : rowNumbers(paper, row).filter((n) => !s.called.includes(n))
   if (missing.length) return `Chưa kinh — số ${missing.join(', ')} chưa được gọi.`
   return { ...s, winner: { id: playerId, sheet, row } }
 }

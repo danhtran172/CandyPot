@@ -73,7 +73,13 @@ function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: strin
           </radialGradient>
         </defs>
         {/* Viền sáng mỏng quanh hạt để nổi trên giấy và trên số */}
-        <path d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z" fill="none" stroke="#fffaf0" strokeWidth="3.2" strokeOpacity="0.9" />
+        <path
+          d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z"
+          fill="none"
+          stroke="#fffaf0"
+          strokeWidth="3.2"
+          strokeOpacity="0.9"
+        />
         <path d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z" fill="url(#seed)" stroke="#8a3b2c" strokeWidth="1.4" />
         {/* Gờ giữa hạt + vệt bóng */}
         <path d="M20 9 C22 17 22 26 20 33" fill="none" stroke="#a0533f" strokeOpacity="0.55" strokeWidth="1.2" />
@@ -83,11 +89,23 @@ function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: strin
   }
   const tilt = ((n * 37) % 13) - 6
   return (
-    <svg aria-hidden viewBox="0 0 40 40" className={`pointer-events-none absolute inset-0 z-[2] size-full ${fresh ? 'mark-draw' : ''}`} style={{ rotate: `${tilt}deg` }}>
+    <svg
+      aria-hidden
+      viewBox="0 0 40 40"
+      className={`pointer-events-none absolute inset-0 z-[2] size-full ${fresh ? 'mark-draw' : ''}`}
+      style={{ rotate: `${tilt}deg` }}
+    >
       {kind === 'cross' ? (
         <>
           <path d="M8 8 L32 32" pathLength={100} stroke={color} strokeWidth="4.5" strokeLinecap="round" />
-          <path d="M32 8 L8 32" pathLength={100} stroke={color} strokeWidth="4.5" strokeLinecap="round" style={{ animationDelay: '0.12s' }} />
+          <path
+            d="M32 8 L8 32"
+            pathLength={100}
+            stroke={color}
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            style={{ animationDelay: '0.12s' }}
+          />
         </>
       ) : (
         <path
@@ -196,7 +214,7 @@ export function SheetCard({
                     aria-pressed={marked}
                     onAnimationEnd={() => setShake(null)}
                     onClick={() => {
-                      if (!called?.includes(n) && !marked) {
+                      if (called && !called.includes(n) && !marked) {
                         setShake(n)
                         return onWarn?.(n)
                       }
@@ -248,7 +266,14 @@ export function SheetPicker({
 }) {
   const state = loto ?? { sheets: {}, caller: null, called: [] }
   const mine = state.sheets[me] ?? []
-  const [at, setAt] = useState(() => mine[0] ?? Math.max(0, papers.findIndex((_, i) => !ownerOf(state, i, me))))
+  const [at, setAt] = useState(
+    () =>
+      mine[0] ??
+      Math.max(
+        0,
+        papers.findIndex((_, i) => !ownerOf(state, i, me)),
+      ),
+  )
   const [error, setError] = useState<string | null>(null)
   const swipe = useRef<number | null>(null)
   const owner = ownerOf(state, at, me)
@@ -262,7 +287,12 @@ export function SheetPicker({
     setError(errors[0] ?? null)
   }
   return (
-    <div role="dialog" aria-modal="true" aria-label="Mua tờ lô tô" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mua tờ lô tô"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    >
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
       <div className="pop relative flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
         <div className="flex items-baseline gap-2">
@@ -292,7 +322,11 @@ export function SheetPicker({
                 style={{ background: sheetColor(i) }}
               >
                 {(i % 2) + 1}
-                {own && <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-lemon text-[9px] text-night">✓</span>}
+                {own && (
+                  <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-lemon text-[9px] text-night">
+                    ✓
+                  </span>
+                )}
               </button>
             )
           })}
@@ -317,13 +351,23 @@ export function SheetPicker({
           )}
         </div>
         <div className="mt-1.5 flex items-center gap-2">
-          <button type="button" aria-label="Tờ trước" onClick={() => go(-1)} className="grid size-9 place-items-center rounded-full bg-night/70 text-xl">
+          <button
+            type="button"
+            aria-label="Tờ trước"
+            onClick={() => go(-1)}
+            className="grid size-9 place-items-center rounded-full bg-night/70 text-xl"
+          >
             ‹
           </button>
           <p className="flex-1 text-center text-[11px] text-muted">
             Tờ {at + 1}/{papers.length} · {price} kẹo một tờ · lướt ngang để xem tờ khác
           </p>
-          <button type="button" aria-label="Tờ sau" onClick={() => go(1)} className="grid size-9 place-items-center rounded-full bg-night/70 text-xl">
+          <button
+            type="button"
+            aria-label="Tờ sau"
+            onClick={() => go(1)}
+            className="grid size-9 place-items-center rounded-full bg-night/70 text-xl"
+          >
             ›
           </button>
         </div>
@@ -367,14 +411,19 @@ export function Ball({ n, big, mid, fresh }: { n: number; big?: boolean; mid?: b
       className={`num relative grid shrink-0 place-items-center rounded-full shadow-[0_2px_4px_rgb(0_0_0/0.35)] ${big ? 'size-14' : mid ? 'size-11' : 'size-8'} ${
         fresh ? 'ball-in' : ''
       }`}
-      style={{ background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${ring} 55%, white), ${ring} 55%, color-mix(in srgb, ${ring} 70%, black))` }}
+      style={{
+        background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${ring} 55%, white), ${ring} 55%, color-mix(in srgb, ${ring} 70%, black))`,
+      }}
     >
       <span
         className={`absolute rounded-full bg-[radial-gradient(circle_at_38%_30%,#fffef6,#f7eccd_60%,#e6d6a8)] shadow-[inset_0_1px_2px_rgb(0_0_0/0.25)] ${
           big || mid ? 'inset-[4px]' : 'inset-[3px]'
         }`}
       />
-      <span className={`font-display relative leading-none font-extrabold ${big ? 'text-2xl' : mid ? 'text-lg' : 'text-[13px]'}`} style={{ color: ring }}>
+      <span
+        className={`font-display relative leading-none font-extrabold ${big ? 'text-2xl' : mid ? 'text-lg' : 'text-[13px]'}`}
+        style={{ color: ring }}
+      >
         {n}
       </span>
     </span>
@@ -387,7 +436,12 @@ const BALL_COLORS = ['#2b9348', '#d62828']
 function CalledBoard({ called, onClose }: { called: number[]; onClose: () => void }) {
   const list = [...called].reverse()
   return (
-    <div role="dialog" aria-modal="true" aria-label="Các số đã gọi" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Các số đã gọi"
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    >
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
       <div className="pop relative max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
         <div className="flex items-baseline">
@@ -477,6 +531,7 @@ export function LotoCenter({
   players,
   me,
   auto,
+  outside,
   canPickCaller,
   onShake,
   onPickCaller,
@@ -485,6 +540,8 @@ export function LotoCenter({
   players: Record<ID, Player>
   me: ID | null
   auto: boolean
+  /** Số gọi ở ngoài đời: không có túi, không có số trên app. */
+  outside?: boolean
   canPickCaller: boolean
   onShake: () => void
   onPickCaller: () => void
@@ -492,6 +549,13 @@ export function LotoCenter({
   const last = loto.called[loto.called.length - 1]
   const canShake = !!me && loto.caller === me && !auto && !loto.winner && loto.called.length < 90
   const shakeReady = useShakeReady(loto.called.length)
+  if (outside)
+    return (
+      <div className="flex flex-col items-center gap-1 text-center">
+        <span className="text-sm font-semibold">Số gọi ở ngoài</span>
+        <span className="text-[11px] text-muted">Nghe kêu số rồi tự đánh trên tờ</span>
+      </div>
+    )
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="flex items-center gap-3">
@@ -530,6 +594,7 @@ export function LotoPanel({
   onWarn,
   canShake,
   onShake,
+  outside,
   menu,
 }: {
   roundId: string
@@ -544,6 +609,8 @@ export function LotoPanel({
   /** Mình là người gọi (lắc thủ công): túi số nằm ngay đầu khung. */
   canShake: boolean
   onShake: () => void
+  /** Số gọi ở ngoài đời: không có dãy số gọi, đánh tự do, đủ hàng là Kinh. */
+  outside?: boolean
   menu: ReactNode
 }) {
   const mine = (me && loto.sheets[me]) || []
@@ -577,13 +644,13 @@ export function LotoPanel({
     const t = window.setTimeout(() => setHintFor(last), HINT_DELAY_MS)
     return () => window.clearTimeout(t)
   }, [last])
-  const hint = hintFor === last && last !== undefined && !marks.includes(last) && !loto.winner ? last : undefined
+  const hint = !outside && hintFor === last && last !== undefined && !marks.includes(last) && !loto.winner ? last : undefined
   const shakeReady = useShakeReady(loto.called.length)
   const recent = loto.called.slice(-7).reverse()
   /** Hàng đánh đủ 5 số (đã gọi) — kinh được. */
   const ready = (() => {
     for (const i of mine) {
-      const rows = fullRows(papers[i], marks).filter((r) => rowNumbers(papers[i], r).every((n) => loto.called.includes(n)))
+      const rows = fullRows(papers[i], marks).filter((r) => outside || rowNumbers(papers[i], r).every((n) => loto.called.includes(n)))
       if (rows.length) return { sheet: i, row: rows[0] }
     }
     return null
@@ -605,27 +672,35 @@ export function LotoPanel({
       {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
       {/* Túi số (người gọi) + số vừa gọi: mới nhất to, bên trái */}
       <div className="flex items-center gap-2">
-        {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
-        {recent.length ? (
-          <>
-            <Ball key={recent[0]} n={recent[0]} big fresh />
-            <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-              {recent.slice(1).map((n) => (
-                <Ball key={n} n={n} />
-              ))}
-            </div>
-          </>
+        {outside ? (
+          <span className="flex-1 text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</span>
         ) : (
-          <span className="flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
+          <>
+            {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
+            {recent.length ? (
+              <>
+                <Ball key={recent[0]} n={recent[0]} big fresh />
+                <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+                  {recent.slice(1).map((n) => (
+                    <Ball key={n} n={n} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <span className="flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
+            )}
+          </>
         )}
-        <button
-          type="button"
-          onClick={() => setBoard(true)}
-          aria-label="Xem tất cả số đã gọi"
-          className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
-        >
-          {loto.called.length}/90
-        </button>
+        {!outside && (
+          <button
+            type="button"
+            onClick={() => setBoard(true)}
+            aria-label="Xem tất cả số đã gọi"
+            className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
+          >
+            {loto.called.length}/90
+          </button>
+        )}
         {mine.length > 0 && (
           <button
             type="button"
@@ -661,7 +736,11 @@ export function LotoPanel({
                 </button>
               ))}
             <span className="flex-1" />
-            <div role="radiogroup" aria-label="Đánh số bằng" className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap">
+            <div
+              role="radiogroup"
+              aria-label="Đánh số bằng"
+              className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap"
+            >
               {MARKERS.map(([v, label]) => (
                 <button
                   key={v}
@@ -695,9 +774,7 @@ export function LotoPanel({
                   className="absolute top-3 left-[18%] w-[64%] origin-left cursor-pointer transition-transform"
                   style={{ transform: `translateX(${(depth + 1) * 22}%) scale(${1 - (depth + 1) * 0.08})`, zIndex: 5 - depth }}
                 >
-                  <div
-                    className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}
-                  >
+                  <div className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}>
                     <div className="opacity-45">
                       <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
                     </div>
@@ -710,7 +787,7 @@ export function LotoPanel({
                 sheet={papers[current]}
                 index={current}
                 marks={marks}
-                called={loto.called}
+                called={outside ? undefined : loto.called}
                 marker={marker}
                 freshMark={fresh}
                 hint={hint}
@@ -741,16 +818,16 @@ export function LotoPanel({
               Ván mới
             </Button>
           ) : (
-            <p className="flex-1 text-center text-xs text-muted">
-              {players[winner.id]?.name} kinh · chờ host mở ván mới
-            </p>
+            <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
           )
         ) : ready ? (
           <Button variant="primary" className="font-display loto-kinh flex-1 text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
             KINH!
           </Button>
         ) : (
-          <p className="flex-1 text-center text-[11px] text-muted">Chạm số đã gọi để đánh · đủ 5 số một hàng là Kinh</p>
+          <p className="flex-1 text-center text-[11px] text-muted">
+            {outside ? 'Chạm số để đánh' : 'Chạm số đã gọi để đánh'} · đủ 5 số một hàng là Kinh
+          </p>
         )}
       </div>
     </section>
@@ -786,14 +863,25 @@ export function LotoWinner({
     [],
   )
   return (
-    <div role="alertdialog" aria-modal="true" aria-label="Có người kinh" className="fixed inset-0 z-[60] flex items-center justify-center px-6">
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-label="Có người kinh"
+      className="fixed inset-0 z-[60] flex items-center justify-center px-6"
+    >
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/75" onClick={onClose} />
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         {confetti.map((c, i) => (
           <span
             key={i}
             className="loto-confetti absolute -top-4 block h-3 w-2 rounded-sm"
-            style={{ left: `${c.left}%`, background: c.color, animationDelay: `${c.delay}s`, animationDuration: `${c.dur}s`, rotate: `${c.rot}deg` }}
+            style={{
+              left: `${c.left}%`,
+              background: c.color,
+              animationDelay: `${c.delay}s`,
+              animationDuration: `${c.dur}s`,
+              rotate: `${c.rot}deg`,
+            }}
           />
         ))}
       </div>
@@ -802,7 +890,9 @@ export function LotoWinner({
         <p className="mt-2 text-lg">
           🎉 Chúc mừng <b className="text-cream">{w.id === me ? 'bạn' : players[w.id]?.name}</b>
         </p>
-        <p className="text-xs text-muted">Tờ {sheetName(w.sheet)} · hàng {w.row + 1}</p>
+        <p className="text-xs text-muted">
+          Tờ {sheetName(w.sheet)} · hàng {w.row + 1}
+        </p>
         <div className="mt-3 flex justify-center gap-1.5">
           {rowNumbers(papers[w.sheet], w.row).map((n) => (
             <Ball key={n} n={n} />

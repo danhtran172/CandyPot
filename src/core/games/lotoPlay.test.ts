@@ -36,4 +36,10 @@ describe('lotoPlay', () => {
     expect(s.winner).toEqual({ id: 'a', sheet: 0, row: 4 })
     expect(callNumber(s, 'h', remaining(s)[0])).toMatch(/kinh/)
   })
+
+  it('gọi ở ngoài: kinh theo hàng đã đánh, không cần số trong app', () => {
+    const s = ok(pickSheets(emptyLoto('h'), 'a', [0], 2, 12))
+    expect(claim(s, sheets, 'a', 0, 2)).toMatch(/chưa được gọi/)
+    expect(ok(claim(s, sheets, 'a', 0, 2, true)).winner).toEqual({ id: 'a', sheet: 0, row: 2 })
+  })
 })
