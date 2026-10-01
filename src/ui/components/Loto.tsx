@@ -319,7 +319,7 @@ export function SheetPicker({
                 aria-current={i === at}
                 className={`relative grid size-8 shrink-0 place-items-center rounded-lg text-xs font-extrabold text-white transition ${
                   i === at ? 'scale-110 ring-2 ring-cream' : ''
-                } ${who ? 'opacity-35' : ''}`}
+                } ${who ? 'brightness-50 saturate-50' : ''}`}
                 style={{ background: sheetColor(i) }}
               >
                 {(i % 2) + 1}
@@ -369,7 +369,7 @@ export function SheetPicker({
                   zIndex: 10 - far,
                 }}
               >
-                <div className={who && !d ? 'opacity-60' : ''}>
+                <div className={who && !d ? 'brightness-50 saturate-50' : ''}>
                   <SheetCard sheet={sheet} index={i} />
                 </div>
                 {!d && who && (
