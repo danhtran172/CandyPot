@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { BET, BUY, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { candyFor } from '../candyIcons'
@@ -86,6 +86,35 @@ const PLASTIC_TOP = {
   backgroundPosition: 'center',
   boxShadow:
     'inset 0 0 0 5px rgb(255 255 255 / 0.07), inset 0 0 0 6px rgb(120 0 0 / 0.35), inset 0 2px 0 rgb(255 255 255 / 0.45), 0 9px 0 #8f1015, 0 22px 30px rgb(0 0 0 / 0.55)',
+}
+
+/**
+ * Chân bàn nhựa: bản to ở trên, vát cong phía trong rồi thon dần xuống, hơi choãi ra ngoài (vẽ chân trái, chân phải lật lại).
+ * Chân sau ngắn và tối hơn, nằm lùi vào trong — cho bàn có chiều sâu.
+ */
+function PlasticLeg({ side, back }: { side: 'left' | 'right'; back?: boolean }) {
+  const id = useId()
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 28 64"
+      preserveAspectRatio="none"
+      className={`absolute top-[calc(100%-12px)] w-[26px] ${side === 'left' ? (back ? 'left-[13%]' : 'left-[2%]') : back ? 'right-[13%] -scale-x-100' : 'right-[2%] -scale-x-100'}`}
+      style={{
+        height: back ? 'min(34px, 18%)' : 'min(60px, 32%)',
+        filter: back ? 'brightness(0.55)' : 'drop-shadow(0 6px 6px rgb(0 0 0 / 0.5))',
+      }}
+    >
+      <defs>
+        <linearGradient id={id} x1="0" x2="1">
+          <stop offset="0" stopColor="#9b1218" />
+          <stop offset="0.4" stopColor="#e0373a" />
+          <stop offset="1" stopColor="#a8151b" />
+        </linearGradient>
+      </defs>
+      <path d="M3 0H28C20 4 16 10 15 18L13 61Q12.5 64 10 64H3Q.5 64 .5 61Z" fill={`url(#${id})`} />
+    </svg>
+  )
 }
 
 function sizeFor(n: number) {
@@ -268,7 +297,14 @@ export function Board({
         >
           {/* Mặt bàn */}
           {shape === 'plastic' ? (
-            <div className="absolute inset-x-[19%] top-[17%] bottom-[25%] rounded-[1.4rem]" style={PLASTIC_TOP} />
+            <div className="absolute inset-x-[19%] top-[17%] bottom-[25%]">
+              {/* Chân sau (lùi trong, tối) rồi chân trước, mặt bàn đè lên trên */}
+              <PlasticLeg side="left" back />
+              <PlasticLeg side="right" back />
+              <PlasticLeg side="left" />
+              <PlasticLeg side="right" />
+              <div className="absolute inset-0 rounded-[1.4rem]" style={PLASTIC_TOP} />
+            </div>
           ) : (
             <div
               className={`absolute border-2 border-line shadow-[inset_0_0_40px_rgb(0_0_0/0.45)] ${
