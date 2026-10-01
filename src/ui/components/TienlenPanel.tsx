@@ -133,7 +133,8 @@ export function TienlenPanel({
   const table = cards.table?.cards ?? null
   // Tới lượt: làm mờ các lá không nằm trong bộ nào chặn được bàn
   const playable = myTurn ? playableCards(hand, table, cards.mustOpen) : null
-  const left = useTurnLeft(turnKey ?? null)
+  // Đồng hồ chỉ hiện lúc tới lượt mình; lượt người khác chỉ ghi đang chờ ai
+  const left = useTurnLeft(myTurn ? (turnKey ?? null) : null)
   const secs = left === null ? null : Math.max(0, Math.ceil(left / 1000))
   const urgent = secs !== null && secs <= 5
 
@@ -200,7 +201,6 @@ export function TienlenPanel({
         <div className="flex items-center gap-2">
           <p className="flex-1 text-center text-xs text-muted">
             Bạn không chơi ván này · lượt {name(cards.turn!)}
-            {secs !== null && ` · ${secs}s`}
           </p>
           {menu}
         </div>
