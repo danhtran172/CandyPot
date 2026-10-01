@@ -1,5 +1,6 @@
 import type { TienlenCards } from './games/tienlenPlay'
 import type { XidachCards } from './games/xidachPlay'
+import type { LotoState } from './games/lotoPlay'
 export type ID = string
 
 export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'free'
@@ -108,6 +109,8 @@ export interface Round {
   tienlen?: TienlenCards
   /** Xì dách đánh bằng bài trong app (chia lúc chốt cược): bài, lượt rút, ai đã được cái xét. */
   xidach?: XidachCards
+  /** Lô tô chơi bằng giấy trong app: tờ của từng người, người gọi số, số đã gọi, người kinh. */
+  loto?: LotoState
   /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]
@@ -124,6 +127,8 @@ export interface Game {
   price?: number
   /** Lô tô: mỗi người mua tối đa bao nhiêu tờ một ván (mặc định 2). */
   lotoMax?: number
+  /** Lô tô (giấy trong app): máy tự gọi số (true) hay người gọi lắc túi thủ công (mặc định). */
+  lotoAuto?: boolean
   /** Xì dách: mức cược tối thiểu / tối đa (mặc định 1 và 5 × min). */
   xidachLimits?: { min: number; max: number }
   /** Cách chơi bài: real = đánh bài thật ngoài đời (mặc định); app = dùng bài trong app. */

@@ -1,4 +1,4 @@
-import { Children, useEffect, useState, type ReactNode } from 'react'
+import { Children, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
@@ -26,6 +26,11 @@ import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
 import { XidachCenter, XidachPanel } from '../components/XidachPanel'
+import { LotoCenter, LotoPanel, LotoWinner, SheetPicker } from '../components/Loto'
+import { pairsFor, sheetSet } from '../../core/games/lotoSheets'
+
+/** Máy gọi số lô tô: mỗi bấy nhiêu ms một số. */
+const LOTO_AUTO_MS = 5000
 import { describe, resultText, type XidachCards } from '../../core/games/xidachPlay'
 import { PriceSheet } from '../components/PriceSheet'
 import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
@@ -61,12 +66,16 @@ export function Table() {
   const [params, setParams] = useSearchParams()
   /** Popup chọn số kẹo đang mở: ai → ai; `edit` = Lô tô chưa chốt, người đã mua chỉnh lại số tờ. */
   const [pending, setPending] = useState<{ from: ID; to: ID; tapped?: boolean; edit?: boolean } | null>(null)
-  const [picker, setPicker] = useState<'dealer' | 'award' | null>(null)
+  const [picker, setPicker] = useState<'dealer' | 'award' | 'caller' | null>(null)
   const [pokerSheet, setPokerSheet] = useState<'raise' | 'allin' | 'settings' | null>(null)
   const [showLog, setShowLog] = useState(false)
   const [showMe, setShowMe] = useState(false)
   const [editBets, setEditBets] = useState(false)
   const [editPrice, setEditPrice] = useState(false)
+  /** Lô tô giấy trong app: đang mở bảng chọn tờ. */
+  const [sheetPicker, setSheetPicker] = useState(false)
+  /** Lô tô: đã đóng màn chúc mừng của ván nào. */
+  const [winnerSeen, setWinnerSeen] = useState<ID | null>(null)
   const [editLimits, setEditLimits] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [guidePick, setGuidePick] = useState(false)
@@ -133,7 +142,9 @@ export function Table() {
   /** Chơi bằng bài trong app (chỉ bàn nhiều người): gom các nút phụ vào nút ⋯. */
   const cardApp = !solo && game?.cardMode === 'app' && CARD_GAMES.includes(game.type)
   /** Đang đánh bài trong app: app tự tính kẹo — dưới đáy chỉ còn bài trên tay và một nút ⋯ cho các chức năng còn cần. */
-  const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach)
+  /** Lô tô giấy trong app, đã chốt: đang gọi số / đánh số. */
+  const lotoPlay = cardApp && game?.type === 'loto' && !!round?.loto && round.phase === 'playing'
+  const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
@@ -243,6 +254,14 @@ export function Table() {
     // Lô tô: chỉ thả vào ô Mua mới mua tờ (kẹo vào Pot); thả thẳng vào Pot thì không
     if (isLoto && target === POT && from !== POT)
       return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
+    // Lô tô giấy trong app: ô Mua mở bảng danh sách giấy để chọn tờ
+    if (isLoto && cardApp && target === BUY) {
+      if (from !== me) return flash(`${players[from]?.name ?? 'Người đó'} tự chọn tờ trên máy của họ.`, true)
+      if (round?.phase === 'playing') return flash('Đã chốt — không mua thêm tờ được nữa.', true)
+      if (waitingIds.has(from)) return flash('Bạn đang chờ — vào bàn từ ván sau.', true)
+      if (!round && !openNext()) return
+      return setSheetPicker(true)
+    }
     const to = target === BUY ? POT : target
     // Người vào bàn giữa ván: chưa tính ván này
     const waiter = [from, to].find((id) => waitingIds.has(id))
@@ -343,6 +362,7 @@ export function Table() {
     const kind = picker
     setPicker(null)
     if (kind === 'dealer') onTransfer(DEALER, id)
+    else if (kind === 'caller' && game) run(actions().lotoSetCaller(game.id, id))
     else if (kind === 'award') {
       if (isLoto) void awardPot(id)
       else onTransfer(POT, id)
@@ -598,6 +618,19 @@ export function Table() {
     )
     return () => window.clearTimeout(t)
   }, [turnKey, me, canHost]) // eslint-disable-line react-hooks/exhaustive-deps
+  /** Lô tô giấy trong app: bộ giấy của game (cố định theo mã game, đủ cho cả bàn mua tối đa). */
+  const lotoPairs = cardApp && isLoto && game ? pairsFor((round?.participants ?? visible).length, lotoMax(game)) : 0
+  const lotoPapers = useMemo(() => (game && lotoPairs ? sheetSet(game.id, lotoPairs) : null), [game?.id, lotoPairs]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Máy gọi số: máy của người gọi tự lắc mỗi vài giây (người gọi offline thì máy host gọi thay)
+  const lotoCaller = round?.loto?.caller ?? null
+  const autoCalling =
+    lotoPlay && !!game?.lotoAuto && !!round?.loto && !round.loto.winner && round.loto.called.length < 90 &&
+    (lotoCaller === me || (canHost && !!lotoCaller && !onlineIds.has(lotoCaller)))
+  useEffect(() => {
+    if (!autoCalling || !game || !lotoCaller) return
+    const t = window.setInterval(() => actions().lotoCall(game.id, lotoCaller), LOTO_AUTO_MS)
+    return () => window.clearInterval(t)
+  }, [autoCalling, game?.id, lotoCaller]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Số lá hiện ở chỗ ngồi: đang chia thì theo số lá đã đáp xuống (chia đều theo vòng), xong thì số lá thật. */
   const seatCards = (c: { hands: Record<ID, number[]> }, id: ID) => {
     const real = c.hands[id]?.length
@@ -699,7 +732,7 @@ export function Table() {
   )
 
   return (
-    <main className={round?.tienlen || round?.xidach ? 'pb-80' : 'pb-40'}>
+    <main className={lotoPlay ? 'pb-[34rem]' : round?.tienlen || round?.xidach ? 'pb-80' : 'pb-40'}>
       <TopBar
         title={session.name}
         back="/"
@@ -805,13 +838,25 @@ export function Table() {
             hat={round?.dealer && !round.xidach ? players[round.dealer]?.name : undefined}
             hatLocked={!canHost}
             center={
-              <TableCenter
-                game={game}
-                round={round}
-                players={players}
-                me={me ?? null}
-                onDraw={() => me && run(actions().xidachDraw(game.id, me))}
-              />
+              lotoPlay && round?.loto ? (
+                <LotoCenter
+                  loto={round.loto}
+                  players={players}
+                  me={me ?? null}
+                  auto={!!game.lotoAuto}
+                  canPickCaller={canHost}
+                  onShake={() => me && run(actions().lotoCall(game.id, me))}
+                  onPickCaller={() => (canHost ? setPicker('caller') : flash(`Chỉ host (${hostName}) mới đổi người gọi số.`, true))}
+                />
+              ) : (
+                <TableCenter
+                  game={game}
+                  round={round}
+                  players={players}
+                  me={me ?? null}
+                  onDraw={() => me && run(actions().xidachDraw(game.id, me))}
+                />
+              )
             }
             cornerTop={
               // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
@@ -900,6 +945,24 @@ export function Table() {
                   dealing={!!shuffling}
                   turnKey={turnKey}
                   onNext={nextRound}
+                  menu={cardMenu}
+                />
+              </div>
+            )}
+            {lotoPlay && round?.loto && lotoPapers && (
+              <div className="pointer-events-auto">
+                <LotoPanel
+                  roundId={round.id}
+                  loto={round.loto}
+                  papers={lotoPapers}
+                  me={me ?? null}
+                  players={players}
+                  isHost={canHost}
+                  onClaim={(sheet, row) => me && run(actions().lotoClaim(game.id, me, sheet, row))}
+                  onNext={nextRound}
+                  onWarn={(msg) => flash(msg, true)}
+                  canShake={!!me && round.loto.caller === me && !game.lotoAuto && !round.loto.winner && round.loto.called.length < 90}
+                  onShake={() => me && run(actions().lotoCall(game.id, me))}
                   menu={cardMenu}
                 />
               </div>
@@ -1262,16 +1325,42 @@ export function Table() {
 
       {picker && game && !(picker === 'award' && hand) && (
         <PlayerPicker
-          title={picker === 'dealer' ? '🎩 Ai làm nhà cái?' : '🏆 Ai thắng?'}
+          title={picker === 'dealer' ? '🎩 Ai làm nhà cái?' : picker === 'caller' ? 'Ai gọi số?' : '🏆 Ai thắng?'}
           hint={
-            picker === 'dealer'
+            picker === 'caller'
+              ? 'Người gọi số cầm túi lắc ra từng số.'
+              : picker === 'dealer'
               ? 'Chỉ đổi được khi chưa chốt cược.'
               : `Trao pot ${round ? potOf(round) : 0} kẹo${isLoto ? ' và kết thúc ván' : ''}.`
           }
           players={session.players.filter((p) => (round ? round.participants.includes(p.id) : p.active))}
-          current={picker === 'dealer' ? dealerNow : null}
+          current={picker === 'dealer' ? dealerNow : picker === 'caller' ? (round?.loto?.caller ?? null) : null}
           onPick={onPicked}
           onClose={() => setPicker(null)}
+        />
+      )}
+
+      {sheetPicker && game && me && round && lotoPapers && (
+        <SheetPicker
+          papers={lotoPapers}
+          loto={round.loto}
+          me={me}
+          max={lotoMax(game)}
+          price={lotoPrice(game)}
+          players={players}
+          onSave={(ids) => actions().lotoPickSheets(game.id, me, ids)}
+          onClose={() => setSheetPicker(false)}
+        />
+      )}
+
+      {lotoPlay && round?.loto?.winner && lotoPapers && winnerSeen !== round.id && (
+        <LotoWinner
+          loto={round.loto}
+          papers={lotoPapers}
+          players={players}
+          pot={round.moves.find((m) => m.label === 'Kinh! Ăn pot')?.amount ?? 0}
+          me={me ?? null}
+          onClose={() => setWinnerSeen(round.id)}
         />
       )}
 

@@ -9,6 +9,8 @@ import { closeTransfers, contributions, normalizeSession, potOf } from '../core/
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
 import { autoXidach, check as checkXidach, checkAll as checkAllXidach, dealXidach, draw as drawXidach, newPayouts as xidachPayouts, stand as standXidach, type XidachCards } from '../core/games/xidachPlay'
+import { callNumber as callLoto, claim as claimLoto, emptyLoto, pickSheets, remaining as lotoRemaining, type LotoState } from '../core/games/lotoPlay'
+import { pairsFor, sheetSet } from '../core/games/lotoSheets'
 import { autoMove as autoTienlen, deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
@@ -136,6 +138,16 @@ export interface AppState {
   setLotoTickets(gameId: ID, playerId: ID, count: number): string[]
   /** Lô tô: giá mỗi tờ + số tờ tối đa mỗi người một ván. */
   setLotoSettings(gameId: ID, price: number, max: number): string[]
+  /** Lô tô (giấy trong app): máy tự gọi số hay người gọi lắc thủ công. */
+  setLotoAuto(gameId: ID, auto: boolean): string[]
+  /** Lô tô (giấy trong app, chưa chốt): chọn tờ trong bộ giấy — tự tính kẹo theo số tờ. */
+  lotoPickSheets(gameId: ID, playerId: ID, sheets: number[]): string[]
+  /** Lô tô (giấy trong app): đổi người gọi số. */
+  lotoSetCaller(gameId: ID, playerId: ID): string[]
+  /** Lô tô (giấy trong app): người gọi lắc túi ra một số. */
+  lotoCall(gameId: ID, by: ID): string[]
+  /** Lô tô (giấy trong app): kinh — đúng thì trao cả pot. */
+  lotoClaim(gameId: ID, playerId: ID, sheet: number, row: number): string[]
   /** Xì dách: mức cược tối thiểu / tối đa. */
   setXidachLimits(gameId: ID, min: number, max: number): string[]
   /** Đánh bài thật ngoài đời / dùng bài trong app (áp dụng từ ván sau; ván chưa chia thì chia luôn). */
@@ -427,6 +439,9 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       return []
     }
 
+    /** Lô tô chơi bằng giấy trong app (bàn nhiều người, host gạt "Trên app"). */
+    const lotoApp = (g: Game) => g.type === 'loto' && g.cardMode === 'app' && get().session?.mode === 'multi'
+
     const mapGame = (gameId: ID, fn: (g: Game) => Game) =>
       mutate((s) => ({ ...s, games: s.games.map((g) => (g.id === gameId ? fn(g) : g)) }))
 
@@ -639,6 +654,17 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           Object.assign(round, { participants: order, bet: 2 * sb, stakes: {}, moves: hand.moves, poker: hand.hand })
         }
         if (g.type === 'tienlen' && g.cardMode === 'app' && get().session?.mode === 'multi') round.tienlen = dealTienlen(g, round.participants)
+        if (lotoApp(g)) {
+          // Giấy trong app: mỗi người giữ lại tờ ván trước (như giấy thật), số tờ = số tờ tự mua lại
+          const prev = [...g.rounds].reverse().find((r) => r.loto)?.loto
+          const loto = emptyLoto(prev?.caller && round.participants.includes(prev.caller) ? prev.caller : (get().session?.hostId ?? null))
+          for (const p of round.participants) {
+            const keep = (prev?.sheets[p] ?? []).slice(0, Math.round((stakes[p] ?? 0) / round.bet))
+            if (keep.length) loto.sheets[p] = keep
+          }
+          round.loto = loto
+          round.moves = Object.entries(loto.sheets).map(([p, list]) => ({ id: newId(), from: p, to: POT, amount: list.length * round.bet, label: `${list.length} tờ` }))
+        }
         mapGame(gameId, (g) => ({
           ...g,
           rounds: [...g.rounds, round],
@@ -865,7 +891,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
             : undefined
         mapRound(gameId, open.id, (r) => {
           if (r.phase !== 'betting') return r
-          if (!cards) return { ...r, phase: 'playing' }
+          if (!cards) return { ...r, phase: 'playing', ...(r.loto && { loto: { ...r.loto, caller: r.loto.caller ?? get().session?.hostId ?? null } }) }
           // Vừa chia đã có xì bàn / xì dách → trả kẹo luôn
           const pay = xidachPayouts(undefined, cards, r.stakes).map((p) => ({ id: newId(), ...p }))
           return { ...r, phase: 'playing', xidach: cards, moves: [...r.moves, ...pay] }
@@ -909,6 +935,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         } else if (g.type === 'loto' && open) {
           if (open.phase === 'betting' && to !== POT) return ['Đang mua tờ — bấm Chốt rồi host mới trao pot.']
           if (open.phase === 'playing' && to === POT) return ['Đã chốt — không mua thêm tờ được nữa.']
+          if (to === POT && lotoApp(g)) return ['Lô tô giấy trong app: bấm ô Mua để chọn tờ.']
           if (to === POT) {
             const bought = open.moves.filter((m) => m.from === from && m.to === POT).reduce((s, m) => s + m.amount, 0)
             const cap = lotoMax(g) * open.bet
@@ -1074,11 +1101,82 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         return []
       },
 
+      setLotoAuto(gameId, auto) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        mapGame(gameId, (x) => ({ ...x, lotoAuto: auto }))
+        return []
+      },
+
+      lotoPickSheets(gameId, playerId, ids) {
+        const g = game(gameId)
+        const open = openOf(gameId)
+        if (!g || g.type !== 'loto' || !open) return ['Chưa có ván Lô tô nào đang mở.']
+        if (open.phase === 'playing') return ['Đã chốt — không đổi tờ được nữa.']
+        if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
+        const total = 2 * pairsFor(open.participants.length, lotoMax(g))
+        const first = pickSheets(open.loto ?? emptyLoto(get().session?.hostId ?? null), playerId, ids, lotoMax(g), total)
+        if (typeof first === 'string') return [first]
+        const move = { id: newId(), from: playerId, to: POT, amount: ids.length * open.bet, label: `${ids.length} tờ` }
+        // Tính lại trên bản mới nhất: ai vừa mua mất tờ đó thì thôi (không mua trùng)
+        mapRound(gameId, open.id, (r) => {
+          const next = pickSheets(r.loto ?? emptyLoto(get().session?.hostId ?? null), playerId, ids, lotoMax(g), total)
+          if (typeof next === 'string' || r.phase === 'playing') return r
+          const others = r.moves.filter((m) => !(m.from === playerId && m.to === POT))
+          return { ...r, loto: next, moves: ids.length ? [...others, move] : others }
+        })
+        return []
+      },
+
+      lotoSetCaller(gameId, playerId) {
+        const open = openOf(gameId)
+        if (!open?.loto) return ['Ván này không chơi giấy trong app.']
+        if (!open.participants.includes(playerId) && playerId !== get().session?.hostId) return ['Người này không ở trong ván.']
+        mapRound(gameId, open.id, (r) => (r.loto ? { ...r, loto: { ...r.loto, caller: playerId } } : r))
+        return []
+      },
+
+      lotoCall(gameId, by) {
+        const open = openOf(gameId)
+        if (!open?.loto) return ['Ván này không chơi giấy trong app.']
+        if (open.phase !== 'playing') return ['Chốt mua tờ rồi mới gọi số.']
+        const left = lotoRemaining(open.loto)
+        if (!left.length) return ['Đã gọi hết 90 số.']
+        // Lắc ra một số ở đây (chạy lại trên phòng vẫn là số này); số đó vừa bị gọi ở máy khác thì thôi
+        const n = left[Math.floor(Math.random() * left.length)]
+        const first = callLoto(open.loto, by, n)
+        if (typeof first === 'string') return [first]
+        mapRound(gameId, open.id, (r) => {
+          if (!r.loto) return r
+          const next = callLoto(r.loto, by, n)
+          return typeof next === 'string' ? r : { ...r, loto: next }
+        })
+        return []
+      },
+
+      lotoClaim(gameId, playerId, sheet, row) {
+        const g = game(gameId)
+        const open = openOf(gameId)
+        if (!g || !open?.loto) return ['Ván này không chơi giấy trong app.']
+        const papers = sheetSet(g.id, pairsFor(open.participants.length, lotoMax(g)))
+        const first = claimLoto(open.loto, papers, playerId, sheet, row)
+        if (typeof first === 'string') return [first]
+        const award = { id: newId(), from: POT, to: playerId, amount: 0, label: 'Kinh! Ăn pot' }
+        mapRound(gameId, open.id, (r) => {
+          if (!r.loto) return r
+          const next: LotoState | string = claimLoto(r.loto, papers, playerId, sheet, row)
+          if (typeof next === 'string') return r
+          const pot = potOf(r)
+          return { ...r, loto: next, moves: pot > 0 ? [...r.moves, { ...award, amount: pot }] : r.moves }
+        })
+        return []
+      },
+
       setLotoTickets(gameId, playerId, count) {
         const g = game(gameId)
         const open = openOf(gameId)
         if (!g || g.type !== 'loto' || !open) return ['Chưa có ván Lô tô nào đang mở.']
         if (open.phase === 'playing') return ['Đã chốt — không đổi số tờ được nữa.']
+        if (lotoApp(g)) return ['Lô tô giấy trong app: bấm ô Mua để chọn tờ.']
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (!Number.isInteger(count) || count < 0 || count > lotoMax(g)) return [`Mỗi người mua 0–${lotoMax(g)} tờ một ván.`]
         // Gộp các lần mua của người này thành một lượt đúng số tờ mới

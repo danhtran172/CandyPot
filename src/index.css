@@ -166,3 +166,51 @@ body {
     --board-w: 100%;
   }
 }
+
+/* Lô tô: ô số chưa gọi bị lắc khi chạm; túi lắc; pháo giấy; nút Kinh nhấp nháy */
+@media (prefers-reduced-motion: no-preference) {
+  .loto-shake {
+    animation: loto-shake 0.35s ease-in-out;
+  }
+  @keyframes loto-shake {
+    20%,
+    60% {
+      translate: -3px 0;
+      background: #ff5c7a;
+    }
+    40%,
+    80% {
+      translate: 3px 0;
+    }
+  }
+  .loto-bag-shake {
+    animation: loto-bag 0.18s ease-in-out infinite alternate;
+  }
+  @keyframes loto-bag {
+    from {
+      rotate: -12deg;
+      translate: -3px 0;
+    }
+    to {
+      rotate: 12deg;
+      translate: 3px -2px;
+    }
+  }
+  .loto-confetti {
+    animation: loto-fall linear infinite;
+  }
+  @keyframes loto-fall {
+    to {
+      transform: translateY(110vh) rotate(720deg);
+    }
+  }
+  .loto-kinh {
+    animation: loto-kinh 0.9s ease-in-out infinite;
+  }
+  @keyframes loto-kinh {
+    50% {
+      scale: 1.05;
+      box-shadow: 0 0 22px rgb(255 210 63 / 0.7);
+    }
+  }
+}

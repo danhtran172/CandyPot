@@ -683,3 +683,31 @@ describe('appStore — Xì dách bài trong app', () => {
     }
   })
 })
+
+describe('appStore — Lô tô giấy trong app', () => {
+  it('chọn tờ (không trùng, tự tính kẹo) → chốt → gọi số → kinh thì ăn pot', async () => {
+    const { sheetSet, pairsFor, rowNumbers } = await import('../core/games/lotoSheets')
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }, { name: 'Z', emoji: '🐸' }], 'multi')
+    const [x, y, z] = session().players.map((p) => p.id)
+    const g = s().addGame('loto')
+    s().setCardMode(g, 'app')
+    expect(s().openRound(g, { participants: [x, y, z], bet: 5, stakes: {}, dealer: null })).toEqual([])
+    const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    expect(s().lotoPickSheets(g, y, [0, 1])).toEqual([])
+    expect(s().lotoPickSheets(g, z, [1])).toEqual(['Tờ này đã có người mua — chọn tờ khác.'])
+    expect(s().lotoPickSheets(g, z, [2])).toEqual([])
+    expect(s().addMove(g, z, POT, 5, '')).toEqual(['Lô tô giấy trong app: bấm ô Mua để chọn tờ.'])
+    expect(potOf(open())).toBe(15)
+    s().lockBets(g)
+    expect(open().loto!.caller).toBe(x)
+    const papers = sheetSet(g, pairsFor(3, 2))
+    const row = rowNumbers(papers[2], 0)
+    // Gọi đến khi đủ hàng 0 của tờ 2 (gọi ngẫu nhiên nên gọi tối đa 90 lần)
+    while (!row.every((n) => open().loto!.called.includes(n))) expect(s().lotoCall(g, x)).toEqual([])
+    expect(s().lotoCall(g, y)).toEqual(['Chỉ người gọi số mới lắc được.'])
+    expect(s().lotoClaim(g, z, 2, 0)).toEqual([])
+    expect(open().loto!.winner).toEqual({ id: z, sheet: 2, row: 0 })
+    expect(potOf(open())).toBe(0)
+    expect(open().moves.at(-1)).toMatchObject({ from: POT, to: z, amount: 15 })
+  })
+})
