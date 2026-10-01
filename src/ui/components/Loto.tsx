@@ -242,7 +242,7 @@ export function SheetCard({
 
 /**
  * Mua tờ: xem từng tờ (hiện đủ số), lướt / bấm ‹ › hoặc chạm màu để chuyển tờ, một nút để mua.
- * Tờ của mình thì Hoàn mua; đã đủ số tờ thì Đổi tờ đang xem lấy một tờ của mình. Tờ người khác đã mua thì không mua được.
+ * Tờ của mình thì Bỏ chọn; mục "Đã chọn" bên dưới liệt kê màu + số tờ, chạm ✕ để bỏ. Tờ người khác đã mua thì không mua được.
  * Mỗi thao tác ghi ngay (cả bàn thấy liền).
  */
 export function SheetPicker({
@@ -294,7 +294,7 @@ export function SheetPicker({
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
     >
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
-      <div className="pop relative flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
+      <div className="pop no-scrollbar relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-x-hidden overflow-y-auto rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
         <div className="flex items-baseline gap-2">
           <h2 className="font-display flex-1 text-xl font-extrabold">Mua tờ</h2>
           <span className="text-sm">
@@ -331,9 +331,9 @@ export function SheetPicker({
             )
           })}
         </div>
-        {/* Tờ đang xem — đủ số; lướt ngang để chuyển tờ */}
+        {/* Tờ đang xem ở giữa — đủ số; hai tờ kế tiếp nằm phía sau bên phải (nhỏ, mờ), chạm để xem. Lướt ngang để chuyển tờ */}
         <div
-          className="relative mt-2 touch-pan-y"
+          className="relative mt-2 flex touch-pan-y justify-center"
           onPointerDown={(e) => (swipe.current = e.clientX)}
           onPointerUp={(e) => {
             const x0 = swipe.current
@@ -341,14 +341,33 @@ export function SheetPicker({
             if (x0 !== null && Math.abs(e.clientX - x0) > 50) go(e.clientX < x0 ? 1 : -1)
           }}
         >
-          <div className={`mx-auto max-w-[16rem] ${owner ? 'opacity-50' : ''}`}>
+          {[1, 2].map((d) => {
+            const i = (at + d) % papers.length
+            return (
+              <div
+                key={i}
+                role="button"
+                tabIndex={0}
+                aria-label={`Xem tờ ${sheetName(i)}`}
+                onClick={() => go(d)}
+                onKeyDown={(e) => e.key === 'Enter' && go(d)}
+                className="absolute top-3 left-[calc(50%-8rem)] w-[16rem] origin-left cursor-pointer transition-transform"
+                style={{ transform: `translateX(${d * 14}%) scale(${1 - d * 0.07})`, zIndex: 3 - d }}
+              >
+                <div className="opacity-40">
+                  <SheetCard sheet={papers[i]} index={i} />
+                </div>
+              </div>
+            )
+          })}
+          <div className={`relative z-10 w-[16rem] ${owner ? 'opacity-60' : ''}`}>
             <SheetCard key={at} sheet={papers[at]} index={at} />
+            {owner && (
+              <span className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-2xl bg-night/90 px-3 py-2 text-center text-sm font-semibold">
+                {players[owner]?.name} đã mua tờ này
+              </span>
+            )}
           </div>
-          {owner && (
-            <span className="absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-2xl bg-night/90 px-3 py-2 text-center text-sm font-semibold">
-              {players[owner]?.name} đã mua tờ này
-            </span>
-          )}
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <button
@@ -378,21 +397,45 @@ export function SheetPicker({
             <p className="flex-1 self-center text-center text-sm text-muted">Tờ này đã có người mua — xem tờ khác.</p>
           ) : isMine ? (
             <Button variant="danger" className="flex-1" onClick={() => save(mine.filter((x) => x !== at))}>
-              Hoàn mua (trả lại {price} kẹo)
+              Bỏ chọn tờ này (trả lại {price} kẹo)
             </Button>
           ) : mine.length < max ? (
             <Button variant="primary" className="font-display flex-1 text-lg" onClick={() => save([...mine, at])}>
               Mua tờ này · {price} kẹo
             </Button>
-          ) : null}
-          {/* Đổi: tờ đang xem còn trống → đổi lấy một tờ của mình */}
-          {!owner &&
-            !isMine &&
-            mine.map((m) => (
-              <Button key={m} className="flex-1 text-sm whitespace-nowrap" onClick={() => save(mine.map((x) => (x === m ? at : x)))}>
-                Đổi tờ {sheetName(m)} lấy tờ này
-              </Button>
-            ))}
+          ) : (
+            <p className="flex-1 self-center text-center text-xs text-muted">Đã đủ {max} tờ — bỏ chọn một tờ bên dưới để mua tờ này.</p>
+          )}
+          {/* Đã chọn: màu + số tờ; chạm ✕ để bỏ chọn, chạm tên để xem lại tờ */}
+          <div className="basis-full">
+            <p className="text-xs font-semibold text-muted">
+              Đã chọn {mine.length}/{max}
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {mine.length ? (
+                mine.map((m) => (
+                  <span key={m} className="flex items-center overflow-hidden rounded-full border border-line/60 bg-night/60 text-xs font-semibold">
+                    <button type="button" onClick={() => setAt(m)} className="flex items-center gap-1.5 py-1 pr-1 pl-1">
+                      <span className="grid size-5 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: sheetColor(m) }}>
+                        {(m % 2) + 1}
+                      </span>
+                      {sheetName(m)}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Bỏ chọn tờ ${sheetName(m)}`}
+                      onClick={() => save(mine.filter((x) => x !== m))}
+                      className="grid size-7 place-items-center text-sm text-berry"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-muted">Chưa chọn tờ nào.</span>
+              )}
+            </div>
+          </div>
           <Button className="basis-full" onClick={onClose}>
             Xong
           </Button>
