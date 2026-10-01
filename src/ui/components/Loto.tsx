@@ -331,9 +331,12 @@ export function SheetPicker({
             )
           })}
         </div>
-        {/* Tờ đang xem ở giữa — đủ số; hai tờ kế tiếp nằm phía sau bên phải (nhỏ, mờ), chạm để xem. Lướt ngang để chuyển tờ */}
+        {/*
+          Băng tờ: tờ đang xem ở giữa, hai tờ trước bên trái và hai tờ sau bên phải (nhỏ dần, nghiêng, mờ dần) — chạm tờ bên cạnh
+          để chuyển, lướt ngang cũng được. Các tờ trượt mượt sang chỗ mới khi đổi tờ.
+        */}
         <div
-          className="relative mt-2 flex touch-pan-y justify-center"
+          className="relative mt-2 grid touch-pan-y overflow-hidden py-2 [perspective:900px]"
           onPointerDown={(e) => (swipe.current = e.clientX)}
           onPointerUp={(e) => {
             const x0 = swipe.current
@@ -341,33 +344,44 @@ export function SheetPicker({
             if (x0 !== null && Math.abs(e.clientX - x0) > 50) go(e.clientX < x0 ? 1 : -1)
           }}
         >
-          {[1, 2].map((d) => {
-            const i = (at + d) % papers.length
+          {papers.map((sheet, i) => {
+            const n = papers.length
+            // Khoảng cách có dấu tới tờ đang xem (vòng tròn)
+            const d = ((((i - at) % n) + n + Math.floor(n / 2)) % n) - Math.floor(n / 2)
+            if (Math.abs(d) > 2) return null
+            const far = Math.abs(d)
+            const who = ownerOf(state, i, me)
             return (
               <div
                 key={i}
-                role="button"
-                tabIndex={0}
-                aria-label={`Xem tờ ${sheetName(i)}`}
-                onClick={() => go(d)}
-                onKeyDown={(e) => e.key === 'Enter' && go(d)}
-                className="absolute top-3 left-[calc(50%-8rem)] w-[16rem] origin-left cursor-pointer transition-transform"
-                style={{ transform: `translateX(${d * 14}%) scale(${1 - d * 0.07})`, zIndex: 3 - d }}
+                role={d ? 'button' : undefined}
+                tabIndex={d ? 0 : undefined}
+                aria-label={d ? `Xem tờ ${sheetName(i)}` : undefined}
+                onClick={d ? () => go(d) : undefined}
+                onKeyDown={d ? (e) => e.key === 'Enter' && go(d) : undefined}
+                className={`relative col-start-1 row-start-1 w-[15rem] justify-self-center transition-[transform,opacity] duration-300 ease-out ${d ? 'cursor-pointer' : ''}`}
+                style={{
+                  transform: `translateX(${d * (far === 1 ? 62 : 52)}%) scale(${[1, 0.8, 0.64][far]}) rotateY(${-d * (far === 1 ? 26 : 19)}deg)`,
+                  opacity: [1, 0.55, 0.25][far],
+                  zIndex: 10 - far,
+                }}
               >
-                <div className="opacity-40">
-                  <SheetCard sheet={papers[i]} index={i} />
+                <div className={who && !d ? 'opacity-60' : ''}>
+                  <SheetCard sheet={sheet} index={i} />
                 </div>
+                {!d && who && (
+                  <span className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-2xl bg-night/90 px-3 py-2 text-center text-sm font-semibold">
+                    {players[who]?.name} đã mua tờ này
+                  </span>
+                )}
+                {!d && mine.includes(i) && (
+                  <span className="absolute -top-2 -right-2 grid size-7 place-items-center rounded-full bg-lemon text-sm font-extrabold text-night shadow-lg">
+                    ✓
+                  </span>
+                )}
               </div>
             )
           })}
-          <div className={`relative z-10 w-[16rem] ${owner ? 'opacity-60' : ''}`}>
-            <SheetCard key={at} sheet={papers[at]} index={at} />
-            {owner && (
-              <span className="absolute inset-x-4 top-1/2 -translate-y-1/2 rounded-2xl bg-night/90 px-3 py-2 text-center text-sm font-semibold">
-                {players[owner]?.name} đã mua tờ này
-              </span>
-            )}
-          </div>
         </div>
         <div className="mt-1.5 flex items-center gap-2">
           <button
