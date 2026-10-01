@@ -248,3 +248,26 @@ body {
   }
 }
 
+/* Lô tô: nhắc số vừa gọi — ô số nháy sáng nhẹ, tờ phụ nháy viền (1 giây một lần) */
+@media (prefers-reduced-motion: no-preference) {
+  .loto-hint {
+    animation: loto-hint 1s ease-in-out infinite;
+  }
+  @keyframes loto-hint {
+    50% {
+      background: #fff1a8;
+      box-shadow: inset 0 0 0 2px rgb(255 210 63 / 0.9);
+    }
+  }
+  .loto-hint-border {
+    animation: loto-hint-border 1s ease-in-out infinite;
+  }
+  @keyframes loto-hint-border {
+    50% {
+      box-shadow:
+        0 0 0 3px rgb(255 210 63 / 0.9),
+        0 0 14px rgb(255 210 63 / 0.6);
+    }
+  }
+}
+

@@ -120,6 +120,7 @@ export function SheetCard({
   winRow,
   small,
   freshMark,
+  hint,
 }: {
   sheet: Sheet
   index: number
@@ -134,6 +135,8 @@ export function SheetCard({
   small?: boolean
   /** Số vừa đánh — chạy hiệu ứng gạch. */
   freshMark?: number
+  /** Số vừa gọi mà chưa đánh — nháy nhẹ để nhắc. */
+  hint?: number
 }) {
   const color = sheetColor(index)
   const ink = markColor(index)
@@ -189,7 +192,7 @@ export function SheetCard({
                       }
                       onMark(n)
                     }}
-                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''} ${marked && freshMark === n ? 'mark-pop' : ''}`}
+                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''} ${marked && freshMark === n ? 'mark-pop' : ''} ${!marked && hint === n ? 'loto-hint' : ''}`}
                   >
                     {n}
                     {marked && <Mark n={n} kind={marker ?? 'cross'} color={ink} fresh={freshMark === n} />}
@@ -376,6 +379,9 @@ function Bag({ shaking, small }: { shaking: boolean; small?: boolean }) {
   )
 }
 
+/** Số vừa gọi chưa đánh thì sau bấy nhiêu ms bắt đầu nháy nhắc. */
+const HINT_DELAY_MS = 3000
+
 /** Lắc xong phải chờ ít nhất bấy nhiêu ms mới lắc tiếp (chốt an toàn, khỏi lắc liền tay ra hai số). */
 const SHAKE_GAP_MS = 5000
 /** Còn đang trong khoảng chờ sau số vừa gọi không — `count` = số đã gọi. */
@@ -499,6 +505,15 @@ export function LotoPanel({
   const [marks, setMarks] = useMarks(roundId, me)
   const [marker, setMarker] = useState<Marker>(readMarker)
   const [fresh, setFresh] = useState<number | undefined>()
+  // Nhắc số vừa gọi: sau 3 giây mà chưa đánh thì ô số đó nháy nhẹ (tờ phụ có số đó thì nháy viền)
+  const last = loto.called[loto.called.length - 1]
+  const [hintFor, setHintFor] = useState<number | undefined>()
+  useEffect(() => {
+    if (last === undefined) return
+    const t = window.setTimeout(() => setHintFor(last), HINT_DELAY_MS)
+    return () => window.clearTimeout(t)
+  }, [last])
+  const hint = hintFor === last && last !== undefined && !marks.includes(last) && !loto.winner ? last : undefined
   const shakeReady = useShakeReady(loto.called.length)
   const recent = loto.called.slice(-7).reverse()
   /** Hàng đánh đủ 5 số (đã gọi) — kinh được. */
@@ -595,9 +610,15 @@ export function LotoPanel({
                   onClick={() => setFront(k)}
                   onKeyDown={(e) => e.key === 'Enter' && setFront(k)}
                   className="absolute top-3 left-0 w-[64%] origin-left cursor-pointer transition-transform"
-                  style={{ transform: `translateX(${(depth + 1) * 34}%) scale(${1 - (depth + 1) * 0.08})`, opacity: 0.45, zIndex: 5 - depth }}
+                  style={{ transform: `translateX(${(depth + 1) * 34}%) scale(${1 - (depth + 1) * 0.08})`, zIndex: 5 - depth }}
                 >
-                  <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
+                  <div
+                    className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}
+                  >
+                    <div className="opacity-45">
+                      <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
+                    </div>
+                  </div>
                 </div>
               ))}
             <div className={`relative z-10 ${mine.length > 1 ? 'w-[64%]' : 'mx-auto w-[72%]'}`}>
@@ -609,6 +630,7 @@ export function LotoPanel({
                 called={loto.called}
                 marker={marker}
                 freshMark={fresh}
+                hint={hint}
                 winRow={winner?.id === me && winner.sheet === current ? winner.row : undefined}
                 onMark={
                   winner
