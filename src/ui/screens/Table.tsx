@@ -835,11 +835,20 @@ export function Table() {
                       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGuidePick(true)}>
                         ❓ Hướng dẫn
                       </Button>
-                      {canHost && (
-                        <Button variant="danger" className="bg-night/90 px-3 py-1.5 text-sm" onClick={cancelRound}>
-                          Hủy ván
-                        </Button>
-                      )}
+                      {/* Ai cũng thấy Hủy ván; không phải host thì bấm vào được nhắc nhờ host (host offline thì mời nhận làm host) */}
+                      <Button
+                        variant="danger"
+                        className={`bg-night/90 px-3 py-1.5 text-sm ${canHost ? '' : 'opacity-60'}`}
+                        onClick={() =>
+                          canHost
+                            ? cancelRound()
+                            : hostAway && me
+                              ? confirmTakeHost(session, me)
+                              : flash(`Chỉ host (${hostName}) mới hủy được ván — nhờ ${hostName} hủy giúp.`, true)
+                        }
+                      >
+                        Hủy ván
+                      </Button>
                       {backBtn}
                     </More>
                   }
