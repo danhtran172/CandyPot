@@ -332,11 +332,11 @@ export function SheetPicker({
           })}
         </div>
         {/*
-          Băng tờ: tờ đang xem ở giữa, hai tờ trước bên trái và hai tờ sau bên phải (nhỏ dần, nghiêng, mờ dần) — chạm tờ bên cạnh
+          Băng tờ: tờ đang xem ở giữa, hai tờ trước bên trái và hai tờ sau bên phải (nhỏ dần, tối dần, nằm sau) — chạm tờ bên cạnh
           để chuyển, lướt ngang cũng được. Các tờ trượt mượt sang chỗ mới khi đổi tờ.
         */}
         <div
-          className="relative mt-2 grid touch-pan-y overflow-hidden py-2 [perspective:900px]"
+          className="relative mt-2 grid touch-pan-y overflow-hidden py-2"
           onPointerDown={(e) => (swipe.current = e.clientX)}
           onPointerUp={(e) => {
             const x0 = swipe.current
@@ -359,10 +359,12 @@ export function SheetPicker({
                 aria-label={d ? `Xem tờ ${sheetName(i)}` : undefined}
                 onClick={d ? () => go(d) : undefined}
                 onKeyDown={d ? (e) => e.key === 'Enter' && go(d) : undefined}
-                className={`relative col-start-1 row-start-1 w-[15rem] justify-self-center transition-[transform,opacity] duration-300 ease-out ${d ? 'cursor-pointer' : ''}`}
+                className={`relative col-start-1 row-start-1 w-[15rem] justify-self-center rounded-md transition-[transform,filter] duration-300 ease-out ${d ? 'cursor-pointer' : ''}`}
                 style={{
-                  transform: `translateX(${d * (far === 1 ? 62 : 52)}%) scale(${[1, 0.8, 0.64][far]}) rotateY(${-d * (far === 1 ? 26 : 19)}deg)`,
-                  opacity: [1, 0.55, 0.25][far],
+                  // Tờ bên cạnh: nhỏ dần, lấp ló hai bên, tối đi (vẫn đặc, không trong suốt)
+                  transform: `translateX(${Math.sign(d) * [0, 52, 90][far]}px) scale(${[1, 0.86, 0.74][far]})`,
+                  filter: far ? `brightness(${far === 1 ? 0.5 : 0.35}) saturate(0.7)` : undefined,
+                  boxShadow: far ? undefined : '0 10px 28px rgb(0 0 0 / 0.55)',
                   zIndex: 10 - far,
                 }}
               >
@@ -832,7 +834,8 @@ export function LotoPanel({
                   style={{ transform: `translateX(${(depth + 1) * 22}%) scale(${1 - (depth + 1) * 0.08})`, zIndex: 5 - depth }}
                 >
                   <div className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}>
-                    <div className="opacity-45">
+                    {/* Tờ phụ: tối đi chứ không trong suốt */}
+                    <div className="brightness-50 saturate-[0.7]">
                       <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
                     </div>
                   </div>
