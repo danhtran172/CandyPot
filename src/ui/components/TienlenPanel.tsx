@@ -196,7 +196,10 @@ export function TienlenPanel({
           {menu}
         </div>
       ) : dealing ? (
-        <p className="py-6 text-center text-sm font-semibold text-lemon">Đang chia bài…</p>
+        <div className="flex items-center gap-2 py-3">
+          <p className="flex-1 text-center text-sm font-semibold text-lemon">Đang chia bài…</p>
+          {menu}
+        </div>
       ) : !viewer ? (
         <div className="flex items-center gap-2">
           <p className="flex-1 text-center text-xs text-muted">
