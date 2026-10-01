@@ -6,12 +6,16 @@ import { WhoAmI } from './WhoAmI'
 import { PotAwardNotice } from './PotAwardNotice'
 import { ReawardSheet } from './ReawardSheet'
 import { readMe } from '../me'
+import navTable from '../../assets/nav/table.webp'
+import navSummary from '../../assets/nav/summary.webp'
+import navHistory from '../../assets/nav/history.webp'
+import navTitles from '../../assets/nav/titles.webp'
 
 const TABS = [
-  { to: '', label: 'Bàn chơi', icon: '🃏' },
-  { to: 'summary', label: 'Sổ nợ', icon: '🍬' },
-  { to: 'history', label: 'Lịch sử', icon: '📜' },
-  { to: 'titles', label: 'Danh hiệu', icon: '👑' },
+  { to: '', label: 'Bàn chơi', icon: navTable },
+  { to: 'summary', label: 'Sổ nợ', icon: navSummary },
+  { to: 'history', label: 'Lịch sử', icon: navHistory },
+  { to: 'titles', label: 'Danh hiệu', icon: navTitles },
 ]
 
 /** Nạp buổi theo URL, hiện thanh điều hướng dưới cùng. */
@@ -99,12 +103,11 @@ export function SessionLayout() {
                   to={t.to ? `/s/${sid}/${t.to}` : `/s/${sid}`}
                   end
                   className={({ isActive }) =>
-                    `flex flex-col items-center gap-0.5 py-2 text-xs font-semibold ${isActive ? 'text-lemon' : 'text-muted'}`
+                    `flex flex-col items-center gap-1 py-2 text-xs font-semibold transition-opacity ${isActive ? 'text-lemon' : 'text-muted opacity-60'}`
                   }
                 >
-                  <span aria-hidden className="text-lg leading-none">
-                    {t.icon}
-                  </span>
+                  {/* Icon cắt sát viền, vuông 96px → hiển thị 24px cho cả 4 tab đều nhau */}
+                  <img src={t.icon} alt="" aria-hidden draggable={false} className="size-6 object-contain" />
                   {t.label}
                 </NavLink>
               </li>
