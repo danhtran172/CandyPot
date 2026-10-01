@@ -4,9 +4,13 @@ const KINDS: ShuffleKind[] = ['riffle', 'bridge']
 
 /** Chọn kiểu xào theo mã ván — ngẫu nhiên giữa các ván nhưng máy nào trong phòng cũng thấy cùng một kiểu. */
 export function shuffleKindOf(roundId: string): ShuffleKind {
-  let h = 0
-  for (const ch of roundId) h = (h * 31 + ch.charCodeAt(0)) | 0
-  return KINDS[Math.abs(h) % KINDS.length]
+  // FNV-1a rồi trộn bit — chia đều 50/50 giữa các kiểu
+  let h = 0x811c9dc5
+  for (const ch of roundId) h = Math.imul(h ^ ch.charCodeAt(0), 0x01000193)
+  h ^= h >>> 15
+  h = Math.imul(h, 0x2c1b3c6d)
+  h ^= h >>> 12
+  return KINDS[(h >>> 0) % KINDS.length]
 }
 
 /** Máy bật giảm chuyển động → bỏ màn xào / chia bài. */

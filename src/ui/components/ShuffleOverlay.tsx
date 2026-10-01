@@ -83,20 +83,25 @@ function shuffleFrames(kind: ShuffleKind): Keyframe[][] {
       const h1 = next.indexOf(c)
       const side = h0 < half ? -1 : 1
       const j = h0 % half
-      const drop = s + ((kind === 'bridge' ? 0.42 : 0.36) + (0.42 * h1) / (N - 1)) * pass
+      const drop = s + ((kind === 'bridge' ? 0.42 : 0.36) + ((kind === 'bridge' ? 0.36 : 0.42) * h1) / (N - 1)) * pass
       const land = drop + 0.08 * pass
       const jitter = (noise(p + 7, c) - 0.5) * 4
       if (kind === 'bridge') {
-        pose(c, s + 0.2 * pass, side * X, -j * H, 0, 100 + h0)
-        pose(c, s + 0.38 * pass, side * X * 0.72, -j * H - 16, side * 16, 100 + h0)
-        pose(c, drop, side * X * 0.72, -j * H - 16, side * 16, 100 + h0)
+        // Tách đôi nằm phẳng, rồi uốn hai nửa thành vòm cầu: mép trong vểnh lên, các lá xòe dần như bị bẻ cong
+        const bend = side * (22 + j * 1.6)
+        pose(c, s + 0.18 * pass, side * X * 0.85, -j * H, 0, 100 + h0)
+        pose(c, s + 0.36 * pass, side * X * 0.5, -j * H * 1.6 - 26, bend, 100 + h0)
+        pose(c, drop, side * X * 0.5, -j * H * 1.6 - 26, bend, 100 + h0)
       } else {
         pose(c, s + 0.22 * pass, side * X, -j * H - 4, -side * 7, 100 + h0)
         pose(c, drop, side * X * 0.94, -j * H - 6, -side * 11, 100 + h0)
       }
       pose(c, land, jitter, -h1 * H, jitter * 0.6, h1)
-      // Vuốt gọn xấp bài
-      pose(c, s + 0.93 * pass, 0, -h1 * H, 0, h1)
+      // Vuốt gọn xấp bài (bridge: gõ xấp xuống bàn một cái cho thẳng)
+      if (kind === 'bridge') {
+        pose(c, s + 0.88 * pass, 0, -h1 * H - 6, 0, h1)
+        pose(c, s + 0.95 * pass, 0, -h1 * H, 0, h1)
+      } else pose(c, s + 0.93 * pass, 0, -h1 * H, 0, h1)
     }
     deck = next
   }
