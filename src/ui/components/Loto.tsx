@@ -581,8 +581,8 @@ export function LotoPanel({
               ))}
             </div>
           </div>
-          {/* Các tờ xếp ngang: tờ đang xem bên phải (to, rõ); tờ phụ nhỏ hơn, mờ, lấp ló bên trái — chạm để đưa lên */}
-          <div className="relative mt-2 flex justify-end">
+          {/* Các tờ xếp ngang: tờ đang xem bên trái (to, rõ); tờ phụ nhỏ hơn, mờ, lấp ló bên phải — chạm để đưa lên */}
+          <div className="relative mt-2 flex justify-start">
             {mine
               .map((i, k) => ({ i, k }))
               .filter(({ i }) => i !== current)
@@ -594,8 +594,8 @@ export function LotoPanel({
                   aria-label={`Xem tờ ${sheetName(i)}`}
                   onClick={() => setFront(k)}
                   onKeyDown={(e) => e.key === 'Enter' && setFront(k)}
-                  className="absolute top-3 right-0 w-[64%] origin-right cursor-pointer transition-transform"
-                  style={{ transform: `translateX(-${(depth + 1) * 34}%) scale(${1 - (depth + 1) * 0.08})`, opacity: 0.45, zIndex: 5 - depth }}
+                  className="absolute top-3 left-0 w-[64%] origin-left cursor-pointer transition-transform"
+                  style={{ transform: `translateX(${(depth + 1) * 34}%) scale(${1 - (depth + 1) * 0.08})`, opacity: 0.45, zIndex: 5 - depth }}
                 >
                   <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
                 </div>
