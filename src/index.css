@@ -281,3 +281,26 @@ body {
   opacity: 0.6;
 }
 
+/* Lô tô: bi số vừa gọi lăn ra — phóng to, xoay, rồi lóe sáng một nhịp */
+@media (prefers-reduced-motion: no-preference) {
+  .ball-in {
+    animation:
+      ball-in 0.55s cubic-bezier(0.25, 1.4, 0.5, 1) both,
+      ball-glow 1.2s ease-out 0.5s;
+  }
+  @keyframes ball-in {
+    from {
+      scale: 0.2;
+      rotate: -200deg;
+      opacity: 0;
+    }
+  }
+  @keyframes ball-glow {
+    30% {
+      box-shadow:
+        0 0 0 4px rgb(255 210 63 / 0.75),
+        0 0 22px rgb(255 210 63 / 0.7);
+    }
+  }
+}
+

@@ -358,15 +358,53 @@ export function SheetPicker({
 }
 
 /** Quả số lô tô. */
-export function Ball({ n, big, fresh }: { n: number; big?: boolean; fresh?: boolean }) {
+export function Ball({ n, big, mid, fresh }: { n: number; big?: boolean; mid?: boolean; fresh?: boolean }) {
+  // Kiểu bi xổ số: vành màu, mặt kem bóng, số cùng màu vành (màu theo số)
+  const ring = BALL_COLORS[n % BALL_COLORS.length]
   return (
     <span
-      className={`num grid shrink-0 place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,#ffe9a8_45%,#f4b400)] font-extrabold text-night shadow-md ${
-        big ? 'size-14 text-2xl' : 'size-7 text-xs'
-      } ${fresh ? 'pop' : ''}`}
+      className={`num relative grid shrink-0 place-items-center rounded-full shadow-[0_2px_4px_rgb(0_0_0/0.35)] ${big ? 'size-14' : mid ? 'size-11' : 'size-8'} ${
+        fresh ? 'ball-in' : ''
+      }`}
+      style={{ background: `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${ring} 55%, white), ${ring} 55%, color-mix(in srgb, ${ring} 70%, black))` }}
     >
-      {n}
+      <span
+        className={`absolute rounded-full bg-[radial-gradient(circle_at_38%_30%,#fffef6,#f7eccd_60%,#e6d6a8)] shadow-[inset_0_1px_2px_rgb(0_0_0/0.25)] ${
+          big || mid ? 'inset-[4px]' : 'inset-[3px]'
+        }`}
+      />
+      <span className={`font-display relative leading-none font-extrabold ${big ? 'text-2xl' : mid ? 'text-lg' : 'text-[13px]'}`} style={{ color: ring }}>
+        {n}
+      </span>
     </span>
+  )
+}
+const BALL_COLORS = ['#d62828', '#2b9348', '#e07a00', '#b8920f', '#1d6fb8']
+
+/** Bảng tất cả số đã gọi (mới nhất trước) — như bảng dò kết quả. */
+function CalledBoard({ called, onClose }: { called: number[]; onClose: () => void }) {
+  const list = [...called].reverse()
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Các số đã gọi" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
+      <div className="pop relative max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
+        <div className="flex items-baseline">
+          <h2 className="font-display flex-1 text-xl font-extrabold">Số đã gọi</h2>
+          <span className="num text-sm text-muted">{called.length}/90</span>
+        </div>
+        <div className="mt-3 grid grid-cols-6 justify-items-center gap-2">
+          {list.map((n, i) => (
+            <span key={n} className={i === 0 ? 'rounded-full ring-2 ring-lemon ring-offset-2 ring-offset-plum' : ''}>
+              <Ball n={n} mid />
+            </span>
+          ))}
+        </div>
+        {!list.length && <p className="py-6 text-center text-sm text-muted">Chưa gọi số nào.</p>}
+        <Button className="mt-4 w-full" onClick={onClose}>
+          Đóng
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -514,6 +552,7 @@ export function LotoPanel({
   const [marks, setMarks] = useMarks(roundId, me)
   const [marker, setMarker] = useState<Marker>(readMarker)
   const [fresh, setFresh] = useState<number | undefined>()
+  const [board, setBoard] = useState(false)
   // Thu tờ lại (chỉ còn số gọi + nút) — nhớ trên máy này
   const [folded, setFolded] = useState(() => {
     try {
@@ -563,6 +602,7 @@ export function LotoPanel({
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-2 pb-2 backdrop-blur">
       <ChalkFilter />
+      {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
       {/* Túi số (người gọi) + số vừa gọi: mới nhất to, bên trái */}
       <div className="flex items-center gap-2">
         {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
@@ -578,7 +618,14 @@ export function LotoPanel({
         ) : (
           <span className="flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
         )}
-        <span className="num shrink-0 text-[11px] text-muted">{loto.called.length}/90</span>
+        <button
+          type="button"
+          onClick={() => setBoard(true)}
+          aria-label="Xem tất cả số đã gọi"
+          className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
+        >
+          {loto.called.length}/90
+        </button>
         {mine.length > 0 && (
           <button
             type="button"
