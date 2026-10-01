@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colOf, generatePair, pairError, pairsFor, seeded, sheetError, sheetSet } from './lotoSheets'
+import { colOf, generatePair, MAX_SHARED, pairError, pairsFor, rowNumbers, seeded, sheetError, sheetSet } from './lotoSheets'
 
 describe('lotoSheets — bộ giấy đúng quy tắc', () => {
   it('cột theo chục: 1–9, 10–19, …, 80–90', () => {
@@ -20,6 +20,31 @@ describe('lotoSheets — bộ giấy đúng quy tắc', () => {
     expect(sheetSet('g1', 3)).not.toEqual(sheetSet('g2', 3))
     // Thêm cặp không đổi các tờ cũ
     expect(sheetSet('g1', 4).slice(0, 6)).toEqual(sheetSet('g1', 3))
+  })
+
+  it('cả bộ: đúng luật, không hai hàng (ở hai tờ khác nhau) chung quá 2 số, ít số trùng đúng ô', () => {
+    for (const [id, pairs] of [
+      ['bo-1', 10],
+      ['bo-2', 15],
+    ] as const) {
+      const set = sheetSet(id, pairs)
+      for (let k = 0; k < pairs; k++) {
+        expect(sheetError(set[2 * k])).toBeNull()
+        expect(sheetError(set[2 * k + 1])).toBeNull()
+        expect(pairError(set[2 * k], set[2 * k + 1])).toBeNull()
+      }
+      const rows = set.flatMap((sheet, i) => Array.from({ length: 9 }, (_, r) => ({ i, nums: rowNumbers(sheet, r) })))
+      let worst = 0
+      for (let a = 0; a < rows.length; a++)
+        for (let b = a + 1; b < rows.length; b++)
+          if (rows[a].i !== rows[b].i) worst = Math.max(worst, rows[a].nums.filter((n) => rows[b].nums.includes(n)).length)
+      expect(worst).toBeLessThanOrEqual(MAX_SHARED)
+      // Trùng đúng ô: trung bình dưới 2 số mỗi cặp tờ (ngẫu nhiên thuần ≈ 2.5)
+      let same = 0
+      for (let a = 0; a < set.length; a++)
+        for (let b = a + 1; b < set.length; b++) same += set[a].flat().filter((x, k) => x !== null && x === set[b].flat()[k]).length
+      expect(same / ((set.length * (set.length - 1)) / 2)).toBeLessThan(2)
+    }
   })
 
   it('đủ giấy cho cả bàn mua tối đa', () => {

@@ -6,6 +6,7 @@
  * - Cột theo chục: cột 1 là 1–9, cột 2 là 10–19, …, cột 8 là 70–79, cột 9 là 80–90.
  * - Mỗi hàng đúng 5 số (4 ô trống). Mỗi khối có ít nhất 1 số ở mỗi cột, số trong cột tăng dần từ trên xuống.
  * - Hai tờ cùng màu là một cặp: gộp lại đủ 90 số, không số nào lặp.
+ * - Các tờ khác cặp không na ná nhau: không hai hàng nào chung quá 2 số, hạn chế số trùng đúng ô.
  * Cả bộ là nhiều cặp màu, sinh cố định theo mã game (máy nào cũng ra đúng bộ đó, ván nào cũng dùng lại như giấy thật).
  */
 
@@ -31,7 +32,20 @@ export const SHEET_COLORS = [
   '#2a9d8f',
   '#6d597a',
 ]
-export const COLOR_NAMES = ['Đỏ', 'Xanh dương', 'Xanh lá', 'Vàng', 'Tím', 'Cam', 'Xanh biển', 'Gạch', 'Xanh chuối', 'Hồng', 'Xanh rêu', 'Tím than']
+export const COLOR_NAMES = [
+  'Đỏ',
+  'Xanh dương',
+  'Xanh lá',
+  'Vàng',
+  'Tím',
+  'Cam',
+  'Xanh biển',
+  'Gạch',
+  'Xanh chuối',
+  'Hồng',
+  'Xanh rêu',
+  'Tím than',
+]
 
 /** Cột của một số: 1–9 → 0, 10–19 → 1, …, 80–90 → 8. */
 export const colOf = (n: number) => (n === 90 ? 8 : Math.floor(n / 10))
@@ -87,53 +101,178 @@ function splitIntoTickets(rand: () => number): number[][][] | null {
   return tickets.every((_, t) => size(t) === 15) ? tickets : null
 }
 
-/** Xếp 15 số của một vé vào 3 hàng × 9 cột, mỗi hàng đúng 5 số; số trong cột tăng dần. */
-function layoutTicket(cols: number[][], rand: () => number): Sheet | null {
-  const rows: Sheet = Array.from({ length: 3 }, () => Array<number | null>(COLS).fill(null))
+/**
+ * Khung một vé: với mỗi cột, các hàng (0–2) có số — `counts[c]` số ở cột c, mỗi hàng đúng 5 số.
+ * Cột 3 số trước, rồi 2, rồi 1 — chọn hàng còn ít số nhất.
+ */
+function ticketPattern(counts: number[], rand: () => number): number[][] | null {
+  const pattern: number[][] = Array.from({ length: COLS }, () => [])
   const count = [0, 0, 0]
-  // Cột 3 số trước, rồi 2, rồi 1 — chọn hàng còn ít số nhất
   const order = shuffle(
     Array.from({ length: COLS }, (_, c) => c),
     rand,
-  ).sort((a, b) => cols[b].length - cols[a].length)
+  ).sort((a, b) => counts[b] - counts[a])
   for (const c of order) {
-    const k = cols[c].length
     const pick = shuffle([0, 1, 2], rand)
       .sort((a, b) => count[a] - count[b])
-      .slice(0, k)
+      .slice(0, counts[c])
       .sort((a, b) => a - b)
     if (pick.some((r) => count[r] >= PER_ROW)) return null
-    const nums = [...cols[c]].sort((a, b) => a - b)
-    pick.forEach((r, i) => {
-      rows[r][c] = nums[i]
-      count[r]++
-    })
+    pick.forEach((r) => count[r]++)
+    pattern[c] = pick
   }
-  return count.every((x) => x === PER_ROW) ? rows : null
+  return count.every((x) => x === PER_ROW) ? pattern : null
 }
 
-/** Sinh một cặp tờ (2 tờ × 3 vé) phủ đủ 1–90. */
-export function generatePair(rand: () => number): [Sheet, Sheet] {
+function patternFor(cols: number[][], rand: () => number): number[][] {
+  const counts = cols.map((c) => c.length)
   for (;;) {
-    const tickets = splitIntoTickets(rand)
-    if (!tickets) continue
-    const laid: Sheet[] = []
-    for (const t of tickets) {
-      let rows: Sheet | null = null
-      for (let tries = 0; tries < 50 && !rows; tries++) rows = layoutTicket(t, rand)
-      if (!rows) break
-      laid.push(rows)
-    }
-    if (laid.length === 6) return [[...laid[0], ...laid[1], ...laid[2]], [...laid[3], ...laid[4], ...laid[5]]]
+    const p = ticketPattern(counts, rand)
+    if (p) return p
   }
 }
 
-/** Bộ giấy của game: `pairs` cặp màu (tờ 2k và 2k+1 cùng màu k). Cố định theo mã game. */
-export function sheetSet(gameId: string, pairs: number): Sheet[] {
-  const out: Sheet[] = []
-  for (let k = 0; k < pairs; k++) out.push(...generatePair(seeded(`${gameId}:loto:${k}`)))
-  return out
+/** Vé (số theo cột + khung) → 3 hàng; số trong cột xếp tăng dần từ trên xuống. */
+function layout(cols: number[][], pattern: number[][]): Sheet {
+  const rows: Sheet = Array.from({ length: 3 }, () => Array<number | null>(COLS).fill(null))
+  cols.forEach((list, c) => {
+    const nums = [...list].sort((x, y) => x - y)
+    pattern[c].forEach((r, i) => (rows[r][c] = nums[i]))
+  })
+  return rows
 }
+
+const toPair = (cols: number[][][], patterns: number[][][]): [Sheet, Sheet] => {
+  const laid = cols.map((t, i) => layout(t, patterns[i]))
+  return [
+    [...laid[0], ...laid[1], ...laid[2]],
+    [...laid[3], ...laid[4], ...laid[5]],
+  ]
+}
+
+/** Các tờ đã có trong bộ — cặp mới phải tránh giống chúng. */
+interface Taken {
+  /** Số → các hàng (của tờ đã có) chứa số đó. */
+  rowsWith: number[][]
+  /** Số hàng đã có. */
+  rows: number
+  /** Ô (hàng × 9 + cột) → số → bao nhiêu tờ đã có số đó ở đúng ô đó. */
+  cells: Map<number, number>[]
+}
+
+/** Hai hàng ở hai tờ khác nhau chung nhiều nhất chừng này số (chung 3–4 số thì tờ nhìn na ná, dễ cùng kinh một lúc). */
+export const MAX_SHARED = 2
+
+/**
+ * Độ "giống" của một vé (khối `block` của tờ) so với các tờ đã có: mỗi cặp hàng chung quá `MAX_SHARED` số bị phạt nặng
+ * (càng chung nhiều càng nặng), mỗi số trùng đúng ô với tờ khác phạt nhẹ.
+ */
+function likeness(rows: Sheet, block: number, taken: Taken, shared: Int32Array): number {
+  let cost = 0
+  rows.forEach((row, i) => {
+    const r = block * 3 + i
+    const touched: number[] = []
+    row.forEach((n, c) => {
+      if (n === null) return
+      cost += taken.cells[r * COLS + c].get(n) ?? 0
+      for (const k of taken.rowsWith[n]) if (shared[k]++ === 0) touched.push(k)
+    })
+    for (const k of touched) {
+      const over = shared[k] - MAX_SHARED
+      if (over > 0) cost += 100 * over * over
+      shared[k] = 0
+    }
+  })
+  return cost
+}
+
+function addTaken(taken: Taken, pair: [Sheet, Sheet]) {
+  for (const sheet of pair)
+    sheet.forEach((row, r) => {
+      const k = taken.rows++
+      row.forEach((n, c) => {
+        if (n === null) return
+        taken.rowsWith[n].push(k)
+        const cell = taken.cells[r * COLS + c]
+        cell.set(n, (cell.get(n) ?? 0) + 1)
+      })
+    })
+}
+
+const emptyTaken = (): Taken => ({
+  rowsWith: Array.from({ length: 91 }, () => []),
+  rows: 0,
+  cells: Array.from({ length: ROWS * COLS }, () => new Map()),
+})
+
+/** Số bước chỉnh tối đa cho một cặp: đủ hết hàng na ná, bớt phần lớn số trùng ô — 10 cặp chừng vài chục ms. */
+const TUNE_STEPS = 1000
+
+/**
+ * Sinh một cặp tờ (2 tờ × 3 vé) phủ đủ 1–90.
+ * Có `taken` (các tờ đã có trong bộ) thì chỉnh dần cho cặp mới khác hẳn chúng: đổi chỗ hai số cùng cột giữa hai vé
+ * (vẫn đúng luật: mỗi vé giữ số lượng ở mỗi cột) hoặc xếp lại khung một vé — giữ bước nào không làm tờ giống hơn.
+ */
+export function generatePair(rand: () => number, taken?: Taken): [Sheet, Sheet] {
+  let cols: number[][][] | null = null
+  while (!cols) cols = splitIntoTickets(rand)
+  const patterns = cols.map((t) => patternFor(t, rand))
+  if (!taken?.rows) return toPair(cols, patterns)
+  const shared = new Int32Array(taken.rows)
+  // Vé t là khối t % 3 của tờ đầu (t < 3) hoặc tờ sau
+  const costOf = (t: number) => likeness(layout(cols![t], patterns[t]), t % 3, taken, shared)
+  const costs = cols.map((_, t) => costOf(t))
+  let total = costs.reduce((a, b) => a + b, 0)
+  for (let step = 0; step < TUNE_STEPS && total > 0; step++) {
+    const t = Math.floor(rand() * 6)
+    if (rand() < 0.2) {
+      // Xếp lại khung một vé
+      const old = patterns[t]
+      patterns[t] = patternFor(cols[t], rand)
+      const next = costOf(t)
+      if (next <= costs[t]) {
+        total += next - costs[t]
+        costs[t] = next
+      } else patterns[t] = old
+      continue
+    }
+    // Đổi hai số cùng cột giữa hai vé
+    const u = (t + 1 + Math.floor(rand() * 5)) % 6
+    const c = Math.floor(rand() * COLS)
+    const i = Math.floor(rand() * cols[t][c].length)
+    const j = Math.floor(rand() * cols[u][c].length)
+    const swap = () => ([cols![t][c][i], cols![u][c][j]] = [cols![u][c][j], cols![t][c][i]])
+    swap()
+    const [nt, nu] = [costOf(t), costOf(u)]
+    if (nt + nu <= costs[t] + costs[u]) {
+      total += nt + nu - costs[t] - costs[u]
+      costs[t] = nt
+      costs[u] = nu
+    } else swap()
+  }
+  return toPair(cols, patterns)
+}
+
+/**
+ * Bộ giấy của game: `pairs` cặp màu (tờ 2k và 2k+1 cùng màu k). Cố định theo mã game.
+ * Mỗi cặp sinh theo thứ tự, tránh giống các cặp trước — thêm cặp (đông người) không đổi các tờ cũ.
+ */
+export function sheetSet(gameId: string, pairs: number): Sheet[] {
+  // Nhớ bộ đã sinh theo mã game (sinh có chỉnh nên tốn vài chục ms) — cần thêm cặp thì sinh tiếp từ chỗ cũ
+  let set = sets.get(gameId)
+  if (!set) {
+    if (sets.size >= 8) sets.clear()
+    set = { sheets: [], taken: emptyTaken() }
+    sets.set(gameId, set)
+  }
+  for (let k = set.sheets.length / 2; k < pairs; k++) {
+    const pair = generatePair(seeded(`${gameId}:loto2:${k}`), set.taken)
+    addTaken(set.taken, pair)
+    set.sheets.push(...pair)
+  }
+  return set.sheets.slice(0, pairs * 2)
+}
+const sets = new Map<string, { sheets: Sheet[]; taken: Taken }>()
 
 /** Bộ giấy đủ cho cả bàn: 10 bộ màu (20 tờ), đông người thì thêm để ai cũng mua đủ tối đa. */
 export const pairsFor = (players: number, max: number) => Math.max(10, Math.ceil((players * max) / 2))
