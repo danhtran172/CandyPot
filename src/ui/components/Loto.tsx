@@ -3,6 +3,7 @@ import { fullRows, ownerOf, type LotoState } from '../../core/games/lotoPlay'
 import { COLS, markColor, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
 import type { ID, Player } from '../../core/types'
 import { Button } from './kit'
+import { useLandscape } from '../landscape'
 import bagIcon from '../../assets/loto-bag.webp'
 
 /** Cách đánh dấu số trên tờ. */
@@ -176,12 +177,12 @@ export function SheetCard({
   /** Ô số: nền trắng ngà, số đen to đậm (kiểu tờ in) — hàng kinh nền vàng. */
   const numCell = (win: boolean) =>
     `relative grid place-items-center bg-[#f7f0e1] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
-      small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[15px]'
+      small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[15px] land:text-[12px]'
     } ${win ? '!bg-lemon' : ''}`
   /** Dải chữ trang trí giữa các khối, như tờ in. */
   const band = (text: string, italic?: boolean) =>
     !small && (
-      <div className={`py-0.5 text-center text-[10px] font-bold tracking-wide ${italic ? 'italic' : 'uppercase'}`} style={{ color: muted }}>
+      <div className={`truncate py-0.5 text-center text-[10px] font-bold tracking-wide land:text-[9px] ${italic ? 'italic' : 'uppercase'}`} style={{ color: muted }}>
         {text}
       </div>
     )
@@ -724,6 +725,116 @@ export function LotoPanel({
       navigator.vibrate?.([60, 40, 60])
     }
   }, [ready])
+
+  const land = useLandscape()
+  const markOn = winner
+    ? undefined
+    : (n: number) => {
+        const on = !marks.includes(n)
+        setFresh(on ? n : undefined)
+        setMarks(on ? [...marks, n] : marks.filter((x) => x !== n))
+      }
+  const markerPicker = (
+    <div role="radiogroup" aria-label="Đánh số bằng" className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap">
+      {MARKERS.map(([v, label]) => (
+        <button
+          key={v}
+          type="button"
+          role="radio"
+          aria-checked={marker === v}
+          onClick={() => {
+            setMarker(v)
+            saveMarker(v)
+          }}
+          className={`rounded-full px-2 py-0.5 ${marker === v ? 'bg-lemon text-night' : 'text-muted'}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+  const action = winner ? (
+    isHost ? (
+      <Button variant="primary" className="font-display flex-1 text-lg" onClick={onNext}>
+        Ván mới
+      </Button>
+    ) : (
+      <p className="flex-1 text-center text-xs text-muted">{players[winner.id]?.name} kinh · chờ host mở ván mới</p>
+    )
+  ) : ready ? (
+    <Button variant="primary" className="font-display loto-kinh flex-1 text-xl" onClick={() => onClaim(ready.sheet, ready.row)}>
+      KINH!
+    </Button>
+  ) : null
+
+  // Xoay ngang: cột trái gom số gọi + nút, bên phải bày đủ các tờ cạnh nhau (đánh trực tiếp trên tờ nào cũng được)
+  if (land) {
+    const n = Math.max(1, mine.length)
+    return (
+      <section
+        data-guide="cards"
+        className="mb-1 flex h-[calc(100dvh-3.5rem)] gap-3 rounded-3xl border border-line/60 bg-night/95 p-2 backdrop-blur"
+      >
+        <ChalkFilter />
+        {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
+        <div className="flex w-36 shrink-0 flex-col gap-2">
+          {outside ? (
+            <p className="text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-1.5">
+                {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
+                {recent.length ? <Ball key={recent[0]} n={recent[0]} big fresh /> : <span className="text-xs text-muted">Chờ gọi số…</span>}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {recent.slice(1).map((n2) => (
+                  <Ball key={n2} n={n2} />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setBoard(true)}
+                aria-label="Xem tất cả số đã gọi"
+                className="num self-start rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
+              >
+                {loto.called.length}/90
+              </button>
+            </>
+          )}
+          {markerPicker}
+          <span className="flex-1" />
+          {action}
+          <div className="flex justify-start">{menu}</div>
+        </div>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          {mine.length ? (
+            mine.map((i) => (
+              <div
+                key={i}
+                className="shrink-0"
+                style={{ width: `min(calc((100dvh - 5rem) / 1.45), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
+              >
+                <SheetCard
+                  sheet={papers[i]}
+                  index={i}
+                  marks={marks}
+                  called={outside ? undefined : loto.called}
+                  marker={marker}
+                  freshMark={fresh}
+                  hint={hint}
+                  winRow={winner?.id === me && winner.sheet === i ? winner.row : undefined}
+                  onMark={markOn}
+                  onWarn={(x) => onWarn(`Số ${x} chưa được gọi — chưa đánh được.`)}
+                />
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted">Bạn không mua tờ nào ván này.</p>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-2 pb-2 backdrop-blur">
