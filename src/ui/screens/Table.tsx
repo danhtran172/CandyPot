@@ -546,7 +546,7 @@ export function Table() {
   const shuffling = fresh && round && shuffledId !== round.id ? round.id : null
   useEffect(() => {
     if (!shuffling) return
-    const t = window.setTimeout(() => setShuffledId(shuffling), introMs(round?.tienlen?.order.length ?? 4))
+    const t = window.setTimeout(() => setShuffledId(shuffling), introMs(shuffleKindOf(shuffling), round?.tienlen?.order.length ?? 4))
     return () => window.clearTimeout(t)
   }, [shuffling]) // eslint-disable-line react-hooks/exhaustive-deps
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.

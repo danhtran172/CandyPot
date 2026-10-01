@@ -105,7 +105,7 @@ export function TienlenPanel({
           {menu}
         </div>
       ) : dealing ? (
-        <p className="py-6 text-center text-sm font-semibold text-lemon">🃏 Đang chia bài…</p>
+        <p className="py-6 text-center text-sm font-semibold text-lemon">Đang chia bài…</p>
       ) : !viewer ? (
         <div className="flex items-center gap-2">
           <p className="flex-1 text-center text-xs text-muted">Bạn không chơi ván này · lượt {name(cards.turn!)}</p>

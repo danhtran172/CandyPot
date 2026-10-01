@@ -1,9 +1,31 @@
 import type { CSSProperties, Ref } from 'react'
-import cardBack from '../../assets/card-back.webp'
 
-/** Lưng một lá bài. Ảnh vuông, lá nằm giữa (tỉ lệ ~0,73) — object-cover vào khung lá là vừa khít. */
+/**
+ * Lưng bài riêng của CandyPot (vẽ bằng SVG, không dùng icon): viền kem, nền berry đan lưới chéo màu chanh,
+ * khung chỉ mảnh, giữa là huy hiệu kẹo mút xoắn. Dựng một lần thành data URI để mọi lá dùng chung một ảnh.
+ */
+const SVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'>
+<defs>
+<linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#ff6f8c'/><stop offset='1' stop-color='#a8203f'/></linearGradient>
+<pattern id='p' width='9' height='9' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'><path d='M0 0H9M0 0V9' stroke='#ffd23f' stroke-opacity='.32' stroke-width='1.3'/></pattern>
+<radialGradient id='m' cx='.4' cy='.35' r='.75'><stop offset='0' stop-color='#4a2858'/><stop offset='1' stop-color='#1c0e22'/></radialGradient>
+</defs>
+<rect width='100' height='140' rx='9' fill='#fff1e0'/>
+<rect x='5' y='5' width='90' height='130' rx='6' fill='url(#g)'/>
+<rect x='5' y='5' width='90' height='130' rx='6' fill='url(#p)'/>
+<rect x='10' y='10' width='80' height='120' rx='4' fill='none' stroke='#fff1e0' stroke-opacity='.85' stroke-width='1.6'/>
+<rect x='13.5' y='13.5' width='73' height='113' rx='2.5' fill='none' stroke='#ffd23f' stroke-opacity='.7' stroke-width='.8'/>
+<g fill='#ffd23f'><path d='M20 20l3 4-3 4-3-4z'/><path d='M80 20l3 4-3 4-3-4z'/><path d='M20 112l3 4-3 4-3-4z'/><path d='M80 112l3 4-3 4-3-4z'/></g>
+<path d='M50 38l32 32-32 32-32-32z' fill='none' stroke='#fff1e0' stroke-opacity='.55' stroke-width='1.2'/>
+<circle cx='50' cy='70' r='20' fill='url(#m)' stroke='#ffd23f' stroke-width='3'/>
+<path d='M50 70a3 3 0 0 1 6 0a6 6 0 0 1-12 0a9 9 0 0 1 18 0a12 12 0 0 1-24 0' fill='none' stroke='#ff8fa6' stroke-width='3.2' stroke-linecap='round'/>
+<path d='M50 70a3 3 0 0 1 6 0a6 6 0 0 1-12 0a9 9 0 0 1 18 0a12 12 0 0 1-24 0' fill='none' stroke='#fff1e0' stroke-width='1' stroke-linecap='round' stroke-opacity='.8'/>
+</svg>`
+const SRC = `data:image/svg+xml,${encodeURIComponent(SVG.replace(/\n/g, ''))}`
+
+/** Lưng một lá bài (tỉ lệ 5:7). */
 export function CardBack({ className = '', style, ref }: { className?: string; style?: CSSProperties; ref?: Ref<HTMLImageElement> }) {
-  return <img ref={ref} src={cardBack} alt="" draggable={false} style={style} className={`object-cover ${className}`} />
+  return <img ref={ref} src={SRC} alt="" draggable={false} style={style} className={`object-fill ${className}`} />
 }
 
 /** Xấp lưng bài xòe nhẹ biểu thị số lá còn trên tay (vẽ tối đa 5 lá) + con số. */
