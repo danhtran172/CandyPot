@@ -90,19 +90,18 @@ const PLASTIC_TOP = {
 
 /**
  * Chân bàn nhựa: bản to ở trên, vát cong phía trong rồi thon dần xuống, hơi choãi ra ngoài (vẽ chân trái, chân phải lật lại).
- * Chân sau ngắn và tối hơn, nằm lùi vào trong — cho bàn có chiều sâu.
  */
-function PlasticLeg({ side, back }: { side: 'left' | 'right'; back?: boolean }) {
+function PlasticLeg({ side }: { side: 'left' | 'right' }) {
   const id = useId()
   return (
     <svg
       aria-hidden
       viewBox="0 0 28 64"
       preserveAspectRatio="none"
-      className={`absolute top-[calc(100%-12px)] w-[26px] ${side === 'left' ? (back ? 'left-[13%]' : 'left-[2%]') : back ? 'right-[13%] -scale-x-100' : 'right-[2%] -scale-x-100'}`}
+      className={`absolute top-[calc(100%-12px)] w-[26px] ${side === 'left' ? 'left-[2%]' : 'right-[2%] -scale-x-100'}`}
       style={{
-        height: back ? 'min(34px, 18%)' : 'min(60px, 32%)',
-        filter: back ? 'brightness(0.55)' : 'drop-shadow(0 6px 6px rgb(0 0 0 / 0.5))',
+        height: 'min(60px, 32%)',
+        filter: 'drop-shadow(0 6px 6px rgb(0 0 0 / 0.5))',
       }}
     >
       <defs>
@@ -298,9 +297,7 @@ export function Board({
           {/* Mặt bàn */}
           {shape === 'plastic' ? (
             <div className="absolute inset-x-[19%] top-[17%] bottom-[25%]">
-              {/* Chân sau (lùi trong, tối) rồi chân trước, mặt bàn đè lên trên */}
-              <PlasticLeg side="left" back />
-              <PlasticLeg side="right" back />
+              {/* 2 chân trước, mặt bàn đè lên trên */}
               <PlasticLeg side="left" />
               <PlasticLeg side="right" />
               <div className="absolute inset-0 rounded-[1.4rem]" style={PLASTIC_TOP} />
