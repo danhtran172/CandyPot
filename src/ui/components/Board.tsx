@@ -7,6 +7,7 @@ import dragCandy from '../../assets/drag-candy.webp'
 import bowtie from '../../assets/rules/bowtie.webp'
 import ticket from '../../assets/loto-ticket.webp'
 import { CardBackStack } from './CardBack'
+import { PlayingCard } from './TienlenPanel'
 import { TURN_MS, turnStart } from '../turnClock'
 
 export interface Seat {
@@ -23,6 +24,10 @@ export interface Seat {
   tickets?: { count: number; color: string }
   /** Bài trong app: số lá còn trên tay, hiện trước chỗ ngồi dạng xấp lưng bài. */
   cards?: number
+  /** Bài đã lật cho cả bàn xem (Xì dách: đã được xét / bài cái) — thay cho xấp lưng bài. */
+  faceUp?: number[]
+  /** Làm nổi bật bài lật (bài của cái). */
+  faceUpGlow?: boolean
   isMe?: boolean
   /** Đang có máy mở bàn (bàn nhiều người) — chấm xanh góc trên bên trái avatar. */
   online?: boolean
@@ -341,9 +346,31 @@ export function Board({
             const top = square ? 50 + 47 * (Math.sin(angle) / edge) : 47 + 37 * Math.sin(angle)
             // Chip cược đặt trước chỗ ngồi, về phía giữa bàn
             const side = Math.abs(Math.cos(angle)) > 0.35 ? (Math.cos(angle) < 0 ? 'right' : 'left') : Math.sin(angle) < 0 ? 'below' : 'above'
-            const stake = s.cards !== undefined ? (
-              <span className={`pointer-events-none absolute z-10 flex items-center rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}>
+            const stake = s.faceUp?.length ? (
+              <span
+                className={`pointer-events-none absolute z-10 flex items-center rounded-xl py-1 pr-1.5 pl-1 whitespace-nowrap ${STAKE_POS[side]} ${
+                  s.faceUpGlow ? 'pop bg-lemon/20 shadow-[0_0_18px_rgb(255_210_63/0.6)] ring-2 ring-lemon' : 'bg-night/80'
+                }`}
+              >
+                <span className="flex">
+                  {s.faceUp.map((c, k) => (
+                    <span key={c} className={k ? (s.faceUpGlow ? '-ml-3' : '-ml-3.5') : ''}>
+                      <PlayingCard card={c} tiny={!s.faceUpGlow} small={s.faceUpGlow} />
+                    </span>
+                  ))}
+                </span>
+                {s.stake !== undefined && <span className="num ml-1 text-xs font-bold text-lemon">{s.stake}</span>}
+              </span>
+            ) : s.cards !== undefined ? (
+              <span className={`pointer-events-none absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]}`}>
                 <CardBackStack count={s.cards} />
+                {/* Xì dách: tiền cược nằm cạnh xấp bài */}
+                {s.stake !== undefined && (
+                  <span className="num flex items-center gap-0.5 text-xs font-bold text-lemon">
+                    · <img src={candyFor(s.player.id)} alt="" className="size-4" draggable={false} />
+                    {s.stake}
+                  </span>
+                )}
               </span>
             ) : s.tickets ? (
               <span

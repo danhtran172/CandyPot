@@ -8,6 +8,7 @@ import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, contributions, normalizeSession, potOf } from '../core/round'
 import { hostVoteTally, hostVotesNeeded } from '../core/hostVote'
 import { tienlenBets } from '../core/suggest'
+import { autoXidach, check as checkXidach, checkAll as checkAllXidach, dealXidach, draw as drawXidach, newPayouts as xidachPayouts, stand as standXidach, type XidachCards } from '../core/games/xidachPlay'
 import { autoMove as autoTienlen, deal, pass as passTienlen, payouts as tienlenPayouts, play as playTienlen, shuffled } from '../core/games/tienlenPlay'
 import { MAX_PLAYERS, POT, type Game, type GameType, type ID, type Player, type Round, type Session, type Tag } from '../core/types'
 import type { SessionRepo } from '../storage/SessionRepo'
@@ -145,6 +146,14 @@ export interface AppState {
   /** Hết giờ lượt `step` của người này: tự bỏ lượt / đánh lá nhỏ nhất. Lượt đã qua (máy khác đi rồi) thì thôi. */
   tienlenTimeout(gameId: ID, playerId: ID, step: number): string[]
   tienlenPayout(gameId: ID): string[]
+  /** Xì dách (bài trong app): rút một lá / dằn (cái dằn = xét tất). */
+  xidachDraw(gameId: ID, playerId: ID): string[]
+  xidachStand(gameId: ID, playerId: ID): string[]
+  /** Cái xét một con / xét tất — lật bài, tự trả kẹo theo kết quả. */
+  xidachCheck(gameId: ID, by: ID, target: ID): string[]
+  xidachCheckAll(gameId: ID, by: ID): string[]
+  /** Hết giờ lượt `step`: con tự dằn, cái tự xét tất. Lượt đã qua thì thôi. */
+  xidachTimeout(gameId: ID, playerId: ID, step: number): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
@@ -397,6 +406,25 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         error = 'Không lưu được vào bộ nhớ máy (có thể đã đầy). Dữ liệu vẫn còn trên màn hình.'
       }
       set({ session: next, error })
+    }
+
+    /**
+     * Một nước Xì dách bài trong app: tính trên bản mới nhất (kể cả lúc chạy lại trên phòng), kết quả xét mới
+     * thì tự ghi lượt trả kẹo (thắng: cái trả con; thua: con trả cái; ×2 / ×3 với bài đặc biệt).
+     */
+    const xidachDo = (gameId: ID, fn: (s: XidachCards) => XidachCards | string): string[] => {
+      const open = openOf(gameId)
+      if (!open?.xidach) return ['Ván này không chia bài trong app.']
+      const first = fn(open.xidach)
+      if (typeof first === 'string') return [first]
+      mapRound(gameId, open.id, (x) => {
+        if (!x.xidach) return x
+        const r = fn(x.xidach)
+        if (typeof r === 'string') return x
+        const pay = xidachPayouts(x.xidach, r, x.stakes).map((p) => ({ id: newId(), ...p }))
+        return { ...x, xidach: r, moves: [...x.moves, ...pay] }
+      })
+      return []
     }
 
     const mapGame = (gameId: ID, fn: (g: Game) => Game) =>
@@ -774,6 +802,22 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         return []
       },
 
+      xidachDraw(gameId, playerId) {
+        return xidachDo(gameId, (s) => drawXidach(s, playerId))
+      },
+      xidachStand(gameId, playerId) {
+        return xidachDo(gameId, (s) => standXidach(s, playerId))
+      },
+      xidachCheck(gameId, by, target) {
+        return xidachDo(gameId, (s) => checkXidach(s, by, target))
+      },
+      xidachCheckAll(gameId, by) {
+        return xidachDo(gameId, (s) => checkAllXidach(s, by))
+      },
+      xidachTimeout(gameId, playerId, step) {
+        return xidachDo(gameId, (s) => (s.turn === playerId && s.step === step ? autoXidach(s, playerId) : 'Lượt đã qua.'))
+      },
+
       tienlenPayout(gameId) {
         const open = openOf(gameId)
         if (!open?.tienlen) return ['Ván này không chia bài trong app.']
@@ -813,7 +857,19 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const open = openOf(gameId)
         if (!open) return ['Chưa có ván nào đang mở.']
         if (open.phase !== 'betting') return []
-        mapRound(gameId, open.id, (r) => ({ ...r, phase: 'playing' }))
+        const g = game(gameId)
+        // Xì dách bài trong app: chốt cược là chia bài luôn (chia sẵn ở đây — chạy lại trên phòng vẫn đúng bộ bài này)
+        const cards =
+          g?.type === 'xidach' && g.cardMode === 'app' && get().session?.mode === 'multi' && open.dealer
+            ? dealXidach(open.participants, open.dealer)
+            : undefined
+        mapRound(gameId, open.id, (r) => {
+          if (r.phase !== 'betting') return r
+          if (!cards) return { ...r, phase: 'playing' }
+          // Vừa chia đã có xì bàn / xì dách → trả kẹo luôn
+          const pay = xidachPayouts(undefined, cards, r.stakes).map((p) => ({ id: newId(), ...p }))
+          return { ...r, phase: 'playing', xidach: cards, moves: [...r.moves, ...pay] }
+        })
         return []
       },
 
@@ -824,7 +880,11 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         // Tự do: cược nằm trong pot nên chỉ chặn khi đã trao pot; Xì dách: chặn khi đã có lượt trả kẹo
         const paid = game(gameId)?.type === 'free' ? open.moves.some((m) => m.from === POT) : open.moves.length > 0
         if (paid) return ['Ván đã có lượt trả kẹo — hoàn tác hết rồi mới bỏ chốt được.']
-        mapRound(gameId, open.id, (r) => ({ ...r, phase: 'betting' }))
+        mapRound(gameId, open.id, (r) => {
+          const next = { ...r, phase: 'betting' as const }
+          delete next.xidach
+          return next
+        })
         return []
       },
 

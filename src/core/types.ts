@@ -1,4 +1,5 @@
 import type { TienlenCards } from './games/tienlenPlay'
+import type { XidachCards } from './games/xidachPlay'
 export type ID = string
 
 export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'free'
@@ -105,6 +106,8 @@ export interface Round {
   poker?: PokerHand
   /** Tiến lên đánh bằng bài trong app: bài từng người, lượt, bộ trên bàn, thứ tự về. */
   tienlen?: TienlenCards
+  /** Xì dách đánh bằng bài trong app (chia lúc chốt cược): bài, lượt rút, ai đã được cái xét. */
+  xidach?: XidachCards
   /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]

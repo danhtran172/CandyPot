@@ -25,6 +25,8 @@ import { AmountSheet } from '../components/AmountSheet'
 import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
+import { XidachCenter, XidachPanel } from '../components/XidachPanel'
+import { describe, resultText, type XidachCards } from '../../core/games/xidachPlay'
 import { PriceSheet } from '../components/PriceSheet'
 import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
@@ -131,7 +133,7 @@ export function Table() {
   /** Chơi bằng bài trong app (chỉ bàn nhiều người): gom các nút phụ vào nút ⋯. */
   const cardApp = !solo && game?.cardMode === 'app' && CARD_GAMES.includes(game.type)
   /** Đang đánh bài trong app: app tự tính kẹo — dưới đáy chỉ còn bài trên tay và một nút ⋯ cho các chức năng còn cần. */
-  const cardPlay = cardApp && !!round?.tienlen
+  const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach)
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
 
@@ -299,6 +301,10 @@ export function Table() {
    * Bấm thay cho kéo — người làm luôn là mình: bấm người khác = đưa kẹo (đổi sang đòi được),
    * bấm mình = xem Trả/nhận, bấm Pot = bỏ kẹo / mua tờ / (host) trao pot, bấm Bet = đặt cược, bấm 🎩 = chọn cái.
    */
+  /** Chạy một thao tác của store, lỗi thì báo. */
+  const run = (errors: string[]) => {
+    if (errors.length) flash(errors[0], true)
+  }
   /** 💤 Mình tạm nghỉ / chơi lại (bấm avatar của chính mình trên bàn). */
   const setResting = (resting: boolean) => {
     if (!me) return
@@ -310,6 +316,11 @@ export function Table() {
     if (!game || !me) return
     // Bấm avatar của mình → 💤 tạm nghỉ / chơi lại + lời/lỗ của mình từng ván (Trả/nhận ở nút riêng)
     if (id === me) return setShowMe(true)
+    // Xì dách bài trong app: cái tới lượt chạm vào một con = xét người đó
+    if (round?.xidach && round.xidach.dealer === me && round.xidach.turn === me && round.xidach.order.includes(id)) {
+      if (round.xidach.settled[id]) return flash(`Đã xét ${players[id]?.name} rồi.`, true)
+      return void run(actions().xidachCheck(game.id, me, id))
+    }
     if (id === DEALER) return canHost ? setPicker('dealer') : flash(`Chỉ host (${hostName}) mới đổi nhà cái.`, true)
     if (id === POT) {
       if (hand) return flash('Poker: dùng các nút Theo / Tố / Bỏ bài bên dưới.', true)
@@ -542,12 +553,21 @@ export function Table() {
   const [dealt, setDealt] = useState<{ id: ID; n: number } | null>(null)
   // Ván đã có sẵn lúc mở màn này (vd tải lại trang giữa ván) thì không xào lại
   const [mountRoundId] = useState(() => round?.id)
+  // Xì dách chia lúc chốt cược (ván đã mở từ trước) → nhớ ván nào đã có bài lúc mở màn này
+  const [mountDealtId] = useState(() => (round?.xidach ? round.id : null))
   const fresh =
-    !!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId && !reducedMotion()
+    !reducedMotion() &&
+    ((!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId) ||
+      (!!round?.xidach && round.xidach.step === 0 && round.id !== mountDealtId))
   const shuffling = fresh && round && shuffledId !== round.id ? round.id : null
+  /** Thứ tự chia bài theo vòng (Xì dách: các con rồi tới cái). */
+  const dealOrder = round?.tienlen ? round.tienlen.order : round?.xidach ? [...round.xidach.order, round.xidach.dealer] : null
   useEffect(() => {
     if (!shuffling) return
-    const t = window.setTimeout(() => setShuffledId(shuffling), introMs(shuffleKindOf(shuffling), round?.tienlen?.order.length ?? 4))
+    const t = window.setTimeout(
+      () => setShuffledId(shuffling),
+      introMs(shuffleKindOf(shuffling), dealOrder?.length ?? 4, round?.xidach ? 2 : 13),
+    )
     return () => window.clearTimeout(t)
   }, [shuffling]) // eslint-disable-line react-hooks/exhaustive-deps
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
@@ -562,24 +582,29 @@ export function Table() {
   const tlCards = round?.tienlen
   // Đồng hồ lượt (bài trong app): hết giờ thì máy của người tới lượt tự bỏ lượt / đánh lá nhỏ nhất;
   // máy đó mất mạng thì host làm thay sau thêm một chút. Chưa tính giờ lúc đang xào / chia bài.
-  const turnKey = cardPlay && round && tlCards?.turn && !shuffling ? `${round.id}:${tlCards.step ?? 0}` : null
+  const xdCards = round?.xidach
+  /** Ai đang tới lượt + số nước (bài trong app). */
+  const turnNow = tlCards ? { turn: tlCards.turn, step: tlCards.step ?? 0 } : xdCards ? { turn: xdCards.turn, step: xdCards.step } : null
+  const turnKey = cardPlay && round && turnNow?.turn && !shuffling ? `${round.id}:${xdCards ? 'x' : ''}${turnNow.step}` : null
   useEffect(() => {
-    if (!turnKey || !game || !tlCards?.turn) return
-    const turn = tlCards.turn
-    const step = tlCards.step ?? 0
+    if (!turnKey || !game || !turnNow?.turn) return
+    const { turn, step } = turnNow
     const mine = turn === me
     if (!mine && !canHost) return
     const wait = turnStart(turnKey) + TURN_MS + (mine ? 0 : HOST_GRACE_MS) - Date.now()
-    const t = window.setTimeout(() => actions().tienlenTimeout(game.id, turn, step), Math.max(0, wait))
+    const t = window.setTimeout(
+      () => (xdCards ? actions().xidachTimeout(game.id, turn!, step) : actions().tienlenTimeout(game.id, turn!, step)),
+      Math.max(0, wait),
+    )
     return () => window.clearTimeout(t)
   }, [turnKey, me, canHost]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Số lá hiện ở chỗ ngồi: đang chia thì theo số lá đã đáp xuống (chia đều theo vòng), xong thì số lá thật. */
-  const seatCards = (c: TienlenCards, id: ID) => {
+  const seatCards = (c: { hands: Record<ID, number[]> }, id: ID) => {
     const real = c.hands[id]?.length
-    if (!shuffling || real === undefined) return real
+    if (!shuffling || real === undefined || !dealOrder) return real
     const n = dealt?.id === shuffling ? dealt.n : 0
-    const seat = c.order.indexOf(id)
-    const got = Math.floor((n - seat + c.order.length - 1) / c.order.length)
+    const seat = dealOrder.indexOf(id)
+    const got = Math.floor((n - seat + dealOrder.length - 1) / dealOrder.length)
     return got > 0 ? Math.min(real, got) : undefined
   }
   const seats: Seat[] = visible.map((p) => ({
@@ -589,7 +614,7 @@ export function Table() {
     round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
     waiting: waitingIds.has(p.id),
     pop: pops[p.id],
-    badge: hand ? pokerBadge(p.id) : tlCards ? tienlenBadge(tlCards, p.id) : undefined,
+    badge: hand ? pokerBadge(p.id) : tlCards ? tienlenBadge(tlCards, p.id) : xdCards ? xidachBadge(xdCards, p.id) : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
       ? hand.streetBets[p.id] || undefined
@@ -599,10 +624,18 @@ export function Table() {
           ? (round ?? lastPlay)?.stakes[p.id]
           : undefined,
     stakeDim: !round || (isFree && !contributions(round)[p.id]),
-    cards: tlCards && !tlCards.finished.includes(p.id) ? seatCards(tlCards, p.id) : undefined,
+    cards:
+      tlCards && !tlCards.finished.includes(p.id)
+        ? seatCards(tlCards, p.id)
+        : xdCards && (shuffling || !xidachShown(xdCards, p.id))
+          ? seatCards(xdCards, p.id)
+          : undefined,
+    // Xì dách: bài đã được xét / bài cái đã lật thì cả bàn thấy; bài cái làm nổi bật
+    faceUp: xdCards && !shuffling && xidachShown(xdCards, p.id) ? xdCards.hands[p.id] : undefined,
+    faceUpGlow: !!xdCards && xdCards.dealer === p.id,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
-    highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id),
-    turnClock: turnKey && tlCards?.turn === p.id ? turnKey : undefined,
+    highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id) || (!!xdCards && xdCards.turn === p.id),
+    turnClock: turnKey && turnNow?.turn === p.id ? turnKey : undefined,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
       hand && p.id === me ? (
@@ -621,8 +654,52 @@ export function Table() {
     dim: !!hand?.folded.includes(p.id),
   }))
 
+  /** Bài trong app: nút ⋯ gom các chức năng còn cần (Trả/nhận, Host, Hủy ván…). */
+  const cardMenu = (
+    <More on count={menuCount}>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowLog(true)}>
+        📜 Trả/nhận{myRoundMoves + asking.length ? ` (${myRoundMoves + asking.length})` : ''}
+      </Button>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/host`)}>
+        🛎️ Host{hostTasks(session, me).length ? ` (${hostTasks(session, me).length})` : ''}
+      </Button>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/requests`)}>
+        📨 Yêu cầu{asksCount ? ` (${asksCount})` : ''}
+      </Button>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowRules(true)}>
+        📖 Luật & mode bài
+      </Button>
+      {canHost && (
+        <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
+          🎮 Đổi game
+        </Button>
+      )}
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/players`)}>
+        👥 Người chơi
+      </Button>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGuidePick(true)}>
+        ❓ Hướng dẫn
+      </Button>
+      {/* Ai cũng thấy Hủy ván; không phải host thì bấm vào được nhắc nhờ host (host offline thì mời nhận làm host) */}
+      <Button
+        variant="danger"
+        className={`bg-night/90 px-3 py-1.5 text-sm ${canHost ? '' : 'opacity-60'}`}
+        onClick={() =>
+          canHost
+            ? cancelRound()
+            : hostAway && me
+              ? confirmTakeHost(session, me)
+              : flash(`Chỉ host (${hostName}) mới hủy được ván — nhờ ${hostName} hủy giúp.`, true)
+        }
+      >
+        Hủy ván
+      </Button>
+      {backBtn}
+    </More>
+  )
+
   return (
-    <main className={round?.tienlen ? 'pb-80' : 'pb-40'}>
+    <main className={round?.tienlen || round?.xidach ? 'pb-80' : 'pb-40'}>
       <TopBar
         title={session.name}
         back="/"
@@ -718,16 +795,24 @@ export function Table() {
                 {GAMES[game.type].label}
               </>
             }
-            betBox={game.type === 'xidach'}
+            betBox={game.type === 'xidach' && !round?.xidach}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             // Lô tô lúc mua tờ: Pot còn 55% cỡ thường (ô Mua là chính), chốt rồi Pot về cỡ thường để trao
             potScale={isLoto && round?.phase !== 'playing' ? 0.55 : undefined}
             shape={game.type === 'tienlen' ? 'square' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
-            hat={round?.dealer ? players[round.dealer]?.name : undefined}
+            hat={round?.dealer && !round.xidach ? players[round.dealer]?.name : undefined}
             hatLocked={!canHost}
-            center={<TableCenter game={game} round={round} players={players} />}
+            center={
+              <TableCenter
+                game={game}
+                round={round}
+                players={players}
+                me={me ?? null}
+                onDraw={() => me && run(actions().xidachDraw(game.id, me))}
+              />
+            }
             cornerTop={
               // Góc trên phải: Rule ? (ai cũng xem) bên trái ⚙ cài đặt (chỉ host)
               !cardPlay && withRules && (
@@ -815,48 +900,24 @@ export function Table() {
                   dealing={!!shuffling}
                   turnKey={turnKey}
                   onNext={nextRound}
-                  menu={
-                    <More on count={menuCount}>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowLog(true)}>
-                        📜 Trả/nhận{myRoundMoves + asking.length ? ` (${myRoundMoves + asking.length})` : ''}
-                      </Button>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/host`)}>
-                        🛎️ Host{hostTasks(session, me).length ? ` (${hostTasks(session, me).length})` : ''}
-                      </Button>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/requests`)}>
-                        📨 Yêu cầu{asksCount ? ` (${asksCount})` : ''}
-                      </Button>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowRules(true)}>
-                        📖 Luật & mode bài
-                      </Button>
-                      {canHost && (
-                        <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
-                          🎮 Đổi game
-                        </Button>
-                      )}
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => navigate(`${base}/players`)}>
-                        👥 Người chơi
-                      </Button>
-                      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGuidePick(true)}>
-                        ❓ Hướng dẫn
-                      </Button>
-                      {/* Ai cũng thấy Hủy ván; không phải host thì bấm vào được nhắc nhờ host (host offline thì mời nhận làm host) */}
-                      <Button
-                        variant="danger"
-                        className={`bg-night/90 px-3 py-1.5 text-sm ${canHost ? '' : 'opacity-60'}`}
-                        onClick={() =>
-                          canHost
-                            ? cancelRound()
-                            : hostAway && me
-                              ? confirmTakeHost(session, me)
-                              : flash(`Chỉ host (${hostName}) mới hủy được ván — nhờ ${hostName} hủy giúp.`, true)
-                        }
-                      >
-                        Hủy ván
-                      </Button>
-                      {backBtn}
-                    </More>
-                  }
+                  menu={cardMenu}
+                />
+              </div>
+            )}
+            {cardPlay && round?.xidach && (
+              <div className="pointer-events-auto">
+                <XidachPanel
+                  round={round}
+                  cards={round.xidach}
+                  players={players}
+                  me={me ?? null}
+                  isHost={canHost}
+                  dealing={!!shuffling}
+                  turnKey={turnKey}
+                  onStand={() => me && run(actions().xidachStand(game.id, me))}
+                  onCheckAll={() => me && run(actions().xidachCheckAll(game.id, me))}
+                  onNext={nextRound}
+                  menu={cardMenu}
                 />
               </div>
             )}
@@ -1088,8 +1149,13 @@ export function Table() {
         />
       )}
 
-      {shuffling && round?.tienlen && (
-        <ShuffleOverlay kind={shuffleKindOf(shuffling)} order={round.tienlen.order} onDealt={(n) => setDealt({ id: shuffling, n })} />
+      {shuffling && dealOrder && (
+        <ShuffleOverlay
+          kind={shuffleKindOf(shuffling)}
+          order={dealOrder}
+          perSeat={round?.xidach ? 2 : 13}
+          onDealt={(n) => setDealt({ id: shuffling, n })}
+        />
       )}
 
       {gameMenu && (
@@ -1296,11 +1362,16 @@ function TableCenter({
   game,
   round,
   players,
+  me,
+  onDraw,
 }: {
   game: Game
   round?: Round
   players: Record<ID, Player>
+  me: ID | null
+  onDraw: () => void
 }) {
+  if (round?.xidach) return <XidachCenter cards={round.xidach} players={players} me={me} onDraw={onDraw} />
   if (round?.poker) {
     const h = round.poker
     const state = { hand: h, moves: round.moves }
@@ -1424,4 +1495,17 @@ function More({
       </Button>
     </div>
   )
+}
+
+/** Xì dách bài trong app: bài người này đã lật cho cả bàn (đã được xét, hoặc bài cái sau lần xét đầu). */
+function xidachShown(c: XidachCards, id: ID): boolean {
+  return id === c.dealer ? c.dealerShown : !!c.settled[id]
+}
+
+/** Xì dách bài trong app: dòng phụ dưới tên — kết quả khi đã xét, "Dằn" khi đã dằn, điểm của cái khi đã lật. */
+function xidachBadge(c: XidachCards, id: ID): string | undefined {
+  if (id === c.dealer) return c.dealerShown ? `Cái · ${describe(c.hands[id] ?? [], true)}` : undefined
+  const r = c.settled[id]
+  if (r) return resultText(r)
+  return c.stood.includes(id) ? 'Dằn' : undefined
 }

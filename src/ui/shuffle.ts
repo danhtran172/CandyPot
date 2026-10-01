@@ -26,10 +26,10 @@ export const shuffleMs = (kind: ShuffleKind) => SHUFFLE_PASSES * PASS_MS[kind] +
 export const DEAL_STEP_MS = 70
 export const DEAL_FLY_MS = 460
 
-/** Số lá chia (mỗi người 13, tối đa cả bộ 52). */
-export const dealCount = (players: number) => Math.min(52, players * 13)
+/** Số lá chia (Tiến lên mỗi người 13, Xì dách 2; tối đa cả bộ 52). */
+export const dealCount = (players: number, perSeat = 13) => Math.min(52, players * perSeat)
 
 /** Cả màn xào + chia bài kéo dài bao lâu. */
-export function introMs(kind: ShuffleKind, players: number): number {
-  return shuffleMs(kind) + dealCount(players) * DEAL_STEP_MS + DEAL_FLY_MS + 250
+export function introMs(kind: ShuffleKind, players: number, perSeat = 13): number {
+  return shuffleMs(kind) + dealCount(players, perSeat) * DEAL_STEP_MS + DEAL_FLY_MS + 250
 }

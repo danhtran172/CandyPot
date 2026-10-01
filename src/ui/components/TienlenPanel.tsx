@@ -35,6 +35,7 @@ export function PlayingCard({
   selected,
   onClick,
   small,
+  tiny,
   dim,
   fan,
 }: {
@@ -42,6 +43,8 @@ export function PlayingCard({
   selected?: boolean
   onClick?: () => void
   small?: boolean
+  /** Lá rất nhỏ (bài đã lật ở chỗ ngồi). */
+  tiny?: boolean
   /** Lá không đi được nước này: mờ, không bấm được. */
   dim?: boolean
   /** Lá trên tay xòe quạt: to hơn; chạm / vuốt do quạt xử lý (nút chỉ còn nhận bàn phím). */
@@ -59,7 +62,7 @@ export function PlayingCard({
       aria-pressed={selected}
       aria-label={label}
       className={`num relative shrink-0 rounded-lg border-2 bg-cream font-bold leading-none shadow-md transition duration-150 ${
-        small ? 'h-12 w-9' : fan ? 'h-[4.5rem] w-12' : 'h-[4.2rem] w-[2.65rem]'
+        tiny ? 'h-9 w-[1.6rem] rounded-md border' : small ? 'h-12 w-9' : fan ? 'h-[4.5rem] w-12' : 'h-[4.2rem] w-[2.65rem]'
       } ${isRed(card) ? 'text-berry' : 'text-night'} ${
         selected
           ? `${fan ? '' : '-translate-y-2.5'} border-lemon shadow-[0_0_0_2px_var(--color-lemon),0_8px_16px_rgb(0_0_0/0.4)]`
@@ -67,11 +70,13 @@ export function PlayingCard({
       } ${dim ? (fan ? 'brightness-[0.55] saturate-50' : 'opacity-35 saturate-0') : onClick && !fan ? 'active:scale-95' : ''}`}
     >
       {/* Góc trên trái: hạng + chất nhỏ; giữa lá: chất to — giống các app đánh bài */}
-      <span className={`absolute top-1 left-1 flex flex-col items-center ${small ? 'text-[11px]' : fan ? 'text-base' : 'text-sm'}`}>
+      <span
+        className={`absolute flex flex-col items-center ${tiny ? 'top-0.5 left-0.5 text-[10px]' : `top-1 left-1 ${small ? 'text-[11px]' : fan ? 'text-base' : 'text-sm'}`}`}
+      >
         <span className="tracking-tighter">{rank}</span>
-        <span className={small ? 'text-[10px]' : 'text-xs'}>{suit}</span>
+        <span className={tiny ? 'text-[9px]' : small ? 'text-[10px]' : 'text-xs'}>{suit}</span>
       </span>
-      <span className={`absolute right-1 bottom-0.5 ${small ? 'text-lg' : 'text-2xl'}`}>{suit}</span>
+      {!tiny && <span className={`absolute right-1 bottom-0.5 ${small ? 'text-lg' : 'text-2xl'}`}>{suit}</span>}
     </button>
   )
 }

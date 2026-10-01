@@ -654,3 +654,32 @@ describe('LocalRepo — giữ tối đa 10 bàn', () => {
     expect(r.list()[0].id).toBe('s3')
   })
 })
+
+describe('appStore — Xì dách bài trong app', () => {
+  it('chốt cược thì chia bài; cái xét tất thì tự ghi lượt trả kẹo; bỏ chốt thì thu bài', () => {
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }, { name: 'Z', emoji: '🐸' }], 'multi')
+    const [x, y, z] = session().players.map((p) => p.id)
+    const g = s().addGame('xidach')
+    expect(s().setCardMode(g, 'app')).toEqual([])
+    expect(s().openRound(g, { participants: [x, y, z], bet: 2, stakes: { [y]: 2, [z]: 3 }, dealer: x })).toEqual([])
+    const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    expect(open().phase).toBe('betting')
+    s().lockBets(g)
+    const xd = open().xidach!
+    expect(xd.dealer).toBe(x)
+    expect(Object.values(xd.hands).every((h) => h.length === 2)).toBe(true)
+    // Con chưa xét (không có xì dách ngay) thì dằn hết, tới cái xét tất
+    for (const p of [y, z]) if (open().xidach!.turn === p) s().xidachStand(g, p)
+    if (open().xidach!.turn === x) expect(s().xidachCheckAll(g, x)).toEqual([])
+    const done = open().xidach!
+    expect(done.turn).toBeNull()
+    expect(Object.keys(done.settled).sort()).toEqual([y, z].sort())
+    const paid = open().moves.filter((m) => m.label.startsWith('Bài:'))
+    const decided = Object.values(done.settled).filter((r) => r.outcome !== 'draw').length
+    expect(paid).toHaveLength(decided)
+    if (!paid.length) {
+      expect(s().unlockBets(g)).toEqual([])
+      expect(open().xidach).toBeUndefined()
+    }
+  })
+})

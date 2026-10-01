@@ -23,10 +23,14 @@ const EASE = 'cubic-bezier(0.45, 0, 0.25, 1)'
 export function ShuffleOverlay({
   kind,
   order,
+  perSeat = 13,
   onDealt,
 }: {
   kind: ShuffleKind
+  /** Chia theo vòng theo thứ tự này. */
   order: ID[]
+  /** Mỗi người mấy lá (Tiến lên 13, Xì dách 2). */
+  perSeat?: number
   /** Mỗi lá chia xong (đáp xuống chỗ ngồi): tổng số lá đã chia. */
   onDealt?: (dealt: number) => void
 }) {
@@ -41,7 +45,7 @@ export function ShuffleOverlay({
       aria-label={phase === 'shuffle' ? `Đang xào bài — ${LABEL[kind]}` : 'Đang chia bài'}
       className="fade-in pointer-events-none fixed inset-0 z-40 flex flex-col items-center justify-center bg-night/45"
     >
-      {phase === 'shuffle' ? <Shuffle kind={kind} /> : <Deal order={order} onDealt={onDealt} />}
+      {phase === 'shuffle' ? <Shuffle kind={kind} /> : <Deal order={order} perSeat={perSeat} onDealt={onDealt} />}
       <p className="font-display mt-6 rounded-full bg-night/80 px-4 py-1 text-sm font-bold text-lemon">
         {phase === 'shuffle' ? `Xào bài · ${LABEL[kind]}` : 'Chia bài…'}
       </p>
@@ -133,8 +137,8 @@ function Shuffle({ kind }: { kind: ShuffleKind }) {
 }
 
 /** Chia bài đều theo vòng: lá thứ k bay tới người order[k % số người] (tìm chỗ ngồi trên bàn qua data-drop). */
-function Deal({ order, onDealt }: { order: ID[]; onDealt?: (dealt: number) => void }) {
-  const total = dealCount(order.length)
+function Deal({ order, perSeat, onDealt }: { order: ID[]; perSeat: number; onDealt?: (dealt: number) => void }) {
+  const total = dealCount(order.length, perSeat)
   const stage = useRef<HTMLDivElement>(null)
   const cards = useRef<(HTMLImageElement | null)[]>([])
   const [left, setLeft] = useState(total)
