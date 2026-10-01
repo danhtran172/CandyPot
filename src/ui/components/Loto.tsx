@@ -61,17 +61,28 @@ function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: strin
       <svg
         aria-hidden
         viewBox="0 0 40 40"
-        className={`pointer-events-none absolute inset-[18%] size-[64%] drop-shadow-[0_1px_1px_rgb(0_0_0/0.5)] ${fresh ? 'mark-drop' : ''}`}
+        className={`pointer-events-none absolute inset-[8%] z-[2] size-[84%] drop-shadow-[0_2px_2px_rgb(0_0_0/0.55)] ${fresh ? 'mark-drop' : ''}`}
         style={{ rotate: `${rot}deg` }}
       >
-        <path d="M20 4 C29 12 31 24 26 33 C23 38 17 38 14 33 C9 24 11 12 20 4 Z" fill="#2a1414" stroke="#7a2e2e" strokeWidth="1.6" />
-        <path d="M18 12 C15 18 15 25 17 30" fill="none" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
+        <defs>
+          <radialGradient id="seed" cx="0.38" cy="0.32" r="0.75">
+            <stop offset="0" stopColor="#5a3a30" />
+            <stop offset="0.55" stopColor="#1c0d0a" />
+            <stop offset="1" stopColor="#000" />
+          </radialGradient>
+        </defs>
+        {/* Viền sáng mỏng quanh hạt để nổi trên giấy và trên số */}
+        <path d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z" fill="none" stroke="#fffaf0" strokeWidth="3.2" strokeOpacity="0.9" />
+        <path d="M20 3 C30 11 32 24 27 33 C24 39 16 39 13 33 C8 24 10 11 20 3 Z" fill="url(#seed)" stroke="#8a3b2c" strokeWidth="1.4" />
+        {/* Gờ giữa hạt + vệt bóng */}
+        <path d="M20 9 C22 17 22 26 20 33" fill="none" stroke="#a0533f" strokeOpacity="0.55" strokeWidth="1.2" />
+        <path d="M16 12 C13.5 18 13.5 24 15.5 29" fill="none" stroke="#fff" strokeOpacity="0.7" strokeWidth="2.4" strokeLinecap="round" />
       </svg>
     )
   }
   const tilt = ((n * 37) % 13) - 6
   return (
-    <svg aria-hidden viewBox="0 0 40 40" className={`pointer-events-none absolute inset-0 size-full ${fresh ? 'mark-draw' : ''}`} style={{ rotate: `${tilt}deg` }}>
+    <svg aria-hidden viewBox="0 0 40 40" className={`pointer-events-none absolute inset-0 z-[2] size-full ${fresh ? 'mark-draw' : ''}`} style={{ rotate: `${tilt}deg` }}>
       {kind === 'cross' ? (
         <>
           <path d="M8 8 L32 32" pathLength={100} stroke={color} strokeWidth="4.5" strokeLinecap="round" />
@@ -157,7 +168,7 @@ export function SheetCard({
     )
   return (
     // Không viền: tờ giấy ngà, các khối kẻ ô đen mảnh; phủ vân giấy lên cả tờ
-    <div className={`relative overflow-hidden bg-[#f7f0e1] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
+    <div className={`relative isolate overflow-hidden bg-[#f7f0e1] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
       {band(`CandyPot · Tờ ${sheetName(index)}`)}
       {[0, 1, 2].map((b) => (
         <div key={b}>
@@ -204,7 +215,8 @@ export function SheetCard({
         </div>
       ))}
       {band('Lô tô CandyPot')}
-      <span aria-hidden className="paper-grain pointer-events-none absolute inset-0" />
+      {/* Vân giấy nằm dưới dấu đánh (dấu vẫn đậm, rõ) */}
+      <span aria-hidden className="paper-grain pointer-events-none absolute inset-0 z-[1]" />
     </div>
   )
 }
