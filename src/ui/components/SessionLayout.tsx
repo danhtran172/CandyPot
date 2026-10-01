@@ -95,8 +95,9 @@ export function SessionLayout() {
         <RequestInbox session={session} onOpenAll={(tab) => navigate(`/s/${sid}/${tab}`)} />
       )}
       {showNav && (
-        <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line/60 bg-night/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
-          <ul className="mx-auto grid max-w-lg grid-cols-4">
+        <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-line/60 bg-night/95 pb-[env(safe-area-inset-bottom)] backdrop-blur land:inset-x-auto land:inset-y-0 land:right-0 land:flex land:w-[calc(5rem+env(safe-area-inset-right))] land:items-center land:border-t-0 land:border-l land:pr-[env(safe-area-inset-right)] land:pb-0">
+          {/* Xoay ngang: cột dọc bên phải */}
+          <ul className="mx-auto grid max-w-lg grid-cols-4 land:w-full land:grid-cols-1 land:gap-3">
             {TABS.map((t) => (
               <li key={t.to}>
                 <NavLink

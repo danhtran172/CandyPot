@@ -202,17 +202,19 @@ export function TienlenPanel({
         </div>
       ) : !viewer ? (
         <div className="flex items-center gap-2">
-          <p className="flex-1 text-center text-xs text-muted">
-            Bạn không chơi ván này · lượt {name(cards.turn!)}
-          </p>
+          <p className="flex-1 text-center text-xs text-muted">Bạn không chơi ván này · lượt {name(cards.turn!)}</p>
           {menu}
         </div>
       ) : (
-        <>
-          <div className="flex items-center justify-center gap-2 text-xs text-muted">
+        // Xoay ngang: quạt bài bên trái, trạng thái + nút bên phải (khung thấp, trải ngang)
+        <div className="land:grid land:grid-cols-[minmax(0,1fr)_15rem] land:grid-rows-[auto_auto_1fr] land:items-start land:gap-x-3">
+          <div className="flex items-center justify-center gap-2 text-xs text-muted land:col-start-2 land:row-start-1 land:mt-1 land:flex-wrap land:justify-start">
             <p className="truncate">
               {myTurn ? (
-                <b className="text-lemon">Lượt bạn{playable && !playable.size ? ' — không chặn được, Bỏ lượt' : ''}</b>
+                <b className="text-lemon">
+                  Lượt bạn
+                  {playable && !playable.size ? ' — không chặn được, Bỏ lượt' : ''}
+                </b>
               ) : cards.finished.includes(viewer) ? (
                 `Bạn đã về ${placeOf(cards, viewer)} 🎉`
               ) : (
@@ -241,24 +243,28 @@ export function TienlenPanel({
           </div>
           {/* Thanh thời gian của lượt hiện tại */}
           {left !== null && (
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-plum-2">
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-plum-2 land:col-start-2 land:row-start-2">
               <div
                 className={`h-full rounded-full transition-[width] duration-300 ease-linear ${urgent ? 'bg-berry' : myTurn ? 'bg-lemon' : 'bg-mint'}`}
-                style={{ width: `${Math.max(0, Math.min(100, (left / TURN_MS) * 100))}%` }}
+                style={{
+                  width: `${Math.max(0, Math.min(100, (left / TURN_MS) * 100))}%`,
+                }}
               />
             </div>
           )}
-          <FanHand
-            hand={hand}
-            picked={picked}
-            dim={(c) => !!playable && !playable.has(c)}
-            onTap={tap}
-            onDrag={(c, on) => setSel((prev) => (on ? (prev.includes(c) ? prev : [...prev, c]) : prev.filter((x) => x !== c)))}
-            onDragEnd={dragEnd}
-            onSwipeUp={myTurn && combo ? play : undefined}
-          />
+          <div className="land:col-start-1 land:row-span-3 land:row-start-1">
+            <FanHand
+              hand={hand}
+              picked={picked}
+              dim={(c) => !!playable && !playable.has(c)}
+              onTap={tap}
+              onDrag={(c, on) => setSel((prev) => (on ? (prev.includes(c) ? prev : [...prev, c]) : prev.filter((x) => x !== c)))}
+              onDragEnd={dragEnd}
+              onSwipeUp={myTurn && combo ? play : undefined}
+            />
+          </div>
           {!myTurn && (
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex items-center gap-2 land:col-start-2 land:row-start-3 land:mt-2 land:self-end land:flex-wrap">
               <p className="flex-1 text-[11px] text-muted">
                 {picked.length ? 'Đã chọn sẵn — tới lượt là đánh được' : 'Chạm hoặc vuốt ngang để chọn bài'}
               </p>
@@ -271,20 +277,20 @@ export function TienlenPanel({
             </div>
           )}
           {myTurn && (
-            <div className="mt-1 flex gap-2">
+            <div className="mt-1 flex gap-2 land:col-start-2 land:row-start-3 land:mt-2 land:flex-wrap land:gap-1.5 land:self-end">
               {menu}
-              <Button className="px-3 whitespace-nowrap" disabled={!cards.table} onClick={() => onPass(viewer)}>
+              <Button className="px-3 whitespace-nowrap land:px-2.5 land:py-1.5 land:text-sm" disabled={!cards.table} onClick={() => onPass(viewer)}>
                 Bỏ lượt
               </Button>
-              <Button className="px-3 whitespace-nowrap" disabled={!picked.length} onClick={() => setSel([])}>
+              <Button className="px-3 whitespace-nowrap land:px-2.5 land:py-1.5 land:text-sm" disabled={!picked.length} onClick={() => setSel([])}>
                 Bỏ chọn
               </Button>
-              <Button variant="primary" className="font-display flex-1 text-lg" disabled={!combo} onClick={play}>
+              <Button variant="primary" className="font-display flex-1 text-lg land:basis-full land:py-1.5" disabled={!combo} onClick={play}>
                 Đánh
               </Button>
             </div>
           )}
-        </>
+        </div>
       )}
     </section>
   )
@@ -331,7 +337,15 @@ function FanHand({
     setWidth(el.clientWidth)
     return () => ro.disconnect()
   }, [])
-  const drag = useRef<{ x: number; y: number; start: Card; on: boolean; seen: Set<Card>; moved: boolean; wasPicked: boolean } | null>(null)
+  const drag = useRef<{
+    x: number
+    y: number
+    start: Card
+    on: boolean
+    seen: Set<Card>
+    moved: boolean
+    wasPicked: boolean
+  } | null>(null)
 
   const n = hand.length
   const radius = CARD_H * PIVOT
@@ -361,7 +375,15 @@ function FanHand({
         if (c === null) return
         e.currentTarget.setPointerCapture(e.pointerId)
         const wasPicked = picked.includes(c)
-        drag.current = { x: e.clientX, y: e.clientY, start: c, on: !wasPicked, seen: new Set([c]), moved: false, wasPicked }
+        drag.current = {
+          x: e.clientX,
+          y: e.clientY,
+          start: c,
+          on: !wasPicked,
+          seen: new Set([c]),
+          moved: false,
+          wasPicked,
+        }
       }}
       onPointerMove={(e) => {
         const d = drag.current
@@ -438,7 +460,10 @@ export function TienlenTableCards({ cards, players }: { cards: TienlenCards; pla
             ))}
           </>
         ) : (
-          <span className="text-xs text-muted">Vòng mới — {name(cards.turn!)} đánh gì cũng được{cards.mustOpen ? ' (phải có 3♠)' : ''}</span>
+          <span className="text-xs text-muted">
+            Vòng mới — {name(cards.turn!)} đánh gì cũng được
+            {cards.mustOpen ? ' (phải có 3♠)' : ''}
+          </span>
         )}
       </div>
     </div>

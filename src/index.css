@@ -6,6 +6,9 @@
 @import '@fontsource/be-vietnam-pro/700.css';
 @import 'tailwindcss';
 
+/* Điện thoại xoay ngang (màn thấp): thanh điều hướng sang cột phải, khung bài trải ngang dưới đáy */
+@custom-variant land (@media (orientation: landscape) and (max-height: 600px));
+
 @theme {
   --color-night: #1c0e22;
   --color-plum: #2b1734;
@@ -149,5 +152,17 @@ body {
     from {
       opacity: 0;
     }
+  }
+}
+
+/* Chiều cao / rộng vùng bàn chơi (Board) — xoay ngang thì bàn thấp lại, trải hết bề ngang */
+:root {
+  --board-h: clamp(420px, calc(100dvh - 270px), 640px);
+  --board-w: min(100%, var(--board-h));
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  :root {
+    --board-h: max(160px, calc(100dvh - 215px));
+    --board-w: 100%;
   }
 }

@@ -23,7 +23,7 @@ export default function App() {
     <BrowserRouter>
       {/* iPhone tai thỏ / Dynamic Island: che dải trên cùng để nội dung cuộn không lẫn vào thanh trạng thái */}
       <div aria-hidden className="fixed inset-x-0 top-0 z-[26] h-[env(safe-area-inset-top)] bg-night" />
-      <div className="mx-auto min-h-dvh max-w-lg px-4 pt-[env(safe-area-inset-top)] pb-28">
+      <div className="mx-auto min-h-dvh max-w-lg px-4 pt-[env(safe-area-inset-top)] pb-28 land:max-w-4xl land:pr-[calc(6rem+env(safe-area-inset-right))] land:pb-4 land:pl-[calc(1rem+env(safe-area-inset-left))]">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/new" element={<NewSession />} />

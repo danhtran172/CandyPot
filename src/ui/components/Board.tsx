@@ -57,8 +57,9 @@ const THRESHOLD = 8
 const STAKE_POS = {
   right: 'left-[calc(100%+6px)] top-1/2 -translate-y-1/2',
   left: 'right-[calc(100%+6px)] top-1/2 -translate-y-1/2',
-  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2',
-  below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2',
+  // Xoay ngang (bàn thấp): người ngồi cạnh trên / dưới đặt chip sang bên phải, không đè giữa bàn
+  above: 'bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2 land:bottom-auto land:left-[calc(100%+6px)] land:top-1/2 land:translate-x-0 land:-translate-y-1/2',
+  below: 'top-[calc(100%+2px)] left-1/2 -translate-x-1/2 land:left-[calc(100%+6px)] land:top-1/2 land:translate-x-0 land:-translate-y-1/2',
 } as const
 
 /** Kích thước ô theo số người để 10 người vẫn vừa quanh bàn. */
@@ -71,7 +72,8 @@ function sizeFor(n: number) {
   return { seat: 'w-[60px]', avatar: 'size-10 text-2xl' }
 }
 
-const HEIGHT = 'clamp(420px, calc(100dvh - 270px), 640px)'
+/** Chiều cao vùng bàn (biến CSS trong index.css — xoay ngang thì thấp lại). */
+const HEIGHT = 'var(--board-h)'
 
 /**
  * Bàn oval (hoặc vuông với Tiến lên): mọi người xếp đều quanh bàn, "tôi" ở dưới cùng.
@@ -235,8 +237,11 @@ export function Board({
       <div className="relative -mx-3" style={{ height: HEIGHT }}>
         {/* Bàn vuông: khung vuông giữa vùng bàn — mặt bàn và ghế đặt theo khung này */}
         <div
-          className={square ? 'absolute top-[48%] left-1/2 aspect-square -translate-x-1/2 -translate-y-1/2' : 'absolute inset-0'}
-          style={square ? { width: `min(100%, ${HEIGHT})` } : undefined}
+          className={
+            square ? 'absolute top-[48%] left-1/2 aspect-square -translate-x-1/2 -translate-y-1/2 land:aspect-auto land:h-full' : 'absolute inset-0'
+          }
+          // Xoay ngang: bàn "vuông" thành chữ nhật trải hết bề ngang
+          style={square ? { width: 'var(--board-w)' } : undefined}
         >
           {/* Mặt bàn */}
           <div
@@ -252,7 +257,7 @@ export function Board({
             }`}
           >
             {title && (
-              <span className="font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase opacity-70">
+              <span className="font-display pointer-events-none flex items-center gap-1.5 text-2xl leading-none font-extrabold tracking-wider uppercase opacity-70 land:hidden">
                 {title}
               </span>
             )}

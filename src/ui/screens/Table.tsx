@@ -761,7 +761,7 @@ export function Table() {
 
 
           {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
-          <div className="pointer-events-none fixed inset-x-0 bottom-16 z-10 mx-auto max-w-lg px-4 pb-[env(safe-area-inset-bottom)]">
+          <div className="pointer-events-none fixed inset-x-0 bottom-16 z-10 mx-auto max-w-lg px-4 pb-[env(safe-area-inset-bottom)] land:right-[calc(5rem+env(safe-area-inset-right))] land:bottom-0 land:max-w-none land:pl-[calc(1rem+env(safe-area-inset-left))]">
             {!cardPlay && (
             <div className="mb-2 flex items-end justify-between">
               <button
@@ -1396,7 +1396,7 @@ function More({
         <>
           <button type="button" aria-label="Đóng" className="fixed inset-0 z-40 cursor-default bg-night/50" onClick={() => setOpen(false)} />
           <div
-            className="pop fixed inset-x-4 bottom-44 z-50 mx-auto grid max-w-sm grid-cols-2 gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl [&>*]:w-full [&>*]:whitespace-nowrap"
+            className="pop fixed inset-x-4 bottom-44 z-50 mx-auto grid max-w-sm grid-cols-2 land:bottom-3 land:left-auto land:right-[calc(6rem+env(safe-area-inset-right))] land:w-sm gap-1.5 rounded-2xl border border-line/60 bg-plum-2 p-2 shadow-2xl [&>*]:w-full [&>*]:whitespace-nowrap"
             // Đóng sau khi nút bên trong chạy xong (đóng ở pha capture thì nút bị gỡ trước khi kịp chạy)
             onClick={() => setOpen(false)}
           >
