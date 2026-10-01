@@ -123,39 +123,40 @@ export function SheetCard({
 }) {
   const color = sheetColor(index)
   const [shake, setShake] = useState<number | null>(null)
+  /** Ô số: nền trắng ngà, số đen to đậm (kiểu tờ in) — hàng kinh nền vàng. */
+  const numCell = (win: boolean) =>
+    `relative grid place-items-center bg-[#fffdf6] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
+      small ? 'h-2 text-[0px]' : 'aspect-[1/0.8] text-[17px]'
+    } ${win ? '!bg-lemon' : ''}`
+  /** Dải chữ trang trí giữa các khối, như tờ in. */
+  const band = (text: string, italic?: boolean) =>
+    !small && (
+      <div className={`py-0.5 text-center text-[10px] font-bold tracking-wide ${italic ? 'italic' : 'uppercase'}`} style={{ color }}>
+        {text}
+      </div>
+    )
   return (
-    <div
-      className={`overflow-hidden rounded-xl border-2 bg-cream shadow-lg ${small ? 'p-0.5' : 'p-1'}`}
-      style={{ borderColor: color }}
-    >
-      {!small && (
-        <div className="mb-1 flex items-center justify-between rounded-md px-2 py-0.5 text-xs font-bold text-white" style={{ background: color }}>
-          <span>Tờ {sheetName(index)}</span>
-          <span className="opacity-80">LÔ TÔ</span>
-        </div>
-      )}
-      <div className="flex flex-col gap-[3px]">
-        {[0, 1, 2].map((b) => (
-          <div key={b} className="grid gap-px" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
+    // Không viền: tờ là nền giấy trắng, các khối kẻ ô đen mảnh
+    <div className={`bg-[#fffdf6] shadow-lg ${small ? 'rounded p-0.5' : 'rounded-md px-1 pb-0.5'}`}>
+      {band(`CandyPot · Tờ ${sheetName(index)}`)}
+      {[0, 1, 2].map((b) => (
+        <div key={b}>
+          <div className="grid gap-px bg-[#1a1a1a] p-px" style={{ gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))` }}>
             {[0, 1, 2].flatMap((i) =>
               sheet[b * 3 + i].map((n, c) => {
                 const row = b * 3 + i
                 const marked = n !== null && !!marks?.includes(n)
                 const win = winRow === row
                 return n === null ? (
+                  // Ô trống: màu của tờ, hoa văn hình thoi nhỏ
                   <span
                     key={`${row}-${c}`}
-                    className={small ? 'h-2' : 'aspect-[1/0.78]'}
-                    style={{ background: color, opacity: 0.85 } as CSSProperties}
+                    className={small ? 'h-2' : 'aspect-[1/0.8]'}
+                    style={{ background: `${ORNAMENT} center / 60% no-repeat, ${color}` } as CSSProperties}
                   />
                 ) : !onMark || small ? (
-                  // Chỉ để xem (bảng chọn tờ / tờ phía sau): không bấm được
-                  <span
-                    key={`${row}-${c}`}
-                    className={`num relative grid place-items-center font-bold text-night ${
-                      small ? 'h-2 bg-cream text-[0px]' : `aspect-[1/0.78] text-sm leading-none ${win ? 'bg-lemon' : 'bg-cream'}`
-                    }`}
-                  >
+                  // Chỉ để xem (bảng mua tờ / tờ phía sau): không bấm được
+                  <span key={`${row}-${c}`} className={numCell(win)}>
                     {n}
                     {marked && !small && (marker === 'seed' ? <SeedMark n={n} /> : <ChalkMark n={n} />)}
                   </span>
@@ -173,9 +174,7 @@ export function SheetCard({
                       }
                       onMark(n)
                     }}
-                    className={`num relative grid place-items-center text-sm leading-none font-bold text-night aspect-[1/0.78] ${
-                      win ? 'bg-lemon' : 'bg-cream'
-                    } ${shake === n ? 'loto-shake' : ''}`}
+                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''}`}
                   >
                     {n}
                     {marked && (marker === 'seed' ? <SeedMark n={n} /> : <ChalkMark n={n} />)}
@@ -184,13 +183,25 @@ export function SheetCard({
               }),
             )}
           </div>
-        ))}
-      </div>
+          {b === 0 && band('Lô tô · vui là chính')}
+          {b === 1 && band('Phúc lộc đầy nhà', true)}
+        </div>
+      ))}
+      {band('Lô tô CandyPot')}
     </div>
   )
 }
 
-/** Bảng danh sách giấy: chạm chọn tờ (tối đa `max`), tờ người khác đã mua thì mờ + tên người mua. */
+/** Hoa văn ô trống (hình thoi trắng nhỏ có chấm giữa) — một ảnh dùng chung. */
+const ORNAMENT = `url("data:image/svg+xml,${encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path d='M10 2l8 8-8 8-8-8z' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.4'/><path d='M10 7l3 3-3 3-3-3z' fill='white' fill-opacity='.5'/></svg>",
+)}")`
+
+/**
+ * Mua tờ: xem từng tờ (hiện đủ số), lướt / bấm ‹ › hoặc chạm màu để chuyển tờ, một nút để mua.
+ * Tờ của mình thì Hoàn mua; đã đủ số tờ thì Đổi tờ đang xem lấy một tờ của mình. Tờ người khác đã mua thì không mua được.
+ * Mỗi thao tác ghi ngay (cả bàn thấy liền).
+ */
 export function SheetPicker({
   papers,
   loto,
@@ -210,68 +221,111 @@ export function SheetPicker({
   onSave: (ids: number[]) => string[]
   onClose: () => void
 }) {
-  const [picked, setPicked] = useState<number[]>(loto?.sheets[me] ?? [])
+  const state = loto ?? { sheets: {}, caller: null, called: [] }
+  const mine = state.sheets[me] ?? []
+  const [at, setAt] = useState(() => mine[0] ?? Math.max(0, papers.findIndex((_, i) => !ownerOf(state, i, me))))
   const [error, setError] = useState<string | null>(null)
-  const had = (loto?.sheets[me] ?? []).length > 0
-  const toggle = (i: number) => {
+  const swipe = useRef<number | null>(null)
+  const owner = ownerOf(state, at, me)
+  const isMine = mine.includes(at)
+  const go = (d: number) => {
     setError(null)
-    setPicked((p) => {
-      if (p.includes(i)) return p.filter((x) => x !== i)
-      if (p.length >= max) {
-        setError(`Tối đa ${max} tờ — bỏ bớt một tờ rồi chọn tờ khác.`)
-        return p
-      }
-      return [...p, i]
-    })
+    setAt((i) => (i + d + papers.length) % papers.length)
+  }
+  const save = (ids: number[]) => {
+    const errors = onSave(ids)
+    setError(errors[0] ?? null)
   }
   return (
-    <div role="dialog" aria-modal="true" aria-label="Chọn tờ lô tô" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div role="dialog" aria-modal="true" aria-label="Mua tờ lô tô" className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
-      <div className="pop relative flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
-        <h2 className="font-display text-xl font-extrabold">Chọn tờ</h2>
-        <p className="text-xs text-muted">
-          Chạm để chọn / bỏ. Tối đa {max} tờ · {price} kẹo một tờ. Hai tờ cùng màu là một cặp đủ 90 số.
-        </p>
-        <div className="no-scrollbar mt-3 grid flex-1 grid-cols-3 gap-2 overflow-y-auto pb-2">
-          {papers.map((sheet, i) => {
-            const owner = ownerOf(loto ?? { sheets: {}, caller: null, called: [] }, i, me)
-            const on = picked.includes(i)
+      <div className="pop relative flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-line/60 bg-plum p-4 sm:rounded-3xl">
+        <div className="flex items-baseline gap-2">
+          <h2 className="font-display flex-1 text-xl font-extrabold">Mua tờ</h2>
+          <span className="text-sm">
+            Đã mua <b className="text-lemon">{mine.length}</b>/{max} · <b className="num text-lemon">{mine.length * price}</b> kẹo
+          </span>
+        </div>
+        {/* Chọn nhanh tờ theo màu: mỗi màu 2 tờ (cặp đủ 90 số) */}
+        <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto pb-1">
+          {papers.map((_, i) => {
+            const who = ownerOf(state, i, me)
+            const own = mine.includes(i)
             return (
               <button
                 key={i}
                 type="button"
-                disabled={!!owner}
-                onClick={() => toggle(i)}
-                aria-pressed={on}
-                aria-label={`Tờ ${sheetName(i)}${owner ? ` — ${players[owner]?.name} đã mua` : ''}`}
-                className={`relative rounded-xl p-1 text-left transition ${on ? 'bg-lemon/20 ring-2 ring-lemon' : 'bg-night/40'} ${owner ? 'opacity-40' : 'active:scale-95'}`}
+                onClick={() => {
+                  setError(null)
+                  setAt(i)
+                }}
+                aria-label={`Tờ ${sheetName(i)}${own ? ' — của bạn' : who ? ` — ${players[who]?.name} đã mua` : ''}`}
+                aria-current={i === at}
+                className={`relative grid size-8 shrink-0 place-items-center rounded-lg text-xs font-extrabold text-white transition ${
+                  i === at ? 'scale-110 ring-2 ring-cream' : ''
+                } ${who ? 'opacity-35' : ''}`}
+                style={{ background: sheetColor(i) }}
               >
-                <SheetCard sheet={sheet} index={i} small />
-                <span className="mt-1 block truncate text-[11px] font-semibold" style={{ color: sheetColor(i) }}>
-                  {sheetName(i)}
-                </span>
-                {owner && <span className="absolute inset-x-1 top-1/3 truncate rounded bg-night/85 px-1 text-center text-[10px]">{players[owner]?.name}</span>}
-                {on && <span className="absolute top-0.5 right-0.5 grid size-5 place-items-center rounded-full bg-lemon text-xs font-bold text-night">✓</span>}
+                {(i % 2) + 1}
+                {own && <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-lemon text-[9px] text-night">✓</span>}
               </button>
             )
           })}
         </div>
-        {error && <p className="mb-2 text-center text-xs font-semibold text-berry">{error}</p>}
-        <div className="flex items-center gap-2 border-t border-line/60 pt-3">
-          <p className="flex-1 text-sm">
-            <b className="text-lemon">{picked.length}</b>/{max} tờ · <b className="num text-lemon">{picked.length * price}</b> kẹo
+        {/* Tờ đang xem — đủ số; lướt ngang để chuyển tờ */}
+        <div
+          className="relative mt-2 touch-pan-y"
+          onPointerDown={(e) => (swipe.current = e.clientX)}
+          onPointerUp={(e) => {
+            const x0 = swipe.current
+            swipe.current = null
+            if (x0 !== null && Math.abs(e.clientX - x0) > 50) go(e.clientX < x0 ? 1 : -1)
+          }}
+        >
+          <div className={owner ? 'opacity-50' : ''}>
+            <SheetCard key={at} sheet={papers[at]} index={at} />
+          </div>
+          {owner && (
+            <span className="absolute inset-x-6 top-1/2 -translate-y-1/2 rounded-2xl bg-night/90 px-3 py-2 text-center text-sm font-semibold">
+              {players[owner]?.name} đã mua tờ này
+            </span>
+          )}
+        </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <button type="button" aria-label="Tờ trước" onClick={() => go(-1)} className="grid size-9 place-items-center rounded-full bg-night/70 text-xl">
+            ‹
+          </button>
+          <p className="flex-1 text-center text-[11px] text-muted">
+            Tờ {at + 1}/{papers.length} · {price} kẹo một tờ · lướt ngang để xem tờ khác
           </p>
-          <Button onClick={onClose}>Đóng</Button>
-          <Button
-            variant="primary"
-            disabled={!picked.length && !had}
-            onClick={() => {
-              const errors = onSave(picked)
-              if (errors.length) setError(errors[0])
-              else onClose()
-            }}
-          >
-            {picked.length || !had ? 'Mua' : 'Bỏ mua'}
+          <button type="button" aria-label="Tờ sau" onClick={() => go(1)} className="grid size-9 place-items-center rounded-full bg-night/70 text-xl">
+            ›
+          </button>
+        </div>
+        {error && <p className="mt-1 text-center text-xs font-semibold text-berry">{error}</p>}
+        {/* Hành động cho tờ đang xem */}
+        <div className="mt-2 flex flex-wrap gap-2 border-t border-line/60 pt-3">
+          {owner ? (
+            <p className="flex-1 self-center text-center text-sm text-muted">Tờ này đã có người mua — xem tờ khác.</p>
+          ) : isMine ? (
+            <Button variant="danger" className="flex-1" onClick={() => save(mine.filter((x) => x !== at))}>
+              Hoàn mua (trả lại {price} kẹo)
+            </Button>
+          ) : mine.length < max ? (
+            <Button variant="primary" className="font-display flex-1 text-lg" onClick={() => save([...mine, at])}>
+              Mua tờ này · {price} kẹo
+            </Button>
+          ) : null}
+          {/* Đổi: tờ đang xem còn trống → đổi lấy một tờ của mình */}
+          {!owner &&
+            !isMine &&
+            mine.map((m) => (
+              <Button key={m} className="flex-1 text-sm whitespace-nowrap" onClick={() => save(mine.map((x) => (x === m ? at : x)))}>
+                Đổi tờ {sheetName(m)} lấy tờ này
+              </Button>
+            ))}
+          <Button className="basis-full" onClick={onClose}>
+            Xong
           </Button>
         </div>
       </div>

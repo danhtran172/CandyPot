@@ -135,8 +135,8 @@ export function sheetSet(gameId: string, pairs: number): Sheet[] {
   return out
 }
 
-/** Bộ giấy đủ cho cả bàn: ít nhất 6 cặp (12 tờ), đông người thì thêm để ai cũng mua đủ tối đa. */
-export const pairsFor = (players: number, max: number) => Math.max(6, Math.ceil((players * max) / 2))
+/** Bộ giấy đủ cho cả bàn: 10 bộ màu (20 tờ), đông người thì thêm để ai cũng mua đủ tối đa. */
+export const pairsFor = (players: number, max: number) => Math.max(10, Math.ceil((players * max) / 2))
 
 /** Màu / tên tờ thứ `index`. */
 export const sheetColor = (index: number) => SHEET_COLORS[Math.floor(index / 2) % SHEET_COLORS.length]

@@ -23,7 +23,8 @@ describe('lotoSheets — bộ giấy đúng quy tắc', () => {
   })
 
   it('đủ giấy cho cả bàn mua tối đa', () => {
-    expect(pairsFor(4, 2)).toBe(6)
+    expect(pairsFor(4, 2)).toBe(10)
     expect(pairsFor(10, 3)).toBe(15)
+    expect(pairsFor(10, 2)).toBe(10)
   })
 })
