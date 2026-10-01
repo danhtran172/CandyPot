@@ -10,7 +10,7 @@ import { CardBackStack } from './CardBack'
 
 export interface Seat {
   player: Player
-  /** Được/mất trong ván đang mở; undefined = không có ván. Lời/lỗ cộng dồn chỉ xem ở Tổng kết / Lịch sử. */
+  /** Được/mất trong ván đang mở; undefined = không có ván. Lời/lỗ cộng dồn chỉ xem ở Sổ nợ / Lịch sử. */
   round?: number
   /** Dòng phụ: "Nhà cái"… */
   badge?: string
@@ -424,7 +424,7 @@ export function Board({
                 >
                   {s.isMe && !['bạn', 'tôi'].includes(s.player.name.toLowerCase()) ? `${s.player.name} (bạn)` : s.player.name}
                 </span>
-                {/* Chỉ hiện được/mất của ván đang chơi — tổng cả bàn xem ở Tổng kết / Lịch sử */}
+                {/* Chỉ hiện được/mất của ván đang chơi — tổng cả bàn xem ở Sổ nợ / Lịch sử */}
                 {s.waiting && s.player.active && (
                   <span className="text-[10px] leading-tight font-semibold whitespace-nowrap text-muted">chờ ván sau</span>
                 )}

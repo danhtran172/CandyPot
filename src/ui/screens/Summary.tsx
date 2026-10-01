@@ -76,7 +76,7 @@ export function Summary() {
 
   return (
     <main>
-      <TopBar title="Tổng kết" />
+      <TopBar title="Sổ nợ" />
 
       {session.games.length > 1 && (
         <nav aria-label="Phạm vi" className="-mx-4 mb-3 no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1">

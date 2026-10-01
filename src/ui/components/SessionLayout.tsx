@@ -9,7 +9,7 @@ import { readMe } from '../me'
 
 const TABS = [
   { to: '', label: 'Bàn chơi', icon: '🃏' },
-  { to: 'summary', label: 'Tổng kết', icon: '🍬' },
+  { to: 'summary', label: 'Sổ nợ', icon: '🍬' },
   { to: 'history', label: 'Lịch sử', icon: '📜' },
   { to: 'titles', label: 'Danh hiệu', icon: '👑' },
 ]
