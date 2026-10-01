@@ -379,7 +379,8 @@ export function Ball({ n, big, mid, fresh }: { n: number; big?: boolean; mid?: b
     </span>
   )
 }
-const BALL_COLORS = ['#d62828', '#2b9348', '#e07a00', '#b8920f', '#1d6fb8']
+/** Hai màu bi như bảng dò: đỏ (số lẻ) và xanh lá (số chẵn). */
+const BALL_COLORS = ['#2b9348', '#d62828']
 
 /** Bảng tất cả số đã gọi (mới nhất trước) — như bảng dò kết quả. */
 function CalledBoard({ called, onClose }: { called: number[]; onClose: () => void }) {
