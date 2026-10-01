@@ -214,3 +214,37 @@ body {
     }
   }
 }
+
+/* Lô tô: hiệu ứng gạch số — nét vẽ ra, ô nảy nhẹ, hạt dưa rơi xuống */
+@media (prefers-reduced-motion: no-preference) {
+  .mark-draw path {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: mark-draw 0.22s ease-out forwards;
+  }
+  @keyframes mark-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .mark-pop {
+    animation: mark-pop 0.3s ease-out;
+  }
+  @keyframes mark-pop {
+    40% {
+      scale: 1.18;
+      background: #fff3b0;
+    }
+  }
+  .mark-drop {
+    animation: mark-drop 0.28s cubic-bezier(0.3, 1.6, 0.5, 1);
+  }
+  @keyframes mark-drop {
+    from {
+      scale: 1.8;
+      opacity: 0;
+      translate: 0 -30%;
+    }
+  }
+}
+

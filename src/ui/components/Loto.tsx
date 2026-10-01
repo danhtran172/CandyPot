@@ -1,17 +1,23 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { fullRows, ownerOf, type LotoState } from '../../core/games/lotoPlay'
-import { COLS, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
+import { COLS, markColor, rowNumbers, sheetColor, sheetName, type Sheet } from '../../core/games/lotoSheets'
 import type { ID, Player } from '../../core/types'
 import { Button } from './kit'
 
 /** Cách đánh dấu số trên tờ. */
-export type Marker = 'chalk' | 'seed'
+export type Marker = 'cross' | 'chalk' | 'seed'
+const MARKERS: [Marker, string][] = [
+  ['cross', 'Dấu X'],
+  ['chalk', 'Phấn'],
+  ['seed', 'Hạt dưa'],
+]
 const MARKER_KEY = 'candypot:loto-marker'
 function readMarker(): Marker {
   try {
-    return localStorage.getItem(MARKER_KEY) === 'seed' ? 'seed' : 'chalk'
+    const v = localStorage.getItem(MARKER_KEY) as Marker | null
+    return v && MARKERS.some(([m]) => m === v) ? v : 'cross'
   } catch {
-    return 'chalk'
+    return 'cross'
   }
 }
 function saveMarker(m: Marker) {
@@ -43,41 +49,46 @@ function useMarks(roundId: string, me: ID | null) {
   return [marks, save] as const
 }
 
-/** Viên phấn: vòng trắng nét phấn (hơi lệch, hơi nhòe). */
-function ChalkMark({ n }: { n: number }) {
-  const rot = (n * 47) % 360
+/**
+ * Dấu đánh trên một số, màu tương phản với màu tờ.
+ * - Dấu X: hai nét chéo. - Phấn: một nét gạch xéo, nét phấn nhòe. - Hạt dưa: hạt đen đặt lên số.
+ * Vừa đánh (`fresh`) thì nét được vẽ ra / hạt rơi xuống cho rõ.
+ */
+function Mark({ n, kind, color, fresh }: { n: number; kind: Marker; color: string; fresh?: boolean }) {
+  if (kind === 'seed') {
+    const rot = (n * 73) % 360
+    return (
+      <svg
+        aria-hidden
+        viewBox="0 0 40 40"
+        className={`pointer-events-none absolute inset-[18%] size-[64%] drop-shadow-[0_1px_1px_rgb(0_0_0/0.5)] ${fresh ? 'mark-drop' : ''}`}
+        style={{ rotate: `${rot}deg` }}
+      >
+        <path d="M20 4 C29 12 31 24 26 33 C23 38 17 38 14 33 C9 24 11 12 20 4 Z" fill="#2a1414" stroke="#7a2e2e" strokeWidth="1.6" />
+        <path d="M18 12 C15 18 15 25 17 30" fill="none" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  const tilt = ((n * 37) % 13) - 6
   return (
-    <svg aria-hidden viewBox="0 0 40 40" className="pointer-events-none absolute inset-0 size-full" style={{ rotate: `${rot}deg` }}>
-      {/* Bóng mờ dưới nét phấn để thấy rõ trên nền giấy sáng */}
-      <path
-        d="M20 5 C31 4 36 12 35 21 C34 31 26 36 18 35 C9 34 4 27 5 18 C6 10 12 6 22 6"
-        fill="rgb(120 130 160 / 0.18)"
-        stroke="#5b6478"
-        strokeOpacity="0.55"
-        strokeWidth="5.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M20 5 C31 4 36 12 35 21 C34 31 26 36 18 35 C9 34 4 27 5 18 C6 10 12 6 22 6"
-        fill="none"
-        stroke="#fffdf5"
-        strokeOpacity="0.92"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeDasharray="38 2 14 3 60"
-        filter="url(#chalk)"
-      />
-    </svg>
-  )
-}
-
-/** Hạt dưa: hạt đen bóng, viền đỏ nâu, xoay ngẫu nhiên theo số. */
-function SeedMark({ n }: { n: number }) {
-  const rot = (n * 73) % 360
-  return (
-    <svg aria-hidden viewBox="0 0 40 40" className="pointer-events-none absolute inset-[20%] size-[60%] drop-shadow-[0_1px_1px_rgb(0_0_0/0.5)]" style={{ rotate: `${rot}deg` }}>
-      <path d="M20 4 C29 12 31 24 26 33 C23 38 17 38 14 33 C9 24 11 12 20 4 Z" fill="#2a1414" stroke="#7a2e2e" strokeWidth="1.6" />
-      <path d="M18 12 C15 18 15 25 17 30" fill="none" stroke="#fff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
+    <svg aria-hidden viewBox="0 0 40 40" className={`pointer-events-none absolute inset-0 size-full ${fresh ? 'mark-draw' : ''}`} style={{ rotate: `${tilt}deg` }}>
+      {kind === 'cross' ? (
+        <>
+          <path d="M8 8 L32 32" pathLength={100} stroke={color} strokeWidth="4.5" strokeLinecap="round" />
+          <path d="M32 8 L8 32" pathLength={100} stroke={color} strokeWidth="4.5" strokeLinecap="round" style={{ animationDelay: '0.12s' }} />
+        </>
+      ) : (
+        <path
+          d="M5 31 C14 25 24 17 35 9"
+          pathLength={100}
+          fill="none"
+          stroke={color}
+          strokeOpacity="0.88"
+          strokeWidth="6.5"
+          strokeLinecap="round"
+          filter="url(#chalk)"
+        />
+      )}
     </svg>
   )
 }
@@ -108,6 +119,7 @@ export function SheetCard({
   onWarn,
   winRow,
   small,
+  freshMark,
 }: {
   sheet: Sheet
   index: number
@@ -120,13 +132,16 @@ export function SheetCard({
   winRow?: number
   /** Bản thu nhỏ (bảng chọn tờ / tờ phía sau). */
   small?: boolean
+  /** Số vừa đánh — chạy hiệu ứng gạch. */
+  freshMark?: number
 }) {
   const color = sheetColor(index)
+  const ink = markColor(index)
   const [shake, setShake] = useState<number | null>(null)
   /** Ô số: nền trắng ngà, số đen to đậm (kiểu tờ in) — hàng kinh nền vàng. */
   const numCell = (win: boolean) =>
     `relative grid place-items-center bg-[#fffdf6] font-display font-extrabold leading-none tracking-tighter text-[#1a1a1a] ${
-      small ? 'h-2 text-[0px]' : 'aspect-[1/0.8] text-[17px]'
+      small ? 'h-2 text-[0px]' : 'aspect-[3/4] text-[15px]'
     } ${win ? '!bg-lemon' : ''}`
   /** Dải chữ trang trí giữa các khối, như tờ in. */
   const band = (text: string, italic?: boolean) =>
@@ -151,14 +166,14 @@ export function SheetCard({
                   // Ô trống: màu của tờ, hoa văn hình thoi nhỏ
                   <span
                     key={`${row}-${c}`}
-                    className={small ? 'h-2' : 'aspect-[1/0.8]'}
+                    className={small ? 'h-2' : 'aspect-[3/4]'}
                     style={{ background: `${ORNAMENT} center / 60% no-repeat, ${color}` } as CSSProperties}
                   />
                 ) : !onMark || small ? (
                   // Chỉ để xem (bảng mua tờ / tờ phía sau): không bấm được
                   <span key={`${row}-${c}`} className={numCell(win)}>
                     {n}
-                    {marked && !small && (marker === 'seed' ? <SeedMark n={n} /> : <ChalkMark n={n} />)}
+                    {marked && !small && <Mark n={n} kind={marker ?? 'cross'} color={ink} />}
                   </span>
                 ) : (
                   <button
@@ -174,10 +189,10 @@ export function SheetCard({
                       }
                       onMark(n)
                     }}
-                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''}`}
+                    className={`${numCell(win)} ${shake === n ? 'loto-shake' : ''} ${marked && freshMark === n ? 'mark-pop' : ''}`}
                   >
                     {n}
-                    {marked && (marker === 'seed' ? <SeedMark n={n} /> : <ChalkMark n={n} />)}
+                    {marked && <Mark n={n} kind={marker ?? 'cross'} color={ink} fresh={freshMark === n} />}
                   </button>
                 )
               }),
@@ -282,7 +297,7 @@ export function SheetPicker({
             if (x0 !== null && Math.abs(e.clientX - x0) > 50) go(e.clientX < x0 ? 1 : -1)
           }}
         >
-          <div className={owner ? 'opacity-50' : ''}>
+          <div className={`mx-auto max-w-[16rem] ${owner ? 'opacity-50' : ''}`}>
             <SheetCard key={at} sheet={papers[at]} index={at} />
           </div>
           {owner && (
@@ -361,8 +376,21 @@ function Bag({ shaking, small }: { shaking: boolean; small?: boolean }) {
   )
 }
 
-/** Túi số cho người gọi: giữ để lắc, thả ra là ra một số. */
-function BagButton({ onShake, small }: { onShake: () => void; small?: boolean }) {
+/** Lắc xong phải chờ ít nhất bấy nhiêu ms mới lắc tiếp (chốt an toàn, khỏi lắc liền tay ra hai số). */
+const SHAKE_GAP_MS = 5000
+/** Còn đang trong khoảng chờ sau số vừa gọi không — `count` = số đã gọi. */
+function useShakeReady(count: number) {
+  // Số đã gọi mà khoảng chờ sau nó đã hết — có số mới thì phải chờ thêm SHAKE_GAP_MS
+  const [doneFor, setDoneFor] = useState(count)
+  useEffect(() => {
+    const t = window.setTimeout(() => setDoneFor(count), SHAKE_GAP_MS)
+    return () => window.clearTimeout(t)
+  }, [count])
+  return doneFor === count
+}
+
+/** Túi số cho người gọi: giữ để lắc, thả ra là ra một số (vừa ra số thì nghỉ vài giây). */
+function BagButton({ onShake, small, ready }: { onShake: () => void; small?: boolean; ready: boolean }) {
   const [shaking, setShaking] = useState(false)
   return (
     <button
@@ -374,13 +402,16 @@ function BagButton({ onShake, small }: { onShake: () => void; small?: boolean })
         setShaking(true)
       }}
       onPointerUp={() => {
-        if (shaking) onShake()
+        if (shaking && ready) onShake()
         setShaking(false)
       }}
       onPointerCancel={() => setShaking(false)}
-      onKeyDown={(e) => e.key === 'Enter' && onShake()}
+      onKeyDown={(e) => e.key === 'Enter' && ready && onShake()}
     >
-      <Bag shaking={shaking} small={small} />
+      {/* Đang nghỉ giữa hai lần lắc: túi hơi mờ */}
+      <span className={`block transition-opacity ${ready ? '' : 'opacity-60'}`}>
+        <Bag shaking={shaking} small={small} />
+      </span>
     </button>
   )
 }
@@ -407,10 +438,11 @@ export function LotoCenter({
 }) {
   const last = loto.called[loto.called.length - 1]
   const canShake = !!me && loto.caller === me && !auto && !loto.winner && loto.called.length < 90
+  const shakeReady = useShakeReady(loto.called.length)
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="flex items-center gap-3">
-        {canShake ? <BagButton onShake={onShake} /> : <Bag shaking={false} />}
+        {canShake ? <BagButton onShake={onShake} ready={shakeReady} /> : <Bag shaking={false} />}
         {last !== undefined ? <Ball key={last} n={last} big fresh /> : <span className="text-xs text-muted">Chưa gọi số</span>}
       </div>
       <span className="text-[11px] text-muted">Đã gọi {loto.called.length}/90</span>
@@ -466,6 +498,8 @@ export function LotoPanel({
   const current = mine[Math.min(front, mine.length - 1)]
   const [marks, setMarks] = useMarks(roundId, me)
   const [marker, setMarker] = useState<Marker>(readMarker)
+  const [fresh, setFresh] = useState<number | undefined>()
+  const shakeReady = useShakeReady(loto.called.length)
   const recent = loto.called.slice(-7).reverse()
   /** Hàng đánh đủ 5 số (đã gọi) — kinh được. */
   const ready = (() => {
@@ -491,7 +525,7 @@ export function LotoPanel({
       <ChalkFilter />
       {/* Túi số (người gọi) + số vừa gọi: mới nhất to, bên trái */}
       <div className="flex items-center gap-2">
-        {canShake && <BagButton onShake={onShake} small />}
+        {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
         {recent.length ? (
           <>
             <Ball key={recent[0]} n={recent[0]} big fresh />
@@ -518,20 +552,19 @@ export function LotoPanel({
                   type="button"
                   onClick={() => setFront(k)}
                   aria-pressed={i === current}
-                  className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${i === current ? 'bg-cream text-night' : 'border-line/60 text-muted'}`}
-                  style={i === current ? { borderColor: sheetColor(i) } : undefined}
+                  aria-label={`Xem tờ ${sheetName(i)}`}
+                  title={sheetName(i)}
+                  className={`grid size-7 shrink-0 place-items-center rounded-lg text-xs font-extrabold text-white transition ${
+                    i === current ? 'ring-2 ring-cream' : 'opacity-50'
+                  }`}
+                  style={{ background: sheetColor(i) }}
                 >
-                  {sheetName(i)}
+                  {(i % 2) + 1}
                 </button>
               ))}
             <span className="flex-1" />
-            <div role="radiogroup" aria-label="Đánh số bằng" className="flex rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold">
-              {(
-                [
-                  ['chalk', 'Phấn'],
-                  ['seed', 'Hạt dưa'],
-                ] as const
-              ).map(([v, label]) => (
+            <div role="radiogroup" aria-label="Đánh số bằng" className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap">
+              {MARKERS.map(([v, label]) => (
                 <button
                   key={v}
                   type="button"
@@ -548,8 +581,8 @@ export function LotoPanel({
               ))}
             </div>
           </div>
-          {/* Xấp tờ: tờ đang xem ở trước; các tờ kia nhỏ hơn, mờ, lệch ra sau — chạm để đưa lên */}
-          <div className="relative mt-2" style={{ paddingTop: (mine.length - 1) * 10 }}>
+          {/* Các tờ xếp ngang: tờ đang xem bên phải (to, rõ); tờ phụ nhỏ hơn, mờ, lấp ló bên trái — chạm để đưa lên */}
+          <div className="relative mt-2 flex justify-end">
             {mine
               .map((i, k) => ({ i, k }))
               .filter(({ i }) => i !== current)
@@ -561,13 +594,13 @@ export function LotoPanel({
                   aria-label={`Xem tờ ${sheetName(i)}`}
                   onClick={() => setFront(k)}
                   onKeyDown={(e) => e.key === 'Enter' && setFront(k)}
-                  className="absolute inset-x-0 top-0 origin-top cursor-pointer transition-transform"
-                  style={{ transform: `translate(${(depth + 1) * 10}px, ${-(depth + 1) * 2}px) scale(${1 - (depth + 1) * 0.05})`, opacity: 0.5, zIndex: 0 }}
+                  className="absolute top-3 right-0 w-[64%] origin-right cursor-pointer transition-transform"
+                  style={{ transform: `translateX(-${(depth + 1) * 34}%) scale(${1 - (depth + 1) * 0.08})`, opacity: 0.45, zIndex: 5 - depth }}
                 >
                   <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
                 </div>
               ))}
-            <div className="relative z-10">
+            <div className={`relative z-10 ${mine.length > 1 ? 'w-[64%]' : 'mx-auto w-[72%]'}`}>
               <SheetCard
                 key={current}
                 sheet={papers[current]}
@@ -575,8 +608,17 @@ export function LotoPanel({
                 marks={marks}
                 called={loto.called}
                 marker={marker}
+                freshMark={fresh}
                 winRow={winner?.id === me && winner.sheet === current ? winner.row : undefined}
-                onMark={winner ? undefined : (n) => setMarks(marks.includes(n) ? marks.filter((x) => x !== n) : [...marks, n])}
+                onMark={
+                  winner
+                    ? undefined
+                    : (n) => {
+                        const on = !marks.includes(n)
+                        setFresh(on ? n : undefined)
+                        setMarks(on ? [...marks, n] : marks.filter((x) => x !== n))
+                      }
+                }
                 onWarn={(n) => onWarn(`Số ${n} chưa được gọi — chưa đánh được.`)}
               />
             </div>

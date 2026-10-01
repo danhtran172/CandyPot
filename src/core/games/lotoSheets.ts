@@ -140,6 +140,18 @@ export const pairsFor = (players: number, max: number) => Math.max(10, Math.ceil
 
 /** Màu / tên tờ thứ `index`. */
 export const sheetColor = (index: number) => SHEET_COLORS[Math.floor(index / 2) % SHEET_COLORS.length]
+/** Màu dấu đánh số: tương phản với màu tờ (đối màu, đậm để nổi trên nền giấy trắng). */
+export function markColor(index: number): string {
+  const hex = sheetColor(index)
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  let h = 0
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  const hue = (Math.round(h * 60) + 180 + 360) % 360
+  return `hsl(${hue} 85% 38%)`
+}
 export const sheetName = (index: number) => `${COLOR_NAMES[Math.floor(index / 2) % COLOR_NAMES.length]} ${(index % 2) + 1}`
 
 /** Kiểm tra một tờ đúng quy tắc (dùng cho test / phòng hờ). Trả về lỗi đầu tiên, null = đúng. */
