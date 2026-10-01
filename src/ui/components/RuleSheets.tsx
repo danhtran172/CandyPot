@@ -7,6 +7,7 @@ import type { Game } from '../../core/types'
 import { actions } from '../../store'
 import { pokerSettingsOf } from '../../store/appStore'
 import { Button, Stepper } from './kit'
+import { RecommendBadge } from './RecommendBadge'
 import { RuleIcon, type RuleIconName } from './RuleIcons'
 
 /** Một dòng cài đặt: icon + tên + ghi chú + ô số. */
@@ -109,25 +110,26 @@ export function LotoSettingsSheet({ game, onDone }: { game: Game; onDone: (saved
     <SettingsModal title="⚙ Lô tô" hint="Mua N tờ thì bỏ N × giá kẹo vào Pot." error={error} onSave={save} onClose={() => onDone(false)}>
       <SettingRow icon="price" label="Giá" hint="kẹo mỗi tờ" value={price} onChange={setPrice} />
       <SettingRow icon="max" label="Tối đa" hint="tờ mỗi người một ván" value={max} onChange={setMax} />
-      {/* Chơi giấy trong app: người gọi lắc túi, máy tự gọi mỗi 5 giây, hay gọi ở ngoài đời (đánh tự do) */}
+      {/* Chơi giấy trong app: gọi ở ngoài đời (mặc định, đánh tự do), người gọi lắc túi, hay máy tự gọi mỗi 5 giây */}
       <div className="mt-3">
         <p className="text-sm font-semibold">Gọi số</p>
         <div className="mt-1 grid grid-cols-3 gap-2">
           {(
             [
+              ['outside', 'Gọi ở ngoài', 'Kêu số ngoài đời, đánh tự do'],
               ['bag', 'Lắc túi', 'Người gọi giữ túi lắc ra số'],
               ['auto', 'Máy gọi', 'Tự ra một số mỗi 5 giây'],
-              ['outside', 'Gọi ở ngoài', 'Kêu số ngoài đời, đánh tự do'],
             ] as const
-          ).map(([v, label, hint]) => (
+          ).map(([v, label, hint], i) => (
             <button
               key={label}
               type="button"
               aria-pressed={calling === v}
               onClick={() => setCalling(v)}
-              className={`rounded-2xl border px-2 py-2 text-left transition ${calling === v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'}`}
+              className={`relative rounded-2xl border px-2 py-2 text-left transition ${calling === v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'}`}
             >
-              <div className="text-sm font-bold">{label}</div>
+              {i === 0 && <RecommendBadge />}
+              <div className="text-sm font-bold whitespace-nowrap">{label}</div>
               <div className="text-[11px] text-muted">{hint}</div>
             </button>
           ))}
@@ -151,7 +153,13 @@ export function XidachLimitsSheet({ game, onDone }: { game: Game; onDone: (saved
     else onDone(true)
   }
   return (
-    <SettingsModal title="⚙ Xì dách" hint="Mỗi người con đặt cược trong khoảng này." error={error} onSave={save} onClose={() => onDone(false)}>
+    <SettingsModal
+      title="⚙ Xì dách"
+      hint="Mỗi người con đặt cược trong khoảng này."
+      error={error}
+      onSave={save}
+      onClose={() => onDone(false)}
+    >
       <SettingRow
         icon="min"
         label="Min"
@@ -297,7 +305,12 @@ export function CardModePill({
     { v: 'app' as const, label: 'Trên app', hint: 'App chia bài, đánh trên máy' },
   ]
   return (
-    <div role="radiogroup" aria-label="Mode chơi bài" data-guide="card-mode" className="flex rounded-full border border-line/60 bg-night/70 p-0.5 text-xs font-bold">
+    <div
+      role="radiogroup"
+      aria-label="Mode chơi bài"
+      data-guide="card-mode"
+      className="flex rounded-full border border-line/60 bg-night/70 p-0.5 text-xs font-bold"
+    >
       {opts.map((o) => (
         <button
           key={o.v}
