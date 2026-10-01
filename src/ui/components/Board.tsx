@@ -116,6 +116,41 @@ function PlasticLeg({ side }: { side: 'left' | 'right' }) {
   )
 }
 
+/** Bàn Poker: tay vịn da nâu (dày, đổ bóng), viền bạc, mặt nỉ xanh. */
+const POKER_RAIL = {
+  background: 'radial-gradient(ellipse at 50% 30%, #7a3b22, #4a1f10 70%, #2e1208)',
+  boxShadow: 'inset 0 2px 0 rgb(255 220 190 / 0.35), inset 0 -3px 6px rgb(0 0 0 / 0.5), 0 8px 0 #24100a, 0 22px 30px rgb(0 0 0 / 0.55)',
+}
+const POKER_CHROME = { background: 'linear-gradient(160deg, #f4f4f4, #9a9a9a 35%, #e8e8e8 55%, #7d7d7d 80%, #d0d0d0)' }
+const POKER_FELT = {
+  background: 'radial-gradient(ellipse at 50% 40%, #23874f 0%, #146238 55%, #0b3f22 100%)',
+  boxShadow: 'inset 0 0 28px rgb(0 0 0 / 0.55)',
+}
+
+/** Đế trụ bàn Poker: thân trụ đen, hai bậc đế rộng dần. */
+function PokerPedestal() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 100 60"
+      preserveAspectRatio="none"
+      className="absolute top-[calc(100%-10px)] left-1/2 w-[42%] -translate-x-1/2 drop-shadow-[0_6px_8px_rgb(0_0_0/0.6)]"
+      style={{ height: 'min(56px, 30%)' }}
+    >
+      <defs>
+        <linearGradient id="poker-base" x1="0" x2="1">
+          <stop offset="0" stopColor="#050505" />
+          <stop offset="0.45" stopColor="#3a3a3a" />
+          <stop offset="1" stopColor="#0a0a0a" />
+        </linearGradient>
+      </defs>
+      <path d="M26 0H74V40H26Z" fill="url(#poker-base)" />
+      <path d="M18 40H82Q86 40 86 44V48H14V44Q14 40 18 40Z" fill="url(#poker-base)" stroke="#555" strokeWidth="0.6" />
+      <path d="M8 48H92Q96 48 96 52V60H4V52Q4 48 8 48Z" fill="url(#poker-base)" stroke="#555" strokeWidth="0.6" />
+    </svg>
+  )
+}
+
 function sizeFor(n: number) {
   if (n <= 6) return { seat: 'w-[78px]', avatar: 'size-13 text-3xl' }
   if (n <= 8) return { seat: 'w-[68px]', avatar: 'size-11 text-2xl' }
@@ -148,8 +183,8 @@ export function Board({
   onTap,
 }: {
   seats: Seat[]
-  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh, hay bàn nhựa đỏ chữ nhật (Lô tô) — ngồi quanh như oval. */
-  shape?: 'oval' | 'square' | 'plastic'
+  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh, hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval. */
+  shape?: 'oval' | 'square' | 'plastic' | 'poker'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Nút ở góc trên bên phải bàn (Rule ? + ⚙ cài đặt). */
@@ -295,7 +330,19 @@ export function Board({
           style={square ? { width: 'var(--board-w)' } : undefined}
         >
           {/* Mặt bàn */}
-          {shape === 'plastic' ? (
+          {shape === 'poker' ? (
+            <div className="absolute inset-x-[17%] top-[16%] bottom-[22%]">
+              <PokerPedestal />
+              {/* Tay vịn da → viền bạc → mặt nỉ (có đường kẻ mờ chỗ đặt cược) */}
+              <div className="absolute inset-0 rounded-full" style={POKER_RAIL}>
+                <div className="absolute inset-[12px] rounded-full p-[3px]" style={POKER_CHROME}>
+                  <div className="relative size-full rounded-full" style={POKER_FELT}>
+                    <span className="absolute inset-[13%] rounded-full border border-white/10" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : shape === 'plastic' ? (
             <div className="absolute inset-x-[19%] top-[17%] bottom-[25%]">
               {/* 2 chân trước, mặt bàn đè lên trên */}
               <PlasticLeg side="left" />
@@ -315,8 +362,8 @@ export function Board({
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             } ${
-              // Bàn nhựa đỏ: chữ xám mờ khó đọc trên nền đỏ → sáng lên
-              shape === 'plastic' ? '[&_.text-muted]:text-white/80' : ''
+              // Bàn nhựa đỏ / nỉ xanh: chữ xám mờ khó đọc trên nền màu → sáng lên
+              shape === 'plastic' || shape === 'poker' ? '[&_.text-muted]:text-white/80' : ''
             }`}
           >
             {title && (
