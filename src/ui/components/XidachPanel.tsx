@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { DEALER_MIN, describe, MAX_CARDS, PLAYER_MIN, resultText, score, type XidachCards, type XidachResult } from '../../core/games/xidachPlay'
+import {
+  DEALER_MIN,
+  describe,
+  MAX_CARDS,
+  PLAYER_MIN,
+  resultText,
+  score,
+  type XidachCards,
+  type XidachResult,
+} from '../../core/games/xidachPlay'
 import type { ID, Player, Round } from '../../core/types'
 import { TURN_MS, useTurnLeft } from '../turnClock'
 import { CardBack } from './CardBack'
@@ -31,11 +40,7 @@ export function XidachCenter({
   const start = useRef<{ x: number; y: number } | null>(null)
   const layers = Math.max(1, Math.ceil(cards.deck.length / 8))
   const status =
-    cards.turn === null
-      ? 'Xong ván'
-      : cards.turn === cards.dealer
-        ? `Lượt cái ${name(cards.dealer)}`
-        : `Lượt ${name(cards.turn)} rút bài`
+    cards.turn === null ? 'Xong ván' : cards.turn === cards.dealer ? `Lượt cái ${name(cards.dealer)}` : `Lượt ${name(cards.turn)} rút bài`
   return (
     <div className="flex flex-col items-center gap-1">
       <div
@@ -70,7 +75,9 @@ export function XidachCenter({
           <CardBack key={i} className="absolute inset-0 size-full rounded-md" style={{ transform: `translate(${-i * 0.6}px, ${-i}px)` }} />
         ))}
         {/* Tới lượt: viền sáng nhấp nháy nhẹ quanh bộ bài */}
-        {canDraw && !pull && <span aria-hidden className="pointer-events-none absolute -inset-1 animate-pulse rounded-lg ring-2 ring-lemon" />}
+        {canDraw && !pull && (
+          <span aria-hidden className="pointer-events-none absolute -inset-1 animate-pulse rounded-lg ring-2 ring-lemon" />
+        )}
         {/* Lá đang kéo theo ngón tay */}
         {pull && (
           <CardBack
@@ -105,6 +112,7 @@ export function XidachPanel({
   onCheckAll,
   onNext,
   menu,
+  hidden,
 }: {
   round: Round
   cards: XidachCards
@@ -117,6 +125,8 @@ export function XidachPanel({
   onCheckAll: () => void
   onNext: () => void
   menu: ReactNode
+  /** Giấu bài (nút con mắt): bài úp lưng, không hiện điểm — vẫn đẩy lên để dằn / xét được. */
+  hidden?: boolean
 }) {
   const name = (id: ID) => players[id]?.name ?? '?'
   const inGame = !!me && (cards.order.includes(me) || cards.dealer === me)
@@ -190,7 +200,11 @@ export function XidachPanel({
         <div
           role="status"
           className={`mb-1 rounded-2xl border px-3 py-1.5 text-center text-sm font-bold ${flashResult ? 'pop' : ''} ${
-            result.outcome === 'win' ? 'border-mint/60 bg-mint/15' : result.outcome === 'lose' ? 'border-berry/60 bg-berry/15' : 'border-sky/60 bg-sky/15'
+            result.outcome === 'win'
+              ? 'border-mint/60 bg-mint/15'
+              : result.outcome === 'lose'
+                ? 'border-berry/60 bg-berry/15'
+                : 'border-sky/60 bg-sky/15'
           }`}
         >
           <span className={TONE[result.outcome]}>Cái xét: {resultText(result)}</span>
@@ -206,7 +220,9 @@ export function XidachPanel({
         <div className="flex items-center justify-center gap-2 text-xs">
           <p className={`text-center ${myTurn ? 'font-semibold text-lemon' : 'text-muted'}`}>{status}</p>
           {secs !== null && (
-            <span className={`num shrink-0 rounded-full px-2 py-0.5 font-bold ${urgent ? 'animate-pulse bg-berry/20 text-berry' : 'bg-plum-2 text-cream'}`}>
+            <span
+              className={`num shrink-0 rounded-full px-2 py-0.5 font-bold ${urgent ? 'animate-pulse bg-berry/20 text-berry' : 'bg-plum-2 text-cream'}`}
+            >
               {secs}s
             </span>
           )}
@@ -251,22 +267,39 @@ export function XidachPanel({
           >
             {hand.map((c, i) => (
               <span key={c} className={`pop ${i ? '-ml-4' : ''}`} style={{ rotate: `${(i - (hand.length - 1) / 2) * 4}deg` }}>
-                <PlayingCard card={c} fan />
+                {hidden ? <CardBack className="block h-[4.5rem] w-12 rounded-lg shadow-md" /> : <PlayingCard card={c} fan />}
               </span>
             ))}
           </div>
           <div className="flex flex-col items-center">
-            <span className={`font-display text-2xl leading-none font-extrabold ${sc?.kind === 'quac' || short ? 'text-berry' : 'text-lemon'}`}>
-              {sc && (sc.kind === 'points' ? sc.points : describe(hand, isDealer))}
-            </span>
-            <span className="text-[10px] text-muted">{sc?.kind === 'points' ? (short ? 'non' : 'điểm') : `${sc?.points ?? ''} điểm`}</span>
-            {myTurn && push < -PULL / 2 && <span className="mt-0.5 text-[10px] font-bold text-lemon">{isDealer ? 'Thả để xét tất' : 'Thả để dằn'}</span>}
+            {hidden ? (
+              <>
+                <span className="font-display text-2xl leading-none font-extrabold text-muted">?</span>
+                <span className="text-[10px] text-muted">đang giấu</span>
+              </>
+            ) : (
+              <>
+                <span
+                  className={`font-display text-2xl leading-none font-extrabold ${sc?.kind === 'quac' || short ? 'text-berry' : 'text-lemon'}`}
+                >
+                  {sc && (sc.kind === 'points' ? sc.points : describe(hand, isDealer))}
+                </span>
+                <span className="text-[10px] text-muted">
+                  {sc?.kind === 'points' ? (short ? 'non' : 'điểm') : `${sc?.points ?? ''} điểm`}
+                </span>
+              </>
+            )}
+            {myTurn && push < -PULL / 2 && (
+              <span className="mt-0.5 text-[10px] font-bold text-lemon">{isDealer ? 'Thả để xét tất' : 'Thả để dằn'}</span>
+            )}
           </div>
         </div>
       )}
       <div className="mt-1.5 flex items-center gap-2">
         {menu}
-        {myTurn && !isDealer && <p className="flex-1 text-center text-[11px] text-muted">↓ Kéo bài giữa bàn để rút · ↑ Đẩy bài lên để dằn</p>}
+        {myTurn && !isDealer && (
+          <p className="flex-1 text-center text-[11px] text-muted">↓ Kéo bài giữa bàn để rút · ↑ Đẩy bài lên để dằn</p>
+        )}
         {myTurn && isDealer && (
           <>
             <p className="flex-1 text-center text-[11px] text-muted">Chạm người chơi để xét lẻ</p>

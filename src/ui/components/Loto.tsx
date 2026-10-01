@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom'
 import { Button } from './kit'
 import { useLandscape } from '../landscape'
 import bagIcon from '../../assets/loto-bag.webp'
+import { FoldIcon } from './CardIcons'
 
 /** Cách đánh dấu số trên tờ. */
 export type Marker = 'cross' | 'chalk' | 'seed'
@@ -804,19 +805,32 @@ export function LotoPanel({
       </div>
     ) : null
 
-  const foldBtn = mine.length > 0 && (
-    <button
-      type="button"
-      onClick={() => fold(!folded)}
-      aria-expanded={!folded}
-      // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
-      className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold whitespace-nowrap ${
-        folded && hint !== undefined && mine.some((i) => unmarked(i, hint)) ? 'loto-hint-border' : ''
-      }`}
-    >
-      {folded ? 'Mở tờ ▴' : 'Thu tờ ▾'}
-    </button>
-  )
+  const foldBtn =
+    mine.length > 0 &&
+    (folded ? (
+      <button
+        type="button"
+        onClick={() => fold(false)}
+        aria-expanded={false}
+        // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
+        className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold whitespace-nowrap ${
+          hint !== undefined && mine.some((i) => unmarked(i, hint)) ? 'loto-hint-border' : ''
+        }`}
+      >
+        Mở tờ ▴
+      </button>
+    ) : (
+      // Đang mở: chỉ một icon thu xuống
+      <button
+        type="button"
+        onClick={() => fold(true)}
+        aria-label="Thu tờ"
+        title="Thu tờ"
+        className="grid size-8 shrink-0 place-items-center rounded-full border border-line/60 bg-night/70 text-cream"
+      >
+        <FoldIcon className="size-4.5" />
+      </button>
+    ))
   const countBtn = !outside && (
     <button
       type="button"

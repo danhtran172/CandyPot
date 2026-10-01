@@ -36,7 +36,8 @@ import { PriceSheet } from '../components/PriceSheet'
 import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
-import { useCardsFolded } from '../cardsFold'
+import { useCardsFolded, useHideHand } from '../cardsFold'
+import { EyeIcon, FoldIcon } from '../components/CardIcons'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
 import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
 import { HOST_GRACE_MS, TURN_MS, turnStart } from '../turnClock'
@@ -148,6 +149,8 @@ export function Table() {
   const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
   /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
   const [cardsFolded, foldCards] = useCardsFolded()
+  /** Giấu bài trên tay (Xì dách): úp lưng, ẩn điểm. */
+  const [handHidden, toggleHand] = useHideHand()
   /** Đang mở bài: bài chiếm phần dưới (Lô tô: cả màn hình), các nút thường ẩn đi. Lô tô không mua tờ thì coi như thu. */
   const cardOpen = cardPlay && !cardsFolded && (!lotoPlay || !!(me && round?.loto?.sheets[me]?.length))
   const isLoto = game?.type === 'loto'
@@ -764,16 +767,41 @@ export function Table() {
   )
   /** Nút Thu bài / Mở bài. Đang thu mà tới lượt mình thì viền nháy nhắc. */
   const cardTurnMine = !!me && (round?.tienlen?.turn === me || round?.xidach?.turn === me)
-  const foldBtn = (open: boolean) => (
+  const foldBtn = (open: boolean) =>
+    open ? (
+      // Đang mở: chỉ một icon thu xuống
+      <button
+        type="button"
+        onClick={() => foldCards(true)}
+        aria-label="Thu bài"
+        title="Thu bài"
+        className="grid size-8 place-items-center rounded-full border border-line/60 bg-night/90 text-cream"
+      >
+        <FoldIcon className="size-4.5" />
+      </button>
+    ) : (
+      <button
+        type="button"
+        onClick={() => foldCards(false)}
+        aria-expanded={false}
+        className={`shrink-0 rounded-full border border-line/60 bg-night/90 px-3 py-1.5 text-xs font-semibold whitespace-nowrap ${
+          cardTurnMine ? 'loto-hint-border text-lemon' : ''
+        }`}
+      >
+        Mở bài ▴
+      </button>
+    )
+  /** Con mắt: giấu / hiện bài trên tay (game cần giấu bài — Xì dách). */
+  const eyeBtn = (
     <button
       type="button"
-      onClick={() => foldCards(open)}
-      aria-expanded={!open}
-      className={`shrink-0 rounded-full border border-line/60 bg-night/90 px-3 py-1.5 text-xs font-semibold whitespace-nowrap ${
-        !open && cardTurnMine ? 'loto-hint-border text-lemon' : ''
-      }`}
+      onClick={toggleHand}
+      aria-pressed={handHidden}
+      aria-label={handHidden ? 'Hiện bài' : 'Giấu bài'}
+      title={handHidden ? 'Hiện bài' : 'Giấu bài'}
+      className={`grid size-8 place-items-center rounded-full border bg-night/90 ${handHidden ? 'border-lemon text-lemon' : 'border-line/60 text-cream'}`}
     >
-      {open ? 'Thu bài ▾' : 'Mở bài ▴'}
+      <EyeIcon off={handHidden} className="size-4.5" />
     </button>
   )
   /** Thanh bài thu gọn (Tiến lên / Xì dách): trạng thái lượt, ⋯ thao tác host, Ván mới khi xong, Mở bài. */
@@ -1076,8 +1104,12 @@ export function Table() {
             )}
             {cardOpen && round?.xidach && (
               <div className="pointer-events-auto relative">
-                <div className="absolute -top-4 right-4 z-10">{foldBtn(true)}</div>
+                <div className="absolute -top-4 right-4 z-10 flex gap-1.5">
+                  {eyeBtn}
+                  {foldBtn(true)}
+                </div>
                 <XidachPanel
+                  hidden={handHidden}
                   round={round}
                   cards={round.xidach}
                   players={players}
