@@ -5,11 +5,11 @@ import {
   cardLabel,
   comboOf,
   COMBO_LABEL,
+  completeWith,
   HAND_SORT_LABEL,
   isRed,
   placeOf,
   playableCards,
-  suggestWith,
   type Card,
   type HandSort,
   type TienlenCards,
@@ -154,18 +154,30 @@ export function TienlenPanel({
     const next = comboOf(cs)
     return !!prev && !!next && beats(prev, next)
   }
+  const tableCombo = table && comboOf(table)
+  /** Bàn là sảnh / đôi thông: một lá chưa đủ biết bộ nào (lên hay xuống) — đợi lá thứ hai mới điền. */
+  const seqTable = tableCombo?.type === 'straight' || tableCombo?.type === 'pairs'
+  /** Tự điền nốt bộ chặn bàn từ các lá đã chọn (null = không điền được / không cần). */
+  const fill = (cs: Card[]) =>
+    !table || !cs.length || beatsTable(cs) || (seqTable && cs.length < 2) ? null : completeWith(hand, table, cs, cards.mustOpen)
   /**
-   * Chạm một lá: đang phải chặn mà chưa chọn gì (hoặc đang chọn sẵn một bộ chặn được) → tự chọn bộ nhỏ nhất
-   * có lá đó chặn được bàn; còn lại bật / tắt riêng lá đó.
+   * Chạm một lá (đang phải chặn):
+   * - lá đang chọn → bỏ chọn lá đó;
+   * - thêm lá mà chưa thành bộ chặn được → tự điền nốt bộ nhỏ nhất có đủ các lá đã chọn
+   *   (đôi / sám / tứ quý: 1 lá là đủ; sảnh / đôi thông: từ lá thứ hai, vd bàn sảnh 3, chọn J Q hoặc J K → J Q K);
+   * - đang có sẵn một bộ chặn được mà chạm lá ngoài bộ → chọn lại bắt đầu từ lá đó.
+   * Vòng mới: bật / tắt từng lá như thường.
    */
   const tap = (c: Card) => {
     if (picked.includes(c)) return setSel(picked.filter((x) => x !== c))
-    if (table && (!picked.length || beatsTable(picked))) {
-      const s = suggestWith(hand, table, c, cards.mustOpen)
-      if (s) return setSel(s)
-    }
-    setSel([...picked, c])
+    const next = [...picked, c]
+    const full = fill(next)
+    if (full) return setSel(full)
+    if (picked.length && beatsTable(picked) && !beatsTable(next)) return setSel(fill([c]) ?? [c])
+    setSel(next)
   }
+  /** Vuốt chọn xong mà chưa thành bộ → điền nốt. */
+  const dragEnd = () => setSel((prev) => fill(prev.filter((c) => hand.includes(c))) ?? prev)
 
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-1 pb-2 backdrop-blur">
@@ -239,6 +251,7 @@ export function TienlenPanel({
             dim={(c) => !!playable && !playable.has(c)}
             onTap={tap}
             onDrag={(c, on) => setSel((prev) => (on ? (prev.includes(c) ? prev : [...prev, c]) : prev.filter((x) => x !== c)))}
+            onDragEnd={dragEnd}
             onSwipeUp={myTurn && combo ? play : undefined}
           />
           {!myTurn && (
@@ -293,6 +306,7 @@ function FanHand({
   dim,
   onTap,
   onDrag,
+  onDragEnd,
   onSwipeUp,
 }: {
   hand: Card[]
@@ -300,6 +314,8 @@ function FanHand({
   dim: (c: Card) => boolean
   onTap: (c: Card) => void
   onDrag: (c: Card, on: boolean) => void
+  /** Vuốt chọn (không phải vuốt lên để đánh) vừa xong. */
+  onDragEnd: () => void
   onSwipeUp?: () => void
 }) {
   const box = useRef<HTMLDivElement>(null)
@@ -366,6 +382,7 @@ function FanHand({
         if (!d) return
         if (!d.moved) return onTap(d.start)
         if (d.wasPicked && d.seen.size === 1 && d.y - e.clientY > 40 && upward(d, e.clientX, e.clientY)) onSwipeUp?.()
+        else if (d.on) onDragEnd()
       }}
       onPointerCancel={() => (drag.current = null)}
     >

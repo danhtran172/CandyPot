@@ -186,27 +186,42 @@ export function autoMove(s: TienlenCards, id: ID): TienlenCards | string {
  * (cùng loại trước, không có thì hàng chặt heo). Vòng mới hoặc không có bộ nào → null.
  */
 export function suggestWith(hand: Card[], table: Card[] | null, card: Card, mustOpen = false): Card[] | null {
+  return completeWith(hand, table, [card], mustOpen)
+}
+
+/**
+ * Tự điền nốt: từ các lá đã chọn, tìm bộ nhỏ nhất CHỨA ĐỦ các lá đó mà chặn được bàn — thêm ít lá nhất có thể.
+ * Vd bàn là sảnh 3 lá, chọn J Q (hoặc J K) → J Q K; bàn là đôi thông 3 đôi, chọn 7 8 → 6 6 7 7 8 8 hoặc 7 7 8 8 9 9;
+ * bàn là heo, chọn một lá của tứ quý → cả tứ quý. Ưu tiên bộ cùng loại với bàn, rồi mới tới hàng chặt; cùng loại thì lá cao nhất nhỏ nhất.
+ * Vòng mới (chưa biết đánh bộ gì) hoặc không có bộ nào → null.
+ */
+export function completeWith(hand: Card[], table: Card[] | null, picked: Card[], mustOpen = false): Card[] | null {
   const prev = table ? comboOf(table) : null
-  if (!prev || !hand.includes(card)) return null
+  if (!prev || !picked.length || !picked.every((c) => hand.includes(c))) return null
   const byRank: Card[][] = Array.from({ length: 13 }, () => [])
   for (const c of [...hand].sort((a, b) => a - b)) byRank[rankOf(c)].push(c)
-  const r = rankOf(card)
+  const pickedRanks = picked.map(rankOf)
+  const lo = Math.min(...pickedRanks)
+  const hi = Math.max(...pickedRanks)
   const wants: { type: ComboType; size: number }[] = [{ type: prev.type, size: prev.size }]
   if (prev.type !== 'quad') wants.push({ type: 'quad', size: 4 })
   for (const n of [3, 4, 5, 6]) if (prev.type !== 'pairs' || prev.size !== n) wants.push({ type: 'pairs', size: n })
   /** Mọi cách lấy k lá từ list. */
   const choose = (list: Card[], k: number): Card[][] =>
     k === 0 ? [[]] : list.flatMap((c, i) => choose(list.slice(i + 1), k - 1).map((rest) => [c, ...rest]))
-  /** Ứng viên bộ chứa `card`, mỗi hạng lấy `per` lá: hạng thường lấy lá nhỏ nhất, hạng cao nhất thử mọi cách (để vừa đủ chặn). */
+  /**
+   * Ứng viên bộ trên các hạng `ranks`, mỗi hạng `per` lá, luôn gồm các lá đã chọn của hạng đó:
+   * hạng thường thêm lá nhỏ nhất, hạng cao nhất thử mọi cách (để vừa đủ chặn).
+   */
   const build = (ranks: number[], per: number): Card[][] => {
     const top = ranks[ranks.length - 1]
     let acc: Card[][] = [[]]
     for (const rank of ranks) {
-      const all = byRank[rank]
-      const others = rank === r ? all.filter((c) => c !== card) : all
-      const need = rank === r ? per - 1 : per
-      if (others.length < need) return []
-      const opts = (rank === top ? choose(others, need) : [others.slice(0, need)]).map((o) => (rank === r ? [card, ...o] : o))
+      const must = picked.filter((c) => rankOf(c) === rank)
+      const others = byRank[rank].filter((c) => !must.includes(c))
+      const need = per - must.length
+      if (need < 0 || others.length < need) return []
+      const opts = (rank === top ? choose(others, need) : [others.slice(0, need)]).map((o) => [...must, ...o])
       acc = acc.flatMap((x) => opts.map((o) => [...x, ...o]))
     }
     return acc
@@ -214,14 +229,15 @@ export function suggestWith(hand: Card[], table: Card[] | null, card: Card, must
   let best: { cards: Card[]; pri: number; top: Card } | null = null
   wants.forEach(({ type, size }, pri) => {
     const windows: { ranks: number[]; per: number }[] = []
-    if (type === 'single' || type === 'pair' || type === 'triple' || type === 'quad') windows.push({ ranks: [r], per: size })
-    else if (r < TWO)
-      for (let a = Math.max(0, r - size + 1); a <= r && a + size - 1 < TWO; a++)
+    if (type === 'single' || type === 'pair' || type === 'triple' || type === 'quad') {
+      if (lo === hi) windows.push({ ranks: [lo], per: size })
+    } else if (hi < TWO)
+      for (let a = Math.max(0, hi - size + 1); a <= lo && a + size - 1 < TWO; a++)
         windows.push({ ranks: Array.from({ length: size }, (_, i) => a + i), per: type === 'pairs' ? 2 : 1 })
     for (const w of windows)
       for (const cards of build(w.ranks, w.per)) {
         const combo = comboOf(cards)
-        if (!combo || combo.type !== type || !cards.includes(card)) continue
+        if (!combo || combo.type !== type || !picked.every((c) => cards.includes(c))) continue
         if (mustOpen && !cards.includes(THREE_SPADES)) continue
         if (!beats(prev, combo)) continue
         if (!best || pri < best.pri || (pri === best.pri && combo.top < best.top)) best = { cards, pri, top: combo.top }

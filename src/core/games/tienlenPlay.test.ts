@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrangeHand, autoMove, beats, comboOf, deal, pass, payouts, play, playableCards, suggestWith, type Card, type TienlenCards } from './tienlenPlay'
+import { arrangeHand, autoMove, beats, completeWith, comboOf, deal, pass, payouts, play, playableCards, suggestWith, type Card, type TienlenCards } from './tienlenPlay'
 
 /** Lá theo hạng + chất: c('3♠') … c('2♥'). */
 const R = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2']
@@ -118,5 +118,30 @@ describe('arrangeHand — xếp bài', () => {
   })
   it('theo bộ: đôi thông trước sảnh', () => {
     expect(arrangeHand(cs('5♠ 5♥ 6♠ 6♥ 7♣ 7♦ 8♠'), 'combo')).toEqual(cs('8♠ 5♠ 5♥ 6♠ 6♥ 7♣ 7♦'))
+  })
+})
+
+describe('completeWith — chọn vài lá, tự điền nốt bộ', () => {
+  const hand = cs('4♠ 6♣ 6♥ 7♠ 7♦ 8♣ 8♥ 9♦ J♠ Q♥ K♣ K♦ A♠')
+  it('sảnh 3: J Q hoặc J K → J Q K', () => {
+    expect(completeWith(hand, cs('5♠ 6♠ 7♥'), cs('J♠ Q♥'))).toEqual(cs('J♠ Q♥ K♣'))
+    expect(completeWith(hand, cs('5♠ 6♠ 7♥'), cs('J♠ K♦'))).toEqual(cs('J♠ Q♥ K♦'))
+  })
+  it('sảnh 5: chọn 2 lá → điền phần còn lại; thiếu lá thì null', () => {
+    const h = cs('5♣ 6♣ 7♠ 8♣ 9♦ 10♥ J♠ Q♥')
+    expect(completeWith(h, cs('3♠ 4♥ 5♦ 6♠ 7♥'), cs('6♣ 9♦'))).toEqual(cs('5♣ 6♣ 7♠ 8♣ 9♦'))
+    expect(completeWith(h, cs('3♠ 4♥ 5♦ 6♠ 7♥'), cs('8♣ Q♥'))).toEqual(cs('8♣ 9♦ 10♥ J♠ Q♥'))
+    expect(completeWith(hand, cs('3♠ 4♥ 5♦ 6♠ 7♥'), cs('9♦ K♣'))).toBeNull()
+  })
+  it('đôi thông: chọn 7 8 → 3 đôi thông nhỏ nhất chặn được', () => {
+    expect(completeWith(hand, cs('3♠ 3♥ 4♠ 4♥ 5♠ 5♥'), cs('7♠ 8♣'))).toEqual(cs('6♣ 6♥ 7♠ 7♦ 8♣ 8♥'))
+  })
+  it('sám / tứ quý: chọn 1–2 lá → đủ bộ', () => {
+    expect(completeWith(cs('9♠ 9♣ 9♥ 3♦'), cs('5♠ 5♣ 5♦'), cs('9♣'))).toEqual(cs('9♠ 9♣ 9♥'))
+    expect(completeWith(cs('9♠ 9♣ 9♦ 9♥ 3♦'), cs('2♠'), cs('9♣ 9♥'))).toEqual(cs('9♠ 9♣ 9♦ 9♥'))
+  })
+  it('lá đã chọn không nằm trong bộ nào chặn được → null; vòng mới → null', () => {
+    expect(completeWith(hand, cs('5♠ 6♠ 7♥'), cs('4♠ A♠'))).toBeNull()
+    expect(completeWith(hand, null, cs('J♠ Q♥'))).toBeNull()
   })
 })
