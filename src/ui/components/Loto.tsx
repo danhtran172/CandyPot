@@ -776,73 +776,157 @@ export function LotoPanel({
     </div>
   ) : null
 
-  // Xoay ngang: phủ cả màn (trừ cột điều hướng) — thanh trên cùng hiện số gọi + nút; các tờ cao gần hết màn hình,
-  // nằm cạnh nhau (đánh trực tiếp trên tờ nào cũng được); túi gọi số ở góc phải dưới
-  if (land) {
-    const n = Math.max(1, mine.length)
+  const foldBtn = mine.length > 0 && (
+    <button
+      type="button"
+      onClick={() => fold(!folded)}
+      aria-expanded={!folded}
+      // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
+      className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold whitespace-nowrap ${
+        folded && hint !== undefined && mine.some((i) => papers[i].some((r) => r.includes(hint))) ? 'loto-hint-border' : ''
+      }`}
+    >
+      {folded ? 'Mở tờ ▴' : 'Thu tờ ▾'}
+    </button>
+  )
+  const countBtn = !outside && (
+    <button
+      type="button"
+      onClick={() => setBoard(true)}
+      aria-label="Xem tất cả số đã gọi"
+      className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
+    >
+      {loto.called.length}/90
+    </button>
+  )
+  /** Số vừa gọi (to) + các số trước; gọi ở ngoài thì chỉ là dòng nhắc. */
+  const calledStrip = (big: boolean) =>
+    outside ? (
+      <p className="min-w-0 flex-1 truncate text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</p>
+    ) : recent.length ? (
+      <>
+        <Ball key={recent[0]} n={recent[0]} big={big} mid={!big} fresh />
+        <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
+          {recent.slice(1).map((n2) => (
+            <Ball key={n2} n={n2} />
+          ))}
+        </div>
+      </>
+    ) : (
+      <span className="min-w-0 flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
+    )
+  const hintLine = (
+    <p className="text-[11px] text-muted">
+      {loto.rejected === me && <b className="text-berry">Host chưa công nhận lần kinh vừa rồi. </b>}
+      {outside ? 'Chạm số để đánh' : 'Chạm số đã gọi để đánh'} · đủ 5 số một hàng là Kinh
+    </p>
+  )
+  const sheetProps = (i: number) => ({
+    sheet: papers[i],
+    index: i,
+    marks,
+    called: outside ? undefined : loto.called,
+    marker,
+    freshMark: fresh,
+    hint,
+    winRow: winner?.id === me && winner.sheet === i ? winner.row : undefined,
+    onMark: markOn,
+    onWarn: (x: number) => onWarn(`Số ${x} chưa được gọi — chưa đánh được.`),
+  })
+
+  // Đang mở tờ: phủ toàn màn hình (che cả thanh tiêu đề và thanh điều hướng) — thanh trên cùng là số gọi + nút,
+  // tờ cao gần hết màn hình; túi gọi số và KINH ở góc phải dưới. "Thu tờ" để quay lại xem bàn.
+  if (mine.length && !folded) {
+    const n = mine.length
     return createPortal(
       <section
         data-guide="cards"
-        className="fixed inset-y-0 left-0 z-30 flex flex-col bg-night pt-[env(safe-area-inset-top)] pr-2 pb-[env(safe-area-inset-bottom)] pl-[calc(0.5rem+env(safe-area-inset-left))]"
-        style={{ right: 'calc(5rem + env(safe-area-inset-right))' }}
+        className="fixed inset-0 z-30 flex flex-col bg-night pt-[env(safe-area-inset-top)] pr-[calc(0.5rem+env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[calc(0.5rem+env(safe-area-inset-left))]"
       >
         <ChalkFilter />
         {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
-        {/* Thanh trên cùng: số vừa gọi (to) + các số trước, đếm, kiểu gạch, ⋯ */}
-        <div className="flex h-12 shrink-0 items-center gap-2">
-          {outside ? (
-            <p className="min-w-0 flex-1 truncate text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</p>
-          ) : (
-            <>
-              {recent.length ? <Ball key={recent[0]} n={recent[0]} mid fresh /> : <span className="text-xs text-muted">Chờ gọi số…</span>}
-              <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-                {recent.slice(1).map((n2) => (
-                  <Ball key={n2} n={n2} />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => setBoard(true)}
-                aria-label="Xem tất cả số đã gọi"
-                className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
-              >
-                {loto.called.length}/90
-              </button>
-            </>
-          )}
-          {markerPicker}
+        {/* Thanh trên cùng: số gọi, đếm, (ngang: kiểu gạch), thu tờ, ⋯ */}
+        <div className="flex h-14 shrink-0 items-center gap-2">
+          {calledStrip(false)}
+          {countBtn}
+          {land && markerPicker}
+          {foldBtn}
           {menu}
         </div>
-        {/* Các tờ: cao gần hết màn hình */}
-        {/* Chừa cột bên phải cho túi / nút ở góc dưới, để không che số trên tờ */}
-        <div className={`flex min-h-0 flex-1 items-start justify-center gap-2 pb-1 ${action || (!outside && canShake) ? 'pr-24' : ''}`}>
-          {mine.length ? (
-            mine.map((i) => (
+        {!land && (
+          <div className="flex shrink-0 items-center gap-1.5 pb-2">
+            {n > 1 &&
+              mine.map((i, k) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setFront(k)}
+                  aria-pressed={i === current}
+                  aria-label={`Xem tờ ${sheetName(i)}`}
+                  title={sheetName(i)}
+                  className={`grid size-7 shrink-0 place-items-center rounded-lg text-xs font-extrabold text-white transition ${
+                    i === current ? 'ring-2 ring-cream' : 'brightness-50'
+                  }`}
+                  style={{ background: sheetColor(i) }}
+                >
+                  {(i % 2) + 1}
+                </button>
+              ))}
+            <span className="flex-1" />
+            {markerPicker}
+          </div>
+        )}
+        {land ? (
+          // Ngang: đủ các tờ cạnh nhau, chừa cột phải cho túi / KINH
+          <div className={`flex min-h-0 flex-1 items-start justify-center gap-2 pb-1 ${action || (!outside && canShake) ? 'pr-24' : ''}`}>
+            {mine.map((i) => (
               <div
                 key={i}
                 className="shrink-0"
                 // Cao tờ ≈ 1.34 × rộng + các dải chữ (~4rem) → rộng sao cho tờ vừa khít chiều cao còn lại
-                style={{ width: `min(calc((100dvh - 7.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
+                style={{ width: `min(calc((100dvh - 8rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34), calc((100% - ${(n - 1) * 0.5}rem) / ${n}))` }}
               >
-                <SheetCard
-                  sheet={papers[i]}
-                  index={i}
-                  marks={marks}
-                  called={outside ? undefined : loto.called}
-                  marker={marker}
-                  freshMark={fresh}
-                  hint={hint}
-                  winRow={winner?.id === me && winner.sheet === i ? winner.row : undefined}
-                  onMark={markOn}
-                  onWarn={(x) => onWarn(`Số ${x} chưa được gọi — chưa đánh được.`)}
-                />
+                <SheetCard {...sheetProps(i)} />
               </div>
-            ))
-          ) : (
-            <p className="self-center text-sm text-muted">Bạn không mua tờ nào ván này.</p>
-          )}
-        </div>
-        {/* Góc phải dưới: KINH / chờ xác nhận / Ván mới, và túi gọi số */}
+            ))}
+          </div>
+        ) : (
+          // Dọc: tờ đang xem ở giữa, cao gần hết màn; tờ phụ tối đi, lấp ló phía sau bên phải — chạm để đưa lên
+          <div className="flex min-h-0 flex-1 items-center justify-center pb-16">
+            <div
+              className="relative h-fit"
+              style={{ width: `min(${n > 1 ? 88 : 94}%, calc((100dvh - 12rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)) / 1.34))` }}
+            >
+              {mine
+                .map((i, k) => ({ i, k }))
+                .filter(({ i }) => i !== current)
+                .map(({ i, k }, depth) => (
+                  <div
+                    key={i}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Xem tờ ${sheetName(i)}`}
+                    onClick={() => setFront(k)}
+                    onKeyDown={(e) => e.key === 'Enter' && setFront(k)}
+                    className="absolute inset-x-0 top-3 origin-left cursor-pointer transition-transform"
+                    style={{ transform: `translateX(${(depth + 1) * 9}%) scale(${1 - (depth + 1) * 0.06})`, zIndex: 5 - depth }}
+                  >
+                    <div className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}>
+                      {/* Tờ phụ: tối đi chứ không trong suốt */}
+                      <div className="brightness-50 saturate-[0.7]">
+                        <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              <div className="relative z-10">
+                <SheetCard key={current} {...sheetProps(current)} />
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Góc dưới: (dọc) dòng nhắc bên trái; KINH / chờ xác nhận / Ván mới và túi gọi số ở góc phải */}
+        {!land && !action && <div className="pointer-events-none absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 max-w-[60%]">{hintLine}</div>}
         <div className="pointer-events-none absolute right-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-10 flex items-end gap-2">
           {action && <div className="pointer-events-auto flex w-44 drop-shadow-[0_6px_14px_rgb(0_0_0/0.6)]">{action}</div>}
           {!outside && canShake && (
@@ -856,159 +940,21 @@ export function LotoPanel({
     )
   }
 
+  // Đã thu tờ (hoặc không mua tờ nào): khung gọn dưới đáy — số gọi + nút, bàn chơi hiện đầy đủ
   return (
     <section data-guide="cards" className="mb-2 rounded-3xl border border-line/60 bg-night/90 px-3 pt-2 pb-2 backdrop-blur">
       <ChalkFilter />
       {board && <CalledBoard called={loto.called} onClose={() => setBoard(false)} />}
-      {/* Túi số (người gọi) + số vừa gọi: mới nhất to, bên trái */}
       <div className="flex items-center gap-2">
-        {outside ? (
-          <span className="flex-1 text-xs text-muted">Số gọi ở ngoài — nghe kêu số rồi chạm để đánh</span>
-        ) : (
-          <>
-            {canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
-            {recent.length ? (
-              <>
-                <Ball key={recent[0]} n={recent[0]} big fresh />
-                <div className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-                  {recent.slice(1).map((n) => (
-                    <Ball key={n} n={n} />
-                  ))}
-                </div>
-              </>
-            ) : (
-              <span className="flex-1 text-xs text-muted">{canShake ? 'Giữ túi để lắc, thả ra là ra số' : 'Chờ gọi số…'}</span>
-            )}
-          </>
-        )}
-        {!outside && (
-          <button
-            type="button"
-            onClick={() => setBoard(true)}
-            aria-label="Xem tất cả số đã gọi"
-            className="num shrink-0 rounded-full border border-line/60 px-2 py-1 text-[11px] text-muted"
-          >
-            {loto.called.length}/90
-          </button>
-        )}
-        {mine.length > 0 && (
-          <button
-            type="button"
-            onClick={() => fold(!folded)}
-            aria-expanded={!folded}
-            // Đang thu mà có số vừa gọi nằm trên tờ → nút nháy viền nhắc
-            className={`shrink-0 rounded-full border border-line/60 bg-night/70 px-2 py-1 text-[11px] font-semibold ${folded && hint !== undefined && mine.some((i) => papers[i].some((r) => r.includes(hint))) ? 'loto-hint-border' : ''}`}
-          >
-            {folded ? 'Mở tờ ▴' : 'Thu tờ ▾'}
-          </button>
-        )}
+        {!outside && canShake && <BagButton onShake={onShake} small ready={shakeReady} />}
+        {calledStrip(true)}
+        {countBtn}
+        {foldBtn}
       </div>
-
-      {mine.length && folded ? null : mine.length ? (
-        <>
-          {/* Chọn tờ đang xem + phấn / hạt dưa */}
-          <div className="mt-2 flex items-center gap-1.5">
-            {mine.length > 1 &&
-              mine.map((i, k) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setFront(k)}
-                  aria-pressed={i === current}
-                  aria-label={`Xem tờ ${sheetName(i)}`}
-                  title={sheetName(i)}
-                  className={`grid size-7 shrink-0 place-items-center rounded-lg text-xs font-extrabold text-white transition ${
-                    i === current ? 'ring-2 ring-cream' : 'opacity-50'
-                  }`}
-                  style={{ background: sheetColor(i) }}
-                >
-                  {(i % 2) + 1}
-                </button>
-              ))}
-            <span className="flex-1" />
-            <div
-              role="radiogroup"
-              aria-label="Đánh số bằng"
-              className="flex shrink-0 rounded-full border border-line/60 bg-night/70 p-0.5 text-[11px] font-bold whitespace-nowrap"
-            >
-              {MARKERS.map(([v, label]) => (
-                <button
-                  key={v}
-                  type="button"
-                  role="radio"
-                  aria-checked={marker === v}
-                  onClick={() => {
-                    setMarker(v)
-                    saveMarker(v)
-                  }}
-                  className={`rounded-full px-2 py-0.5 ${marker === v ? 'bg-lemon text-night' : 'text-muted'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Các tờ xếp ngang: tờ đang xem ở giữa (to, rõ); tờ phụ nhỏ hơn, mờ, lấp ló phía sau bên phải — chạm để đưa lên */}
-          <div className="relative mt-2 flex justify-center">
-            {mine
-              .map((i, k) => ({ i, k }))
-              .filter(({ i }) => i !== current)
-              .map(({ i, k }, depth) => (
-                <div
-                  key={i}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Xem tờ ${sheetName(i)}`}
-                  onClick={() => setFront(k)}
-                  onKeyDown={(e) => e.key === 'Enter' && setFront(k)}
-                  className="absolute top-3 left-[18%] w-[64%] origin-left cursor-pointer transition-transform"
-                  style={{ transform: `translateX(${(depth + 1) * 22}%) scale(${1 - (depth + 1) * 0.08})`, zIndex: 5 - depth }}
-                >
-                  <div className={`rounded-md ${hint !== undefined && papers[i].some((r) => r.includes(hint)) ? 'loto-hint-border' : ''}`}>
-                    {/* Tờ phụ: tối đi chứ không trong suốt */}
-                    <div className="brightness-50 saturate-[0.7]">
-                      <SheetCard sheet={papers[i]} index={i} marks={marks} marker={marker} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            <div className={`relative z-10 ${mine.length > 1 ? 'w-[64%]' : 'w-[72%]'}`}>
-              <SheetCard
-                key={current}
-                sheet={papers[current]}
-                index={current}
-                marks={marks}
-                called={outside ? undefined : loto.called}
-                marker={marker}
-                freshMark={fresh}
-                hint={hint}
-                winRow={winner?.id === me && winner.sheet === current ? winner.row : undefined}
-                onMark={
-                  winner
-                    ? undefined
-                    : (n) => {
-                        const on = !marks.includes(n)
-                        setFresh(on ? n : undefined)
-                        setMarks(on ? [...marks, n] : marks.filter((x) => x !== n))
-                      }
-                }
-                onWarn={(n) => onWarn(`Số ${n} chưa được gọi — chưa đánh được.`)}
-              />
-            </div>
-          </div>
-        </>
-      ) : (
-        <p className="py-4 text-center text-sm text-muted">Bạn không mua tờ nào ván này — xem số gọi ở trên.</p>
-      )}
-
+      {!mine.length && <p className="py-2 text-center text-sm text-muted">Bạn không mua tờ nào ván này — xem số gọi ở trên.</p>}
       <div className="mt-2 flex items-center gap-2">
         {menu}
-        {action ?? (
-          <p className="flex-1 text-center text-[11px] text-muted">
-            {loto.rejected === me && <b className="text-berry">Host chưa công nhận lần kinh vừa rồi. </b>}
-            {outside ? 'Chạm số để đánh' : 'Chạm số đã gọi để đánh'} · đủ 5 số một hàng là Kinh
-          </p>
-        )}
+        {action ?? <div className="flex-1 text-center">{hintLine}</div>}
       </div>
     </section>
   )
