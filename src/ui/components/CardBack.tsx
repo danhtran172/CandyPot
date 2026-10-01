@@ -1,13 +1,13 @@
 import type { CSSProperties, Ref } from 'react'
 
 /**
- * Lưng bài riêng của CandyPot (vẽ bằng SVG, không dùng icon): viền kem, nền berry đan lưới chéo màu chanh,
+ * Lưng bài riêng của CandyPot (vẽ bằng SVG, không dùng icon): viền kem, nền xanh dương đan lưới chéo xanh nhạt,
  * khung chỉ mảnh, giữa là hoa văn hình thoi lồng nhau. Dựng một lần thành data URI để mọi lá dùng chung một ảnh.
  */
 const SVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'>
 <defs>
-<linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#ff6f8c'/><stop offset='1' stop-color='#a8203f'/></linearGradient>
-<pattern id='p' width='9' height='9' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'><path d='M0 0H9M0 0V9' stroke='#ffd23f' stroke-opacity='.32' stroke-width='1.3'/></pattern>
+<linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#5cb4ff'/><stop offset='1' stop-color='#1f3f9e'/></linearGradient>
+<pattern id='p' width='9' height='9' patternUnits='userSpaceOnUse' patternTransform='rotate(45)'><path d='M0 0H9M0 0V9' stroke='#cfe9ff' stroke-opacity='.3' stroke-width='1.3'/></pattern>
 </defs>
 <rect width='100' height='140' rx='9' fill='#fff1e0'/>
 <rect x='5' y='5' width='90' height='130' rx='6' fill='url(#g)'/>
@@ -17,7 +17,7 @@ const SVG = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'>
 <g fill='#ffd23f'><path d='M20 20l3 4-3 4-3-4z'/><path d='M80 20l3 4-3 4-3-4z'/><path d='M20 112l3 4-3 4-3-4z'/><path d='M80 112l3 4-3 4-3-4z'/></g>
 <path d='M50 38l32 32-32 32-32-32z' fill='none' stroke='#fff1e0' stroke-opacity='.55' stroke-width='1.2'/>
 <path d='M50 50l20 20-20 20-20-20z' fill='#ffd23f' fill-opacity='.9'/>
-<path d='M50 58l12 12-12 12-12-12z' fill='#a8203f'/>
+<path d='M50 58l12 12-12 12-12-12z' fill='#1f3f9e'/>
 </svg>`
 const SRC = `data:image/svg+xml,${encodeURIComponent(SVG.replace(/\n/g, ''))}`
 
