@@ -127,6 +127,29 @@ const POKER_FELT = {
   boxShadow: 'inset 0 0 28px rgb(0 0 0 / 0.55)',
 }
 
+/** Vân gỗ: nhiễu kéo dài theo chiều ngang (feTurbulence), tô màu nâu sẫm, phủ lên nền gỗ. */
+const WOOD_GRAIN = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.006 0.12" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0.24  0 0 0 0 0.09  0 0 0 0 0.02  1.3 0 0 0 -0.45"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>`,
+)}")`
+/** Bàn gỗ vuông (Tiến lên): vân gỗ + ánh bóng trên nền nâu đỏ; cạnh sáng, dày bên dưới, bóng đổ xuống sàn. */
+const WOOD_TOP = {
+  background: `radial-gradient(ellipse at 30% 20%, rgb(255 230 200 / 0.22), transparent 55%), ${WOOD_GRAIN}, linear-gradient(135deg, #b85d2b, #93431c 50%, #a8502a)`,
+  backgroundSize: 'auto, 320px 320px, auto',
+  boxShadow:
+    'inset 0 0 0 2px rgb(255 210 170 / 0.18), inset 0 2px 0 rgb(255 235 210 / 0.4), 0 8px 0 #5b2610, 0 20px 28px rgb(0 0 0 / 0.55)',
+}
+
+/** Chân bàn gỗ: thanh vuông thẳng, sáng giữa tối hai bên. */
+function WoodLeg({ side }: { side: 'left' | 'right' }) {
+  return (
+    <span
+      aria-hidden
+      className={`absolute top-[calc(100%-10px)] w-[18px] rounded-b-[2px] shadow-[0_6px_8px_rgb(0_0_0/0.5)] ${side === 'left' ? 'left-[3%]' : 'right-[3%]'}`}
+      style={{ height: 'min(56px, 28%)', background: 'linear-gradient(90deg, #6b2d12, #b0582a 45%, #7a3515)' }}
+    />
+  )
+}
+
 /** Đế trụ bàn Poker: thân trụ đen, hai bậc đế rộng dần. */
 function PokerPedestal() {
   return (
@@ -183,8 +206,8 @@ export function Board({
   onTap,
 }: {
   seats: Seat[]
-  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh, hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval. */
-  shape?: 'oval' | 'square' | 'plastic' | 'poker'
+  /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh (`wood`: vuông bằng gỗ, Tiến lên), hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval. */
+  shape?: 'oval' | 'square' | 'wood' | 'plastic' | 'poker'
   /** Nội dung giữa bàn (theo game). */
   center?: ReactNode
   /** Nút ở góc trên bên phải bàn (Rule ? + ⚙ cài đặt). */
@@ -293,7 +316,7 @@ export function Board({
   const ordered = [...seats.slice(meAt), ...seats.slice(0, meAt)]
   const n = ordered.length
   const size = sizeFor(n)
-  const square = shape === 'square'
+  const square = shape === 'square' || shape === 'wood'
 
   const potBox = pot !== undefined && (
     <div
@@ -342,6 +365,12 @@ export function Board({
                 </div>
               </div>
             </div>
+          ) : shape === 'wood' ? (
+            <div className="absolute inset-[22%]">
+              <WoodLeg side="left" />
+              <WoodLeg side="right" />
+              <div className="absolute inset-0 rounded-md" style={WOOD_TOP} />
+            </div>
           ) : shape === 'plastic' ? (
             <div className="absolute inset-x-[19%] top-[17%] bottom-[25%]">
               {/* 2 chân trước, mặt bàn đè lên trên */}
@@ -362,8 +391,8 @@ export function Board({
             className={`absolute flex flex-col items-center justify-center gap-1 text-center ${
               square ? 'inset-[26%]' : 'inset-x-[22%] top-[23%] bottom-[29%]'
             } ${
-              // Bàn nhựa đỏ / nỉ xanh: chữ xám mờ khó đọc trên nền màu → sáng lên
-              shape === 'plastic' || shape === 'poker' ? '[&_.text-muted]:text-white/80' : ''
+              // Bàn nhựa đỏ / nỉ xanh / gỗ: chữ xám mờ khó đọc trên nền màu → sáng lên
+              shape === 'plastic' || shape === 'poker' || shape === 'wood' ? '[&_.text-muted]:text-white/80' : ''
             }`}
           >
             {title && (

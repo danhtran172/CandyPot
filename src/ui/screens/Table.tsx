@@ -848,7 +848,7 @@ export function Table() {
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
             // Lô tô lúc mua tờ: Pot còn 55% cỡ thường (ô Mua là chính), chốt rồi Pot về cỡ thường để trao
             potScale={isLoto && round?.phase !== 'playing' ? 0.55 : undefined}
-            shape={game.type === 'tienlen' ? 'square' : isLoto ? 'plastic' : game.type === 'poker' ? 'poker' : 'oval'}
+            shape={game.type === 'tienlen' ? 'wood' : isLoto ? 'plastic' : game.type === 'poker' ? 'poker' : 'oval'}
             betLocked={round?.phase === 'playing'}
             onBetHold={unlockBets}
             hat={round?.dealer && !round.xidach ? players[round.dealer]?.name : undefined}
