@@ -266,9 +266,13 @@ export function guideSteps(game: GameType, role: GuideRole, solo = false): Guide
 
 // ---------- Đã xem bước nào (trên máy này) ----------
 
-const SEEN_KEY = 'candypot:guide-steps-seen'
-/** Bản cũ: đã xem cả bộ theo `game:vai:v2` → coi như đã xem mọi bước của bộ đó. */
-const OLD_SEEN_KEY = 'candypot:guides-seen'
+/**
+ * Đổi tên khóa = cả app xem lại hướng dẫn từ đầu (mọi máy coi như chưa xem bước nào).
+ * Lần đổi gần nhất: làm lại hướng dẫn (Bot demo, mời, đổi game, luật, mode bài).
+ */
+const SEEN_KEY = 'candypot:guide-seen-v3'
+/** Các khóa cũ — bỏ đi cho gọn. */
+const OLD_KEYS = ['candypot:guide-steps-seen', 'candypot:guides-seen']
 
 function readList(key: string): string[] {
   try {
@@ -280,12 +284,12 @@ function readList(key: string): string[] {
 }
 
 function seenIds(): Set<string> {
-  const seen = new Set(readList(SEEN_KEY))
-  for (const entry of readList(OLD_SEEN_KEY)) {
-    const [game, role] = entry.split(':') as [GameType, GuideRole]
-    if ((role === 'player' || role === 'host') && game in HOST_GAME) guideSteps(game, role).forEach((s) => seen.add(s.id))
+  try {
+    OLD_KEYS.forEach((k) => localStorage.removeItem(k))
+  } catch {
+    // Chế độ riêng tư: không xóa được thì thôi
   }
-  return seen
+  return new Set(readList(SEEN_KEY))
 }
 
 /** Các bước người dùng chưa từng xem (lần đầu gặp tính năng). */
