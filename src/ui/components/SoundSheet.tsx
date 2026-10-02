@@ -39,32 +39,43 @@ export function SoundSheet({ onClose }: { onClose: () => void }) {
       <div className="pop relative m-3 w-full max-w-sm rounded-3xl border border-line/60 bg-plum-2 p-4 shadow-2xl">
         <h2 className="font-display text-lg font-bold">🔊 Âm thanh</h2>
         <div className="mt-3 flex flex-col gap-2">
-          {ROWS.map(({ kind, icon, label, hint }) => (
-            <button
-              key={kind}
-              type="button"
-              role="switch"
-              aria-checked={prefs[kind]}
-              onClick={() => toggle(kind)}
-              className="flex items-center gap-3 rounded-2xl border border-line/60 bg-night/40 px-3 py-2.5 text-left"
-            >
-              <span aria-hidden className="text-2xl">
-                {icon}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-bold">{label}</span>
-                <span className="block text-xs text-muted">
-                  {kind === 'voice' && !viet ? 'Máy chưa có giọng tiếng Việt — thêm trong cài đặt máy (Ngôn ngữ / Đọc văn bản)' : hint}
+          {ROWS.map(({ kind, icon, label, hint }) => {
+            // Kêu lô tô là một kiểu của giọng đọc → tắt giọng đọc thì không chỉnh được (và không có tác dụng)
+            const off = kind === 'rhyme' && !prefs.voice
+            const on = prefs[kind] && !off
+            return (
+              <button
+                key={kind}
+                type="button"
+                role="switch"
+                aria-checked={on}
+                aria-disabled={off}
+                disabled={off}
+                onClick={() => toggle(kind)}
+                className={`flex items-center gap-3 rounded-2xl border border-line/60 bg-night/40 px-3 py-2.5 text-left ${off ? 'opacity-45' : ''}`}
+              >
+                <span aria-hidden className="text-2xl">
+                  {icon}
                 </span>
-              </span>
-              {/* Công tắc */}
-              <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${prefs[kind] ? 'bg-mint' : 'bg-line'}`}>
-                <span
-                  className={`absolute top-0.5 size-5 rounded-full bg-cream shadow transition-all ${prefs[kind] ? 'left-[1.375rem]' : 'left-0.5'}`}
-                />
-              </span>
-            </button>
-          ))}
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">{label}</span>
+                  <span className="block text-xs text-muted">
+                    {kind === 'voice' && !viet
+                      ? 'Máy chưa có giọng tiếng Việt — thêm trong cài đặt máy (Ngôn ngữ / Đọc văn bản)'
+                      : off
+                        ? 'Bật Giọng đọc để dùng'
+                        : hint}
+                  </span>
+                </span>
+                {/* Công tắc */}
+                <span className={`relative h-6 w-11 shrink-0 rounded-full transition ${on ? 'bg-mint' : 'bg-line'}`}>
+                  <span
+                    className={`absolute top-0.5 size-5 rounded-full bg-cream shadow transition-all ${on ? 'left-[1.375rem]' : 'left-0.5'}`}
+                  />
+                </span>
+              </button>
+            )
+          })}
         </div>
         <Button className="mt-3 w-full" onClick={onClose}>
           Xong
