@@ -40,7 +40,7 @@ import { useCardsFolded, useHideHand } from '../cardsFold'
 import { useMusic } from '../music'
 import { EyeIcon, FoldIcon } from '../components/CardIcons'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
-import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
+import { introMs, shuffleKindOf } from '../shuffle'
 import { HOST_GRACE_MS, TURN_MS, turnStart } from '../turnClock'
 import { placeOf, type TienlenCards } from '../../core/games/tienlenPlay'
 import { PrevRoundIcon } from '../components/PrevRoundIcon'
@@ -598,25 +598,22 @@ export function Table() {
 
   const roundDelta = round ? movesNet(round.moves) : {}
   const pops = useCandyPops(session)
-  // Ván bài trong app vừa chia (mới mở vài giây) → hiệu ứng xào bài một lần cho ván đó
+  // Mỗi ván bài trong app: mỗi máy xem hiệu ứng xào + chia bài đúng một lần, miễn là chưa ai đánh / rút lá nào
+  // (vào màn lúc nào cũng được — đang ở tab khác lúc chia, quay lại vẫn thấy chia)
   const [shuffledId, setShuffledId] = useState<ID | null>(null)
   /** Đang chia: bao nhiêu lá đã đáp xuống chỗ ngồi (xấp lưng bài tăng dần). */
   const [dealt, setDealt] = useState<{ id: ID; n: number } | null>(null)
-  // Ván đã có sẵn lúc mở màn này (vd tải lại trang giữa ván) thì không xào lại
-  const [mountRoundId] = useState(() => round?.id)
-  // Xì dách chia lúc chốt cược (ván đã mở từ trước) → nhớ ván nào đã có bài lúc mở màn này
-  const [mountDealtId] = useState(() => (round?.xidach ? round.id : null))
-  const fresh =
-    !reducedMotion() &&
-    ((!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table && round.id !== mountRoundId) ||
-      (!!round?.xidach && round.xidach.step === 0 && round.id !== mountDealtId))
-  const shuffling = fresh && round && shuffledId !== round.id ? round.id : null
+  const fresh = (!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table) || (!!round?.xidach && round.xidach.step === 0)
+  const shuffling = fresh && round && shuffledId !== round.id && !dealSeen(round.id) ? round.id : null
   /** Thứ tự chia bài theo vòng (Xì dách: các con rồi tới cái). */
   const dealOrder = round?.tienlen ? round.tienlen.order : round?.xidach ? [...round.xidach.order, round.xidach.dealer] : null
   useEffect(() => {
     if (!shuffling) return
     const t = window.setTimeout(
-      () => setShuffledId(shuffling),
+      () => {
+        markDealSeen(shuffling)
+        setShuffledId(shuffling)
+      },
       introMs(shuffleKindOf(shuffling), dealOrder?.length ?? 4, round?.xidach ? 2 : 13),
     )
     return () => window.clearTimeout(t)
@@ -1805,4 +1802,22 @@ function xidachBadge(c: XidachCards, id: ID): string | undefined {
   const r = c.settled[id]
   if (r) return resultText(r)
   return c.stood.includes(id) ? 'Dằn' : undefined
+}
+
+/** Các ván máy này đã xem chia bài (trong phiên mở app) — không chia lại khi quay lại màn bàn chơi. */
+const DEAL_SEEN_KEY = 'candypot:deal-seen'
+function dealSeen(roundId: ID): boolean {
+  try {
+    return (JSON.parse(sessionStorage.getItem(DEAL_SEEN_KEY) ?? '[]') as ID[]).includes(roundId)
+  } catch {
+    return false
+  }
+}
+function markDealSeen(roundId: ID) {
+  try {
+    const list = (JSON.parse(sessionStorage.getItem(DEAL_SEEN_KEY) ?? '[]') as ID[]).filter((id) => id !== roundId)
+    sessionStorage.setItem(DEAL_SEEN_KEY, JSON.stringify([...list, roundId].slice(-30)))
+  } catch {
+    /* không nhớ được thì lần sau chia lại — không sao */
+  }
 }

@@ -13,8 +13,6 @@ export function shuffleKindOf(roundId: string): ShuffleKind {
   return KINDS[(h >>> 0) % KINDS.length]
 }
 
-/** Máy bật giảm chuyển động → bỏ màn xào / chia bài. */
-export const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 /** Xào bài: số lượt và độ dài một lượt theo kiểu. */
 export const SHUFFLE_PASSES = 2
