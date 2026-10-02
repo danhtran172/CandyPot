@@ -8,7 +8,7 @@ const ROWS: { kind: SoundKind; icon: string; label: string; hint: string }[] = [
   { kind: 'music', icon: '🎵', label: 'Nhạc nền', hint: 'Nhạc êm lúc chơi' },
   { kind: 'sfx', icon: '🃏', label: 'Hiệu ứng', hint: 'Chia bài, đánh bài, rút bài, gọi số' },
   { kind: 'voice', icon: '🗣️', label: 'Giọng đọc', hint: 'Đọc số lô tô, báo kinh / đợi' },
-  { kind: 'rhyme', icon: '🎤', label: 'Kêu lô tô', hint: 'Ngắn gọn: "Cờ ra con bốn sáu! Bốn sáu!"' },
+  { kind: 'rhyme', icon: '🎤', label: 'Kêu lô tô', hint: 'Câu vần ngắn: "Tham thì thâm, con ba lăm!"' },
 ]
 
 /** Bảng Âm thanh: bật / tắt nhạc nền, hiệu ứng, giọng đọc (nhớ trên máy này). */
@@ -30,7 +30,7 @@ export function SoundSheet({ onClose }: { onClose: () => void }) {
     // Bật lên thì nghe thử luôn
     if (on && kind === 'sfx') setTimeout(() => sfx.play(2), 0)
     if (on && kind === 'voice') setTimeout(() => speak('Số mười lăm'), 0)
-    if (on && kind === 'rhyme') setTimeout(() => speak(lotoCallText(46, true)), 0)
+    if (on && kind === 'rhyme') setTimeout(() => speak(lotoCallText(35, true)), 0)
   }
 
   return createPortal(

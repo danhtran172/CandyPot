@@ -1,7 +1,7 @@
 /**
  * Câu gọi số lô tô cho giọng đọc.
- * - Kêu lô tô (ngắn gọn): "Cờ ra con bốn sáu! Bốn sáu!" — đọc số kiểu lô tô ("bốn sáu", "ba mốt", "hai lăm").
- * - Đọc thường: "Số bốn mươi sáu".
+ * - Kêu lô tô: một câu vần ngắn theo tiếng cuối của số — "Tham thì thâm, con ba lăm!", "Ba ba con cá tra!".
+ * - Đọc thường: "Số ba mươi lăm".
  */
 
 const DIGIT = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín']
@@ -23,9 +23,37 @@ export function fullReading(n: number): string {
   return n < 20 || n % 10 === 0 ? short : short.replace(' ', ' mươi ')
 }
 
-/** Câu gọi số `n`: kêu lô tô ngắn gọn ("Cờ ra con bốn sáu! Bốn sáu!") hoặc đọc thường ("Số bốn mươi sáu"). */
-export function lotoCallText(n: number, short: boolean): string {
-  if (!short) return `Số ${fullReading(n)}`
+/**
+ * Câu kêu ngắn theo vần tiếng cuối của số: "Tham thì thâm, con ba lăm!", "Ba ba con cá tra!".
+ * `{n}` = số đọc kiểu lô tô. Khóa = tiếng cuối.
+ */
+const TAGS: Record<string, string[]> = {
+  một: ['Thương cho roi cho vọt, con {n}', '{n} củ cà rốt'],
+  mốt: ['{n} củ cà rốt', 'Thương cho roi cho vọt, con {n}', '{n} cây cột'],
+  hai: ['{n} củ khoai', 'Biết vào tay ai, con {n}', '{n} trái xoài'],
+  ba: ['{n} con cá tra', '{n} con gà', 'Đi đâu cũng nhớ nhà, con {n}'],
+  bốn: ['Cái khó ló cái khôn, con {n}', '{n} con chồn'],
+  tư: ['{n} cô Tư', 'Lừ đừ, con {n}'],
+  năm: ['Thương hoài ngàn năm, con {n}', '{n} rau răm'],
+  lăm: ['Tham thì thâm, con {n}', '{n} rau răm', 'Ăn no lại nằm, con {n}'],
+  sáu: ['{n} ông táo', '{n} con sáo', 'Ra đứng ngõ sau, con {n}'],
+  bảy: ['{n} máy bay', 'Đắng cay, con {n}', 'Nhảy dây, con {n}'],
+  tám: ['{n} cá trám', 'Tham thì thâm, con {n}', '{n} trái cam'],
+  chín: ['Mài sắt nên kim, con {n}', 'Nín thinh, con {n}'],
+  mười: ['Tươi cười, con {n}'],
+  mươi: ['Tươi cười, con {n}', 'Xấu người đẹp nết, con {n}'],
+}
+
+/** Câu kêu ngắn cho số `n` (cố định theo số; số cùng vần thì lần lượt các câu trong vần đó). */
+export function lotoTag(n: number): string {
+  if (n === 1) return 'Đứng đầu lô tô, con số một!'
   const read = lotoReading(n)
-  return `Cờ ra con ${read}! ${read[0].toUpperCase() + read.slice(1)}!`
+  const bank = TAGS[read.split(' ').at(-1)!]
+  const line = bank[Math.floor(n / 10) % bank.length].replace('{n}', read)
+  return `${line[0].toUpperCase()}${line.slice(1)}!`
+}
+
+/** Câu gọi số `n`: kêu lô tô ngắn ("Tham thì thâm, con ba lăm!") hoặc đọc thường ("Số ba mươi lăm"). */
+export function lotoCallText(n: number, short: boolean): string {
+  return short ? lotoTag(n) : `Số ${fullReading(n)}`
 }
