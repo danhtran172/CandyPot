@@ -60,8 +60,8 @@ export function useGameSounds(round: Round | undefined, players: Record<ID, Play
       if (same) {
         if (next.called > (p.called ?? next.called)) {
           sfx.ball()
-          // Rao lô tô (câu vần) hoặc đọc số — câu chọn theo mã ván nên mọi máy đọc giống nhau
-          speak(lotoCallText(lo.called[lo.called.length - 1], round!.id, soundPrefs().rhyme))
+          // Kêu lô tô ngắn gọn hoặc đọc số
+          speak(lotoCallText(lo.called[lo.called.length - 1], soundPrefs().rhyme))
         }
         if (lo.winner && !p.winner) {
           sfx.win()
