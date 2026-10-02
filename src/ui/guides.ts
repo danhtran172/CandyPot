@@ -154,7 +154,7 @@ const HOST_GAME: Record<GameType, GuideStep[]> = {
       id: 'xidach-dealer',
       demo: { kind: 'drag', from: 'hat', to: 'other' },
       title: 'Đổi nhà cái',
-      text: 'Kéo 🎩 thả vào người mới (hoặc bấm 🎩 rồi chọn), trước khi chốt cược.',
+      text: 'Kéo 🎩 thả vào người mới (hoặc bấm 🎩 rồi chọn), trước khi chốt cược. Cái luôn là host: đổi cái là đổi host, đổi host thì host mới làm cái.',
     },
   ],
   poker: [
