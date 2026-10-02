@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import {
   DEALER_MIN,
   describe,
@@ -319,5 +320,39 @@ export function XidachPanel({
           ))}
       </div>
     </section>
+  )
+}
+
+/** Xem bài một con khác (con với con được xem bài nhau). Bài cập nhật theo ván (rút thêm thì thấy luôn). */
+export function XidachPeek({ name, cards, onClose }: { name: string; cards: number[]; onClose: () => void }) {
+  const sc = cards.length ? score(cards) : null
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Bài của ${name}`}
+      className="fixed inset-0 z-50 flex items-center justify-center px-6"
+    >
+      <button type="button" aria-label="Đóng" className="absolute inset-0 bg-night/70" onClick={onClose} />
+      <div className="pop relative w-full max-w-xs rounded-3xl border-2 border-lemon bg-plum-2 p-4 text-center shadow-2xl">
+        <h2 className="font-display text-lg font-bold">Bài của {name}</h2>
+        <div className="mt-3 flex justify-center">
+          {cards.map((c, i) => (
+            <span key={c} className={i ? '-ml-4' : ''} style={{ rotate: `${(i - (cards.length - 1) / 2) * 4}deg` }}>
+              <PlayingCard card={c} fan />
+            </span>
+          ))}
+        </div>
+        {sc && (
+          <p className="font-display mt-2 text-xl font-extrabold text-lemon">
+            {sc.kind === 'points' ? `${sc.points} điểm${sc.points < PLAYER_MIN ? ' · non' : ''}` : describe(cards, false)}
+          </p>
+        )}
+        <Button className="mt-3 w-full" onClick={onClose}>
+          Đóng
+        </Button>
+      </div>
+    </div>,
+    document.body,
   )
 }

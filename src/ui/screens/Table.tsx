@@ -25,7 +25,7 @@ import { AmountSheet } from '../components/AmountSheet'
 import { MeSheet } from '../components/MeSheet'
 import { HistorySheet } from '../components/HistorySheet'
 import { TienlenBetSheet } from '../components/TienlenBetSheet'
-import { XidachCenter, XidachPanel } from '../components/XidachPanel'
+import { XidachCenter, XidachPanel, XidachPeek } from '../components/XidachPanel'
 import { LotoCenter, LotoJudge, LotoPanel, LotoWinner, SheetPicker } from '../components/Loto'
 import { pairsFor, sheetSet } from '../../core/games/lotoSheets'
 
@@ -158,6 +158,8 @@ export function Table() {
   // Ván tới hồi gay cấn → nhạc kịch tính
   const [musicOn] = useMusic(musicMood(round))
   const [showSound, setShowSound] = useState(false)
+  /** Xì dách: đang xem bài của con nào (con với con). */
+  const [peek, setPeek] = useState<ID | null>(null)
   /** Giấu bài trên tay (Xì dách): úp lưng, ẩn điểm. */
   const [handHidden, toggleHand] = useHideHand()
   /** Đang mở bài: bài chiếm phần dưới (Lô tô: cả màn hình), các nút thường ẩn đi. Lô tô không mua tờ thì coi như thu. */
@@ -726,6 +728,15 @@ export function Table() {
     faceUp: xdCards && !shuffling && xidachShown(xdCards, p.id) ? xdCards.hands[p.id] : undefined,
     faceUpGlow: !!xdCards && xdCards.dealer === p.id,
     // Cái tới lượt: xấp bài con chưa xét chạm được (như avatar); viền sáng khi xét được ngay (cái đã đủ điểm)
+    // Xì dách: mình là con, người này cũng là con, bài chưa lật → chạm xấp bài để xem bài nhau
+    peekable:
+      !!xdCards &&
+      !shuffling &&
+      !!me &&
+      me !== p.id &&
+      xdCards.order.includes(me) &&
+      xdCards.order.includes(p.id) &&
+      !xidachShown(xdCards, p.id),
     checkable:
       !!xdCards && !shuffling && xdCards.dealer === me && xdCards.turn === me && xdCards.order.includes(p.id) && !xdCards.settled[p.id]
         ? !!me && typeof checkXidach(xdCards, me, p.id) !== 'string'
@@ -1077,6 +1088,7 @@ export function Table() {
             }
             onTransfer={onTransfer}
             onTap={onTap}
+            onPeek={setPeek}
           />
 
           {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
@@ -1457,6 +1469,9 @@ export function Table() {
       )}
 
       {showSound && <SoundSheet onClose={() => setShowSound(false)} />}
+      {peek && round?.xidach?.hands[peek] && (
+        <XidachPeek name={players[peek]?.name ?? '?'} cards={round.xidach.hands[peek]} onClose={() => setPeek(null)} />
+      )}
       {guide && <GuideTour key={guide.map((s) => s.id).join()} steps={guide} onClose={closeGuide} />}
 
       {showRules && game && (

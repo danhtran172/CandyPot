@@ -1,4 +1,12 @@
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import { BET, BUY, DEALER, POT, type ID, type Player } from '../../core/types'
 import { signed, toneOf } from '../format'
 import { candyFor } from '../candyIcons'
@@ -27,6 +35,8 @@ export interface Seat {
   cards?: number
   /** Xì dách, lượt cái: xấp bài của con chạm được như chạm avatar (để xét); `ready` = xét được ngay → viền sáng. */
   checkable?: 'ready' | 'blocked'
+  /** Xì dách: con với con — chạm xấp bài người này để xem bài (chạm avatar vẫn là trả kẹo). */
+  peekable?: boolean
   /** Bài đã lật cho cả bàn xem (Xì dách: đã được xét / bài cái) — thay cho xấp lưng bài. */
   faceUp?: number[]
   /** Làm nổi bật bài lật (bài của cái). */
@@ -229,6 +239,7 @@ export function Board({
   shape = 'oval',
   onTransfer,
   onTap,
+  onPeek,
 }: {
   seats: Seat[]
   /** Hình bàn: oval (mặc định), vuông — 4 người ngồi 4 cạnh (`wood`: vuông bằng gỗ, Tiến lên), hay bàn nhựa đỏ chữ nhật (Lô tô), hay bàn Poker (nỉ xanh, tay vịn da, đế trụ) — ngồi quanh như oval;
@@ -259,6 +270,8 @@ export function Board({
   /** Không đổi được nhà cái (không phải host) → ô 🎩 chỉ để xem. */
   hatLocked?: boolean
   onTransfer: (from: ID, to: ID) => void
+  /** Chạm xấp bài một người (Xì dách, con với con) → xem bài người đó. */
+  onPeek?: (id: ID) => void
   /** Bấm (không kéo) vào một người / pot / ô Bet / mũ nhà cái. */
   onTap?: (id: ID) => void
 }) {
@@ -612,9 +625,26 @@ export function Board({
             ) : s.cards !== undefined ? (
               <span
                 className={`absolute z-10 flex items-center gap-1 rounded-full bg-night/80 py-0.5 pr-2 pl-1.5 whitespace-nowrap ${STAKE_POS[side]} ${
-                  // Chạm được (xét) thì nhận chạm — chạm nổi lên chỗ ngồi như chạm avatar
-                  s.checkable ? `cursor-pointer ${s.checkable === 'ready' ? 'ring-2 ring-lemon/80' : ''}` : 'pointer-events-none'
+                  // Chạm được (xét) thì nhận chạm — chạm nổi lên chỗ ngồi như chạm avatar; xem bài (con với con) thì chạm riêng
+                  s.checkable
+                    ? `cursor-pointer ${s.checkable === 'ready' ? 'ring-2 ring-lemon/80' : ''}`
+                    : s.peekable
+                      ? 'cursor-pointer ring-1 ring-cream/40'
+                      : 'pointer-events-none'
                 }`}
+                {...(s.peekable && !s.checkable
+                  ? {
+                      role: 'button',
+                      'aria-label': `Xem bài ${s.player.name}`,
+                      title: `Xem bài ${s.player.name}`,
+                      // Không cho chạm này thành kéo kẹo / trả kẹo của chỗ ngồi
+                      onPointerDown: (e: ReactPointerEvent) => e.stopPropagation(),
+                      onClick: (e: ReactMouseEvent) => {
+                        e.stopPropagation()
+                        onPeek?.(s.player.id)
+                      },
+                    }
+                  : {})}
               >
                 <CardBackStack count={s.cards} />
                 {/* Xì dách: tiền cược nằm cạnh xấp bài */}
