@@ -62,7 +62,13 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const price = game.type === 'loto' ? lotoPrice(game) : undefined
   const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
-  const dealer = prev?.dealer && participants.includes(prev.dealer) ? prev.dealer : (participants[0] ?? null)
+  // Xì dách bàn nhiều người: cái = host (đổi host ở ván trước thì ván này host mới làm cái)
+  const hostDeals = game.type === 'xidach' && session.mode === 'multi' && !!session.hostId && participants.includes(session.hostId)
+  const dealer = hostDeals
+    ? session.hostId
+    : prev?.dealer && participants.includes(prev.dealer)
+      ? prev.dealer
+      : (participants[0] ?? null)
   // Poker / Tự do: không bỏ kẹo vào pot lúc mở ván (blind tự tính / cược bằng tay)
   const limits = game.type === 'xidach' ? xidachLimits(game) : undefined
   const clamp = (v: number) => (limits ? Math.min(limits.max, Math.max(limits.min, v)) : v)
@@ -278,6 +284,34 @@ export function prevPlay(game: Game): Round | undefined {
 
 function findOpenIn(game: Game): Round | undefined {
   return game.rounds.find((r) => r.status === 'open')
+}
+
+/** Đổi cái trong một ván: cái mới thôi cược, cái cũ (thành con) cược lại số tiền đó (hoặc mức cược ván). */
+function withDealer(r: Round, playerId: ID): Round {
+  if (r.dealer === playerId) return r
+  const stakes = { ...r.stakes }
+  const moved = stakes[playerId]
+  delete stakes[playerId]
+  if (r.dealer) stakes[r.dealer] = moved ?? r.bet
+  return { ...r, dealer: playerId, stakes }
+}
+
+/**
+ * Xì dách (bàn nhiều người): cái = host. Đổi host lúc ván Xì dách còn đang đặt cược → host mới làm cái luôn
+ * (đã chốt thì từ ván sau, xem defaultDraft).
+ */
+function dealerFollowsHost(s: Session): Session {
+  const host = s.hostId
+  if (s.mode !== 'multi' || !host) return s
+  return {
+    ...s,
+    games: s.games.map((g) => {
+      if (g.type !== 'xidach') return g
+      const open = findOpenIn(g)
+      if (!open || open.phase !== 'betting' || open.dealer === host || !open.participants.includes(host)) return g
+      return { ...g, rounds: g.rounds.map((r) => (r.id === open.id ? withDealer(r, host) : r)) }
+    }),
+  }
 }
 
 /**
@@ -751,6 +785,11 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           rounds: [...g.rounds, round],
           bets: g.type === 'tienlen' ? { bet: round.bet, bet2: round.bet2 ?? round.bet } : g.bets,
         }))
+        // Xì dách bàn nhiều người: cái = host (đồng bộ hai chiều)
+        if (g.type === 'xidach' && round.dealer && get().session?.mode === 'multi' && get().session?.hostId !== round.dealer) {
+          const dealer = round.dealer
+          mutate((s) => ({ ...s, hostId: dealer, hostVotes: {} }))
+        }
         return []
       },
 
@@ -963,14 +1002,10 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!open.participants.includes(playerId)) return ['Người này không chơi ván này.']
         if (open.phase === 'playing') return ['Đã chốt cược — đổi cái ở ván sau.']
         if (open.dealer === playerId) return []
-        const old = open.dealer
-        mapRound(gameId, open.id, (r) => {
-          const stakes = { ...r.stakes }
-          const moved = stakes[playerId]
-          delete stakes[playerId]
-          if (old) stakes[old] = moved ?? r.bet
-          return { ...r, dealer: playerId, stakes }
-        })
+        mapRound(gameId, open.id, (r) => withDealer(r, playerId))
+        // Xì dách bàn nhiều người: đổi cái = đổi host luôn
+        if (game(gameId)?.type === 'xidach' && get().session?.mode === 'multi')
+          mutate((s) => (s.hostId === playerId ? s : { ...s, hostId: playerId, hostVotes: {} }))
         return []
       },
 
@@ -1337,11 +1372,11 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       },
 
       setHost(playerId) {
-        mutate((s) => ({ ...s, hostId: playerId, hostVotes: {} }))
+        mutate((s) => dealerFollowsHost({ ...s, hostId: playerId, hostVotes: {} }))
       },
 
       takeHost(playerId, from) {
-        mutate((s) => (s.hostId === from ? { ...s, hostId: playerId, hostVotes: {} } : s))
+        mutate((s) => (s.hostId === from ? dealerFollowsHost({ ...s, hostId: playerId, hostVotes: {} }) : s))
       },
 
       voteHost(voter, candidate) {
@@ -1356,7 +1391,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         const hostVotes = mine === candidate ? rest : { ...rest, [voter]: candidate }
         const next = { ...s, hostVotes }
         if ((hostVoteTally(next)[candidate] ?? 0) >= hostVotesNeeded(next)) {
-          mutate((x) => ({ ...x, hostId: candidate, hostVotes: {} }))
+          mutate((x) => dealerFollowsHost({ ...x, hostId: candidate, hostVotes: {} }))
           return { errors: [], elected: true }
         }
         mutate((x) => ({ ...x, hostVotes }))

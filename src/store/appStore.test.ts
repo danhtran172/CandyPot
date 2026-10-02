@@ -739,6 +739,29 @@ describe('appStore — Lô tô giấy trong app', () => {
   })
 })
 
+describe('appStore — Xì dách: cái = host (đồng bộ hai chiều)', () => {
+  it('mở ván / đổi cái → đổi host; đổi host lúc chưa chốt → đổi cái; đã chốt thì từ ván sau', () => {
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }, { name: 'Z', emoji: '🐸' }], 'multi')
+    const [x, y, z] = session().players.map((p) => p.id)
+    const g = s().addGame('xidach')
+    const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    s().openRound(g, { participants: [x, y, z], bet: 2, stakes: { [x]: 2, [z]: 2 }, dealer: y })
+    expect(session().hostId).toBe(y)
+    s().setDealer(g, z)
+    expect(session().hostId).toBe(z)
+    // Cái cũ thành con, cược lại tiền của cái mới
+    expect(open().stakes[y]).toBe(2)
+    s().setHost(x)
+    expect(open().dealer).toBe(x)
+    s().lockBets(g)
+    s().setHost(y)
+    expect(open().dealer).toBe(x)
+    s().closeRound(g)
+    s().quickOpen(g)
+    expect(open().dealer).toBe(y)
+  })
+})
+
 describe('appStore — đổi sang bài trong app lúc chưa chốt', () => {
   it('Xì dách: mở ván kiểu đánh ngoài, đổi sang app rồi chốt cược → vẫn chia bài', () => {
     s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
