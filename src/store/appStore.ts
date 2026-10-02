@@ -280,6 +280,33 @@ function findOpenIn(game: Game): Round | undefined {
   return game.rounds.find((r) => r.status === 'open')
 }
 
+/**
+ * Người vừa vào bàn / quay lại / thôi nghỉ: ván nào đang mở mà còn ở bước mua tờ / đặt cược (chưa chốt)
+ * thì cho vào ván luôn, không phải chờ ván sau. Xì dách: cược mặc định bằng mức cược ván.
+ */
+function joinBettingRounds(s: Session, id: ID): Session {
+  return {
+    ...s,
+    games: s.games.map((g) => {
+      const open = findOpenIn(g)
+      if (!open || open.phase !== 'betting' || open.participants.includes(id)) return g
+      if (open.participants.length >= GAMES[g.type].maxPlayers) return g
+      return {
+        ...g,
+        rounds: g.rounds.map((r) =>
+          r.id !== open.id
+            ? r
+            : {
+                ...r,
+                participants: [...r.participants, id],
+                stakes: g.type === 'xidach' && r.dealer !== id ? { ...r.stakes, [id]: r.stakes[id] ?? r.bet } : r.stakes,
+              },
+        ),
+      }
+    }),
+  }
+}
+
 /** Chia bài Tiến lên; người về Nhất ván trước (có chia bài) đi trước. */
 function dealTienlen(g: Game, participants: ID[]) {
   const prev = [...g.rounds].reverse().find((r) => r.tienlen && r.tienlen.turn === null)?.tienlen
@@ -552,14 +579,23 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         // Thêm lại đúng tên người đã xóa khỏi phòng → đưa người đó về (giữ lời/lỗ cũ)
         const back = s.players.find((p) => p.removed && p.name.toLowerCase() === name.trim().toLowerCase())
         if (back) {
-          mutate((s) => ({ ...s, players: s.players.map((p) => (p.id === back.id ? { ...p, removed: false, active: true } : p)) }))
+          mutate((s) =>
+            joinBettingRounds({ ...s, players: s.players.map((p) => (p.id === back.id ? { ...p, removed: false, active: true } : p)) }, back.id),
+          )
           return
         }
-        mutate((s) => ({ ...s, players: [...s.players, { id: newId(), name: name.trim(), emoji, active: true }] }))
+        mutate((s) => {
+          const id = newId()
+          return joinBettingRounds({ ...s, players: [...s.players, { id, name: name.trim(), emoji, active: true }] }, id)
+        })
       },
 
       updatePlayer(id, patch) {
-        mutate((s) => ({ ...s, players: s.players.map((p) => (p.id === id ? { ...p, ...patch } : p)) }))
+        mutate((s) => {
+          const next = { ...s, players: s.players.map((p) => (p.id === id ? { ...p, ...patch } : p)) }
+          // Thôi nghỉ (chơi lại) lúc ván chưa chốt → vào ván luôn
+          return patch.active ? joinBettingRounds(next, id) : next
+        })
       },
 
       removePlayer(id) {

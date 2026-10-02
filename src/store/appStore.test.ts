@@ -29,6 +29,31 @@ describe('appStore — buổi & người chơi', () => {
     expect(repo.list()).toEqual([{ id: session().id, name: 'Tối thứ 7', updatedAt: session().updatedAt, playerCount: 3, mode: 'solo' }])
   })
 
+  it('vào bàn / thôi nghỉ lúc ván chưa chốt (đang mua tờ / đặt cược) thì vào ván luôn; chốt rồi thì chờ ván sau', () => {
+    const lo = s().addGame('loto')
+    s().openRound(lo, { participants: [a, b], bet: 5, stakes: {}, dealer: null })
+    s().addPlayer('Dũng', '🐼')
+    const d = session().players.find((p) => p.name === 'Dũng')!.id
+    const open = () => session().games.find((g) => g.id === lo)!.rounds.at(-1)!
+    expect(open().participants).toEqual([a, b, d])
+    s().updatePlayer(c, { active: false })
+    s().updatePlayer(c, { active: true })
+    expect(open().participants).toEqual([a, b, d, c])
+    s().lockBets(lo)
+    s().addPlayer('Em', '🦊')
+    expect(open().participants).toHaveLength(4)
+  })
+
+  it('Xì dách chưa chốt cược: người mới vào được cược mặc định bằng mức cược ván', () => {
+    const xd = s().addGame('xidach')
+    s().openRound(xd, { participants: [a, b], bet: 3, stakes: { [b]: 3 }, dealer: a })
+    s().addPlayer('Giang', '🐯')
+    const gi = session().players.find((p) => p.name === 'Giang')!.id
+    const x = session().games.find((g) => g.id === xd)!.rounds.at(-1)!
+    expect(x.participants).toContain(gi)
+    expect(x.stakes[gi]).toBe(3)
+  })
+
   it('thêm game đặt tên tự động', () => {
     s().addGame('tienlen')
     s().addGame('tienlen')
@@ -463,15 +488,15 @@ describe('appStore — Lô tô', () => {
     expect(s().setLotoTickets(g, a, 2)).toEqual(['Đã chốt — không đổi số tờ được nữa.'])
   })
 
-  it('vào bàn lúc ván đang chơi: chưa tính ván này, ván sau tự vào', () => {
+  it('vào bàn lúc ván đã chốt (đang chơi): chưa tính ván này, ván sau tự vào', () => {
     const g = s().addGame('loto')
     s().quickOpen(g)
+    s().addMove(g, a, POT, 5, '1 tờ')
+    s().lockBets(g)
     s().addPlayer('Dũng', '🦊')
     const d = session().players.find((p) => p.name === 'Dũng')!.id
     expect(openRound(session(), g)!.participants).not.toContain(d)
-    expect(s().addMove(g, d, POT, 5, '1 tờ')).toEqual(['Chỉ kéo kẹo giữa những người trong ván.'])
-    s().addMove(g, a, POT, 5, '1 tờ')
-    s().lockBets(g)
+    expect(s().addMove(g, d, POT, 5, '1 tờ')).not.toEqual([])
     s().addMove(g, POT, a, 5, 'Ăn pot')
     s().closeRound(g)
     s().quickOpen(g)
