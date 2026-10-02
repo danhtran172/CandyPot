@@ -8,7 +8,8 @@ export const LOTO_TENSE_WAITING = 5
  * Nhạc kịch tính khi ván tới hồi gay cấn, còn lại là nhạc êm:
  * - Tiến lên: chưa ai về mà có người sắp hết bài (≤ 2 lá), hoặc chỉ còn 2 người cuối (bàn từ 3 người);
  * - Xì dách: tới lượt cái xét;
- * - Lô tô: hơn 5 người đang đợi.
+ * - Lô tô: hơn 5 người đang đợi;
+ * - Uno: có người còn ≤ 2 lá.
  */
 export function musicMood(round: Round | undefined): MusicMood {
   if (!round || round.status !== 'open') return 'calm'
@@ -22,5 +23,7 @@ export function musicMood(round: Round | undefined): MusicMood {
   if (xd && xd.turn !== null && xd.turn === xd.dealer) return 'tense'
   const lo = round.loto
   if (lo && !lo.winner && (lo.waiting?.length ?? 0) > LOTO_TENSE_WAITING) return 'tense'
+  const uno = round.uno
+  if (uno && uno.turn !== null && uno.order.some((id) => (uno.hands[id]?.length ?? 0) <= 2)) return 'tense'
   return 'calm'
 }

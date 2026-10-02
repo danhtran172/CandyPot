@@ -1,7 +1,9 @@
-import { Children, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Children, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router'
-import { CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
+import { APP_ONLY, CARD_GAMES, GAME_ORDER, GAMES } from '../../core/games'
+import { SLAP_MS, type UnoState } from '../../core/games/unoPlay'
+import { UnoCenter, UnoPanel } from '../components/UnoPanel'
 import { lotoCalling, lotoMax, lotoPrice } from '../../core/games/loto'
 import { seatedOf } from '../../core/games/tienlen'
 import { xidachBetOptions } from '../../core/games/xidach'
@@ -33,7 +35,7 @@ import { pairsFor, sheetSet } from '../../core/games/lotoSheets'
 const LOTO_AUTO_MS = 5000
 import { check as checkXidach, describe, resultText, type XidachCards } from '../../core/games/xidachPlay'
 import { PriceSheet } from '../components/PriceSheet'
-import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '../components/RuleSheets'
+import { CardModePill, LotoSettingsSheet, RulesSheet, UnoSettingsSheet, XidachLimitsSheet } from '../components/RuleSheets'
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { useCardsFolded, useHideHand } from '../cardsFold'
@@ -84,6 +86,7 @@ export function Table() {
   /** Lô tô: đã đóng màn chúc mừng của ván nào. */
   const [winnerSeen, setWinnerSeen] = useState<ID | null>(null)
   const [editLimits, setEditLimits] = useState(false)
+  const [editUno, setEditUno] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [guidePick, setGuidePick] = useState(false)
   /** Đang đánh bài trong app: popup đổi game (thay ô chọn game đã ẩn). */
@@ -147,11 +150,12 @@ export function Table() {
   }
 
   /** Chơi bằng bài trong app (chỉ bàn nhiều người): gom các nút phụ vào nút ⋯. */
-  const cardApp = !solo && game?.cardMode === 'app' && CARD_GAMES.includes(game.type)
+  // Uno chỉ chơi bằng bài trong app (không có mode đánh ngoài)
+  const cardApp = !solo && !!game && ((game.cardMode === 'app' && CARD_GAMES.includes(game.type)) || APP_ONLY.includes(game.type))
   /** Đang đánh bài trong app: app tự tính kẹo — dưới đáy chỉ còn bài trên tay và một nút ⋯ cho các chức năng còn cần. */
   /** Lô tô giấy trong app, đã chốt: đang gọi số / đánh số. */
   const lotoPlay = cardApp && game?.type === 'loto' && !!round?.loto && round.phase === 'playing'
-  const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
+  const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || !!round?.uno || lotoPlay)
   /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
   const [cardsFolded, foldCards] = useCardsFolded()
   /** Nhạc nền lúc chơi (bật / tắt trong bảng Âm thanh, nhớ trên máy). */
@@ -166,6 +170,8 @@ export function Table() {
   const cardOpen = cardPlay && !cardsFolded && (!lotoPlay || !!(me && round?.loto?.sheets[me]?.length))
   const isLoto = game?.type === 'loto'
   const isFree = game?.type === 'free'
+  /** Uno: chỉ chơi, không tính kẹo — chạm người khác là bắt UNO. */
+  const isUno = game?.type === 'uno'
 
   /** Lô tô: số tờ người này đã mua trong ván đang mở. */
   const lotoBought = (id: ID, r = round) => {
@@ -229,6 +235,7 @@ export function Table() {
     else if (game.type === 'tienlen') setEditBets(true)
     else if (game.type === 'loto') setEditPrice(true)
     else if (game.type === 'xidach') setEditLimits(true)
+    else if (game.type === 'uno') setEditUno(true)
   }
   /** Mode có luật để xem / chỉnh (Tự do và mode "sắp có" thì không). */
   const withRules = !!game && game.type !== 'free' && !GAMES[game.type].soon
@@ -271,6 +278,7 @@ export function Table() {
   const onTransfer = (from: ID, target: ID) => {
     // Bot demo (chỉ ngồi lúc hướng dẫn) không nhận / trả kẹo thật
     if (!game || from === DEMO_ID || target === DEMO_ID) return
+    if (isUno) return flash('Uno chỉ chơi, không tính kẹo.', true)
     // Lô tô: chỉ thả vào ô Mua mới mua tờ (kẹo vào Pot); thả thẳng vào Pot thì không
     if (isLoto && target === POT && from !== POT)
       return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
@@ -351,10 +359,34 @@ export function Table() {
     flash(resting ? 'Bạn tạm nghỉ 💤 — không vào ván mới.' : 'Bạn chơi lại rồi!')
   }
 
+  /** Uno: chạm avatar / xấp bài người khác = bắt UNO (hỏi lại; kết quả tính ngay lúc bấm Bắt). */
+  const catchUno = (target: ID) => {
+    const u = round?.uno
+    if (!game || !me) return
+    const name = players[target]?.name ?? '?'
+    if (!u) return flash('Chưa chia bài.', true)
+    if (u.turn === null) return flash('Ván đã xong.', true)
+    if (!u.order.includes(me)) return flash('Bạn không chơi ván này.', true)
+    if (!u.order.includes(target)) return flash(`${name} không chơi ván này.`, true)
+    const gameId = game.id
+    void ask(`Bắt UNO ${name}?`, {
+      icon: '🚨',
+      message: (
+        <>
+          {name} còn 1 lá mà chưa hô UNO → <b className="text-cream">{name} rút 2</b>.
+          <br />
+          Bắt hớ ({name} đã hô, hoặc còn hơn 1 lá) → <b className="text-berry">bạn rút 2</b>.
+        </>
+      ),
+      okLabel: 'Bắt!',
+    }).then((ok) => ok && run(actions().unoCatch(gameId, me, target)))
+  }
+
   const onTap = (id: ID) => {
     if (!game || !me || id === DEMO_ID) return
     // Bấm avatar của mình → 💤 tạm nghỉ / chơi lại + lời/lỗ của mình từng ván (Trả/nhận ở nút riêng)
     if (id === me) return setShowMe(true)
+    if (isUno) return catchUno(id)
     // Xì dách bài trong app: cái tới lượt chạm vào một con (avatar hoặc xấp bài) = xét người đó — hỏi lại trước khi lật
     if (round?.xidach && round.xidach.dealer === me && round.xidach.turn === me && round.xidach.order.includes(id)) {
       const name = players[id]?.name ?? '?'
@@ -494,7 +526,7 @@ export function Table() {
    * Poker bỏ qua (blind luôn có lượt kẹo). Trả về true = cứ kết thúc.
    */
   const confirmEmptyRound = async () => {
-    if (!round || round.poker) return true
+    if (!round || round.poker || round.uno) return true
     if (Object.values(movesNet(round.moves)).some((v) => v !== 0)) return true
     return ask('Chưa ai trả ai?', {
       icon: '⚠️',
@@ -585,19 +617,10 @@ export function Table() {
     editBets ||
     editPrice ||
     editLimits ||
+    editUno ||
     showRules ||
     guidePick
   )
-  useEffect(() => {
-    if (!game || guide || !me || busy) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
-    const t = window.setTimeout(() => {
-      // Popup khác (hộp xác nhận…) → để lúc khác
-      if (document.querySelector('[role=dialog], [role=alertdialog]')) return
-      const fresh = unseenSteps(guideSteps(game.type, role, solo)).filter(canShow)
-      if (fresh.length) setGuide(fresh)
-    }, 600)
-    return () => window.clearTimeout(t)
-  }, [game?.type, role, guide, me, round?.id, round?.phase, busy]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const closeGuide = (shown: GuideStep[]) => {
     markStepsSeen(shown)
@@ -612,12 +635,23 @@ export function Table() {
   const [shuffledId, setShuffledId] = useState<ID | null>(null)
   /** Đang chia: bao nhiêu lá đã đáp xuống chỗ ngồi (xấp lưng bài tăng dần). */
   const [dealt, setDealt] = useState<{ id: ID; n: number } | null>(null)
-  const fresh = (!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table) || (!!round?.xidach && round.xidach.step === 0)
+  const fresh =
+    (!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table) ||
+    (!!round?.xidach && round.xidach.step === 0) ||
+    (!!round?.uno && round.uno.step === 0)
   const shuffling = fresh && round && shuffledId !== round.id && !dealSeen(round.id) ? round.id : null
   // Đang chia bài: chưa báo kẹo (vd Xì dách có xì dách / xì bàn ngay lúc chia) — chia xong mới hiện
   const pops = useCandyPops(session, !!shuffling)
   /** Thứ tự chia bài theo vòng (Xì dách: các con rồi tới cái). */
-  const dealOrder = round?.tienlen ? round.tienlen.order : round?.xidach ? [...round.xidach.order, round.xidach.dealer] : null
+  const dealOrder = round?.tienlen
+    ? round.tienlen.order
+    : round?.xidach
+      ? [...round.xidach.order, round.xidach.dealer]
+      : round?.uno
+        ? round.uno.order
+        : null
+  /** Số lá chia mỗi người: Xì dách 2, Uno 7, Tiến lên 13. */
+  const perSeat = round?.xidach ? 2 : round?.uno ? 7 : 13
   useEffect(() => {
     if (!shuffling) return
     const t = window.setTimeout(
@@ -625,10 +659,21 @@ export function Table() {
         markDealSeen(shuffling)
         setShuffledId(shuffling)
       },
-      introMs(shuffleKindOf(shuffling), dealOrder?.length ?? 4, round?.xidach ? 2 : 13),
+      introMs(shuffleKindOf(shuffling), dealOrder?.length ?? 4, perSeat),
     )
     return () => window.clearTimeout(t)
   }, [shuffling]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // Đang xào / chia bài → đợi chia xong mới hướng dẫn
+    if (!game || guide || !me || busy || shuffling) return // chưa chọn bạn là ai (vừa join) → chưa hướng dẫn
+    const t = window.setTimeout(() => {
+      // Popup khác (hộp xác nhận…) → để lúc khác
+      if (document.querySelector('[role=dialog], [role=alertdialog]')) return
+      const fresh = unseenSteps(guideSteps(game.type, role, solo)).filter(canShow)
+      if (fresh.length) setGuide(fresh)
+    }, 600)
+    return () => window.clearTimeout(t)
+  }, [game?.type, role, guide, me, round?.id, round?.phase, busy, shuffling]) // eslint-disable-line react-hooks/exhaustive-deps
   // Người tạm nghỉ vẫn ngồi trên bàn (mờ + 💤); người đã xóa khỏi phòng thì không.
   // Tiến lên: chỉ người chơi ngồi quanh 4 cạnh bàn — ai không chơi thì cho nghỉ ở tab Người chơi
   const seated = game?.type === 'tienlen' ? (round ? round.participants : seatedOf(session)) : undefined
@@ -641,8 +686,16 @@ export function Table() {
   // máy đó mất mạng thì host làm thay sau thêm một chút. Chưa tính giờ lúc đang xào / chia bài.
   const xdCards = round?.xidach
   /** Ai đang tới lượt + số nước (bài trong app). */
-  const turnNow = tlCards ? { turn: tlCards.turn, step: tlCards.step ?? 0 } : xdCards ? { turn: xdCards.turn, step: xdCards.step } : null
-  const turnKey = cardPlay && round && turnNow?.turn && !shuffling ? `${round.id}:${xdCards ? 'x' : ''}${turnNow.step}` : null
+  const unoCards = round?.uno
+  const turnNow = tlCards
+    ? { turn: tlCards.turn, step: tlCards.step ?? 0 }
+    : xdCards
+      ? { turn: xdCards.turn, step: xdCards.step }
+      : unoCards
+        ? { turn: unoCards.turn, step: unoCards.step }
+        : null
+  const turnKey =
+    cardPlay && round && turnNow?.turn && !shuffling ? `${round.id}:${xdCards ? 'x' : unoCards ? 'u' : ''}${turnNow.step}` : null
   useEffect(() => {
     if (!turnKey || !game || !turnNow?.turn) return
     const { turn, step } = turnNow
@@ -650,11 +703,38 @@ export function Table() {
     if (!mine && !canHost) return
     const wait = turnStart(turnKey) + TURN_MS + (mine ? 0 : HOST_GRACE_MS) - Date.now()
     const t = window.setTimeout(
-      () => (xdCards ? actions().xidachTimeout(game.id, turn!, step) : actions().tienlenTimeout(game.id, turn!, step)),
+      () =>
+        xdCards
+          ? actions().xidachTimeout(game.id, turn!, step)
+          : unoCards
+            ? actions().unoTimeout(game.id, turn!, step)
+            : actions().tienlenTimeout(game.id, turn!, step),
       Math.max(0, wait),
     )
     return () => window.clearTimeout(t)
   }, [turnKey, me, canHost]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Uno, lá Đập tay: hết giờ thì ai chưa đập rút 2 — máy người đánh lá đó tính, mất mạng thì host làm thay
+  const slap = unoCards?.slap
+  const slapKey = slap && round && !shuffling ? `${round.id}:slap:${slap.id}` : null
+  useEffect(() => {
+    if (!slapKey || !slap || !game) return
+    const mine = slap.by === me
+    if (!mine && !canHost) return
+    const wait = turnStart(slapKey) + SLAP_MS + (mine ? 0 : HOST_GRACE_MS) - Date.now()
+    const t = window.setTimeout(() => actions().unoSlapTimeout(game.id, slap.id), Math.max(0, wait))
+    return () => window.clearTimeout(t)
+  }, [slapKey, me, canHost]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Uno: báo cả bàn chuyện vừa xảy ra (bắt UNO, bắt hớ, đập chậm, chuyền bài, rút phạt) — lần đầu thấy ván thì không báo
+  const unoEventKey = round && unoCards?.event ? `${round.id}:${unoCards.event.seq}` : null
+  const lastUnoEvent = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    const before = lastUnoEvent.current
+    lastUnoEvent.current = unoEventKey
+    const e = unoCards?.event
+    if (before === undefined || !unoEventKey || unoEventKey === before || !e) return
+    const text = unoEventText(e, me ?? null, players)
+    if (text) flash(text.text, text.bad)
+  }, [unoEventKey]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Lô tô giấy trong app: bộ giấy của game (cố định theo mã game, đủ cho cả bàn mua tối đa). */
   const lotoPairs = cardApp && isLoto && game ? pairsFor((round?.participants ?? visible).length, lotoMax(game)) : 0
   const lotoPapers = useMemo(() => (game && lotoPairs ? sheetSet(game.id, lotoPairs) : null), [game?.id, lotoPairs]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -695,7 +775,8 @@ export function Table() {
     isMe: p.id === me,
     online: onlineIds.has(p.id),
     // Đang chia bài: chưa hiện được / mất (trả ngay lúc chia vẫn đợi chia xong mới hiện)
-    round: round && !waitingIds.has(p.id) ? (shuffling ? 0 : (roundDelta[p.id] ?? 0)) : undefined,
+    // Uno không tính kẹo: không hiện được / mất
+    round: round && !round.uno && !waitingIds.has(p.id) ? (shuffling ? 0 : (roundDelta[p.id] ?? 0)) : undefined,
     waiting: waitingIds.has(p.id),
     pop: pops[p.id],
     badge: hand
@@ -706,9 +787,13 @@ export function Table() {
           ? shuffling
             ? undefined
             : xidachBadge(xdCards, p.id)
-          : lotoPlay && round?.loto?.waiting?.includes(p.id) && !round.loto.winner
-            ? '🔔 Đang đợi'
-            : undefined,
+          : unoCards
+            ? shuffling
+              ? undefined
+              : unoBadge(unoCards, p.id)
+            : lotoPlay && round?.loto?.waiting?.includes(p.id) && !round.loto.winner
+              ? '🔔 Đang đợi'
+              : undefined,
     dealer: game?.type === 'xidach' && dealerNow === p.id,
     stake: hand
       ? hand.streetBets[p.id] || undefined
@@ -723,20 +808,22 @@ export function Table() {
         ? seatCards(tlCards, p.id)
         : xdCards && (shuffling || !xidachShown(xdCards, p.id))
           ? seatCards(xdCards, p.id)
-          : undefined,
+          : unoCards && (unoCards.hands[p.id]?.length ?? 0) > 0
+            ? seatCards(unoCards, p.id)
+            : undefined,
     // Xì dách: bài đã được xét / bài cái đã lật thì cả bàn thấy; bài cái làm nổi bật
     faceUp: xdCards && !shuffling && xidachShown(xdCards, p.id) ? xdCards.hands[p.id] : undefined,
     faceUpGlow: !!xdCards && xdCards.dealer === p.id,
     // Cái tới lượt: xấp bài con chưa xét chạm được (như avatar); viền sáng khi xét được ngay (cái đã đủ điểm)
     // Xì dách: mình là con, người này cũng là con, bài chưa lật → chạm xấp bài để xem bài nhau
+    // Uno: chạm xấp bài người khác (như chạm avatar) = bắt UNO
     peekable:
-      !!xdCards &&
       !shuffling &&
       !!me &&
       me !== p.id &&
-      xdCards.order.includes(me) &&
-      xdCards.order.includes(p.id) &&
-      !xidachShown(xdCards, p.id),
+      ((!!xdCards && xdCards.order.includes(me) && xdCards.order.includes(p.id) && !xidachShown(xdCards, p.id)) ||
+        (!!unoCards && unoCards.turn !== null && unoCards.order.includes(me) && unoCards.order.includes(p.id))),
+    peekLabel: unoCards ? `Bắt UNO ${p.name}` : undefined,
     checkable:
       !!xdCards && !shuffling && xdCards.dealer === me && xdCards.turn === me && xdCards.order.includes(p.id) && !xdCards.settled[p.id]
         ? !!me && typeof checkXidach(xdCards, me, p.id) !== 'string'
@@ -744,7 +831,11 @@ export function Table() {
           : 'blocked'
         : undefined,
     tickets: isLoto && lotoBought(p.id) > 0 ? { count: lotoBought(p.id), color: colors[p.id] } : undefined,
-    highlight: (!!hand && hand.toAct === p.id) || (!!tlCards && tlCards.turn === p.id) || (!!xdCards && xdCards.turn === p.id),
+    highlight:
+      (!!hand && hand.toAct === p.id) ||
+      (!!tlCards && tlCards.turn === p.id) ||
+      (!!xdCards && xdCards.turn === p.id) ||
+      (!!unoCards && unoCards.turn === p.id),
     turnClock: turnKey && turnNow?.turn === p.id ? turnKey : undefined,
     // Poker: nút hoàn tác thao tác cuối nằm cạnh avatar của mình
     action:
@@ -826,7 +917,7 @@ export function Table() {
     </More>
   )
   /** Nút Thu bài / Mở bài. Đang thu mà tới lượt mình thì viền nháy nhắc. */
-  const cardTurnMine = !!me && (round?.tienlen?.turn === me || round?.xidach?.turn === me)
+  const cardTurnMine = !!me && (round?.tienlen?.turn === me || round?.xidach?.turn === me || round?.uno?.turn === me)
   const foldBtn = (open: boolean) =>
     open ? (
       // Đang mở: chỉ một icon thu xuống
@@ -866,7 +957,7 @@ export function Table() {
   )
   /** Thanh bài thu gọn (Tiến lên / Xì dách): trạng thái lượt, ⋯ thao tác host, Ván mới khi xong, Mở bài. */
   const cardBar = (() => {
-    const c = round?.tienlen ?? round?.xidach
+    const c = round?.tienlen ?? round?.xidach ?? round?.uno
     if (!c) return null
     const done = c.turn === null
     const status = shuffling
@@ -972,6 +1063,7 @@ export function Table() {
                       : round.phase === 'playing'
                         ? 'đã chốt cược'
                         : 'đang chơi'}
+                {round.uno && <span className="text-muted"> · chỉ chơi, không tính kẹo</span>}
                 {game.type === 'tienlen' && (
                   <span className="text-muted">
                     {' '}
@@ -1005,10 +1097,13 @@ export function Table() {
             }
             potAfterCenter={game.type === 'loto'}
             title={
-              <>
-                <GameIcon type={game.type} className="size-7" />
-                {GAMES[game.type].label}
-              </>
+              // Uno đang chơi: giữa bàn chật (bộ bài + lá trên cùng) — bỏ tên game
+              round?.uno ? undefined : (
+                <>
+                  <GameIcon type={game.type} className="size-7" />
+                  {GAMES[game.type].label}
+                </>
+              )
             }
             betBox={game.type === 'xidach' && !round?.xidach}
             buyBox={isLoto && round?.phase !== 'playing' ? { price: lotoPrice(game) } : undefined}
@@ -1032,7 +1127,15 @@ export function Table() {
             hat={round?.dealer && !round.xidach ? players[round.dealer]?.name : undefined}
             hatLocked={!canHost}
             center={
-              lotoPlay && round?.loto ? (
+              round?.uno ? (
+                <UnoCenter
+                  state={round.uno}
+                  players={players}
+                  me={me ?? null}
+                  onDraw={() => me && run(actions().unoDraw(game.id, me))}
+                  onSlap={() => me && run(actions().unoSlap(game.id, me))}
+                />
+              ) : lotoPlay && round?.loto ? (
                 <LotoCenter
                   loto={round.loto}
                   players={players}
@@ -1088,7 +1191,7 @@ export function Table() {
             }
             onTransfer={onTransfer}
             onTap={onTap}
-            onPeek={setPeek}
+            onPeek={(id) => (round?.uno ? catchUno(id) : setPeek(id))}
           />
 
           {/* Cố định dưới cùng: hàng nút góc (Trả/nhận · Host · Yêu cầu) ngay trên thanh nút chính — không cuộn theo trang */}
@@ -1171,6 +1274,28 @@ export function Table() {
                   folded={!cardOpen}
                   onFold={foldCards}
                   menu={cardOpen ? cardMenu : hostMenu}
+                />
+              </div>
+            )}
+            {cardOpen && round?.uno && (
+              <div className="pointer-events-auto relative">
+                <div className="absolute -top-4 right-4 z-10">{foldBtn(true)}</div>
+                <UnoPanel
+                  state={round.uno}
+                  players={players}
+                  me={me ?? null}
+                  isHost={canHost}
+                  dealing={!!shuffling}
+                  turnKey={turnKey}
+                  onPlay={(card, color) => {
+                    const errors = me ? actions().unoPlay(game.id, me, card, color) : ['Chọn bạn là ai trước.']
+                    if (errors.length) flash(errors[0], true)
+                    return !errors.length
+                  }}
+                  onPass={() => me && run(actions().unoPass(game.id, me))}
+                  onSay={() => me && run(actions().unoSay(game.id, me))}
+                  onNext={nextRound}
+                  menu={cardMenu}
                 />
               </div>
             )}
@@ -1380,7 +1505,7 @@ export function Table() {
                   <>
                     <More on={cardApp}>{backBtn}</More>
                     <Button variant="primary" className="font-display flex-1 py-1.5 text-lg" onClick={openNext}>
-                      + Mở ván
+                      {game.type === 'uno' ? 'Chia bài' : '+ Mở ván'}
                     </Button>
                   </>
                 )}
@@ -1431,7 +1556,7 @@ export function Table() {
         <ShuffleOverlay
           kind={shuffleKindOf(shuffling)}
           order={dealOrder}
-          perSeat={round?.xidach ? 2 : 13}
+          perSeat={perSeat}
           onDealt={(n) => {
             sfx.tick()
             setDealt({ id: shuffling, n })
@@ -1469,6 +1594,15 @@ export function Table() {
       )}
 
       {showSound && <SoundSheet onClose={() => setShowSound(false)} />}
+      {editUno && game && (
+        <UnoSettingsSheet
+          game={game}
+          onDone={(saved) => {
+            setEditUno(false)
+            if (saved) flash('Đã lưu — áp dụng từ ván sau.')
+          }}
+        />
+      )}
       {peek && round?.xidach?.hands[peek] && (
         <XidachPeek name={players[peek]?.name ?? '?'} cards={round.xidach.hands[peek]} onClose={() => setPeek(null)} />
       )}
@@ -1744,7 +1878,13 @@ function TableCenter({
       <>
         {/* Tên + icon chế độ đã in trên mặt bàn */}
         <span className="text-xs text-muted">
-          {soon ? 'Sắp có · bấm vào người để chuyển kẹo' : game.type === 'free' ? 'Bấm Pot để cược' : 'Chưa mở ván'}
+          {soon
+            ? 'Sắp có · bấm vào người để chuyển kẹo'
+            : game.type === 'free'
+              ? 'Bấm Pot để cược'
+              : game.type === 'uno'
+                ? 'Chỉ chơi, không tính kẹo · host bấm Chia bài'
+                : 'Chưa mở ván'}
         </span>
       </>
     )
@@ -1819,6 +1959,37 @@ function More({ on, count = 0, children }: { on: boolean; count?: number; childr
       </Button>
     </div>
   )
+}
+
+/** Uno: dòng phụ dưới tên — thắng, đã hô UNO, đã đập tay. */
+function unoBadge(c: UnoState, id: ID): string | undefined {
+  if (c.winner === id) return '🏆 Thắng'
+  if (c.slap?.tapped.includes(id)) return '✋ Đã đập'
+  if (c.uno.includes(id)) return '📣 UNO!'
+  return undefined
+}
+
+/** Uno: câu báo cả bàn cho sự kiện vừa xảy ra; `bad` = chuyện không hay với mình (toast đỏ). */
+function unoEventText(
+  e: NonNullable<UnoState['event']>,
+  me: ID | null,
+  players: Record<ID, Player>,
+): { text: string; bad?: boolean } | null {
+  const who = (id: ID) => (id === me ? 'Bạn' : (players[id]?.name ?? '?'))
+  switch (e.kind) {
+    case 'caught':
+      return { text: `🚨 ${who(e.by)} bắt UNO ${who(e.who)} — ${who(e.who)} rút 2 lá!`, bad: e.who === me }
+    case 'false-catch':
+      return { text: `😅 ${who(e.by)} bắt hớ ${who(e.who)} — ${who(e.by)} rút 2 lá!`, bad: e.by === me }
+    case 'slap-lose':
+      return { text: `✋ ${e.who.map(who).join(', ')} đập chậm — rút 2 lá!`, bad: !!me && e.who.includes(me) }
+    case 'uno':
+      return e.who === me ? null : { text: `📣 ${who(e.who)} hô UNO!` }
+    case 'swap':
+      return { text: `🔄 Cả bàn chuyền bài ${e.dir === 1 ? 'sang trái ↻' : 'sang phải ↺'}!` }
+    case 'penalty':
+      return e.n > 1 ? { text: `${who(e.who)} rút ${e.n} lá.`, bad: e.who === me } : null
+  }
 }
 
 /** Xì dách bài trong app: bài người này đã lật cho cả bàn (đã được xét, hoặc bài cái sau lần xét đầu). */

@@ -56,8 +56,59 @@ const BASICS: GuideStep[] = [
 
 // ---------- Người chơi (bàn nhiều người) ----------
 
+/** Uno: thao tác và cơ chế đặc biệt (ai chơi cũng xem, kể cả host). */
+const UNO_STEPS: GuideStep[] = [
+  {
+    id: 'uno-intro',
+    title: 'Uno — chỉ chơi, không tính kẹo',
+    text: 'App chia mỗi người 7 lá. Đánh lá cùng màu, cùng số hoặc cùng ký hiệu với lá giữa bàn; lá đen đổi màu lúc nào cũng được. Hết bài trước là thắng.',
+  },
+  {
+    id: 'uno-hand',
+    target: 'cards',
+    title: 'Bài của bạn',
+    text: 'Tới lượt: lá đánh được sáng lên, lá không đánh được tối đi. Chạm để chọn, chạm lần nữa (hoặc Đánh) để đánh. Lá đen: chọn màu. Thu bài ▾ để thấy bàn.',
+  },
+  {
+    id: 'uno-draw',
+    target: 'uno-deck',
+    title: 'Rút bài',
+    text: 'Kéo bộ bài giữa bàn về phía bạn (như Xì dách). Rút được lá đánh được thì đánh luôn hoặc Bỏ lượt. Đang bị cộng bài thì kéo = chịu phạt.',
+  },
+  {
+    id: 'uno-call',
+    target: 'uno-call',
+    title: 'Hô UNO!',
+    text: 'Còn 2 lá (sắp đánh) hoặc 1 lá thì bấm UNO! — nút sáng đỏ nhắc bạn. Quên hô mà bị bắt là rút 2.',
+  },
+  {
+    id: 'uno-catch',
+    demo: { kind: 'tap', at: 'other' },
+    title: 'Bắt UNO',
+    text: 'Thấy ai còn 1 lá mà chưa hô: chạm avatar hoặc xấp bài của họ → xác nhận. Đúng thì họ rút 2; bắt hớ (họ đã hô / còn hơn 1 lá) thì bạn rút 2. Kết quả tính ngay.',
+  },
+  {
+    id: 'uno-stack',
+    title: 'Cộng bài & phản',
+    text: '+2 nối +2, +4 nối lên mọi lá cộng, +2 nối lên +4 khi đúng màu đang chọn. Đổi chiều cùng màu phản lá cộng về người vừa đánh; Khiên đẩy đòn sang người kế.',
+  },
+  {
+    id: 'uno-storm',
+    title: 'Bộ mở rộng',
+    text: 'Lốc xoáy (rút tới khi ra đúng màu), Bỏ màu (bỏ mọi lá cùng màu), 7 Đổi bài (cả bàn chuyền bài), Khiên, Leo số. Đánh lá đặc biệt là trên đầu khung bài hiện cách đỡ / chức năng lá đó.',
+  },
+  {
+    id: 'uno-slap',
+    target: 'uno-deck',
+    title: 'Đập tay ✋',
+    text: 'Có người đánh lá Đập tay: chạm bộ bài giữa bàn thật nhanh! Avatar ai đập rồi hiện cạnh bộ bài — ai chậm nhất (hoặc không đập kịp 5 giây) rút 2.',
+  },
+  { id: 'uno-rule', target: 'rule', title: 'Xem đủ các lá', text: 'Rule ? — chức năng từng lá Uno, gốc và mở rộng.' },
+]
+
 const PLAYER_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [],
+  uno: UNO_STEPS,
   xidach: [
     {
       id: 'xidach-bet',
@@ -130,7 +181,7 @@ const HOST_SETUP: GuideStep[] = [
     id: 'v3-switch-game',
     target: 'picker',
     title: 'Đổi game',
-    text: 'Chạm vào đây để chọn Tiến lên, Xì dách, Poker, Lô tô hay Tự do. Đổi lúc nào cũng được — lời/lỗ cả bàn vẫn cộng dồn.',
+    text: 'Chạm vào đây để chọn Tiến lên, Xì dách, Poker, Lô tô, Uno hay Tự do. Đổi lúc nào cũng được — lời/lỗ cả bàn vẫn cộng dồn.',
   },
   {
     id: 'v3-settings',
@@ -148,6 +199,21 @@ const HOST_SETUP: GuideStep[] = [
 
 const HOST_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [{ id: 'tienlen-round', target: 'actions', title: 'Ván', text: '+ Mở ván → trả kẹo → Chốt ván. Nhầm thì Hủy ván.' }],
+  uno: [
+    {
+      id: 'uno-deal',
+      target: 'actions',
+      title: 'Chia bài',
+      text: 'Bấm Chia bài để bắt đầu. Có người hết bài là xong — bấm Ván mới, người thắng đi trước.',
+    },
+    {
+      id: 'uno-settings',
+      target: 'settings',
+      title: 'Bộ mở rộng',
+      text: 'Bấm ⚙ để chọn chơi bộ gốc 108 lá hay kèm bộ mở rộng (mặc định có).',
+    },
+    ...UNO_STEPS,
+  ],
   xidach: [
     { id: 'xidach-round', target: 'actions', title: 'Một nút', text: 'Chốt cược → Kết thúc → ván mới tự mở, giữ cược cũ.' },
     {
@@ -208,6 +274,9 @@ const SOLO_START: GuideStep[] = [
 
 const SOLO_GAME: Record<GameType, GuideStep[]> = {
   tienlen: [],
+  uno: [
+    { id: 'solo-uno', title: 'Uno cần nhiều máy', text: 'Uno chơi bằng bài trên máy mỗi người — tạo bàn nhiều người (mã 5 số) để chơi.' },
+  ],
   xidach: [
     {
       id: 'solo-xidach-bet',
@@ -258,7 +327,9 @@ const SOLO_END: GuideStep[] = [
 ]
 
 export function guideSteps(game: GameType, role: GuideRole, solo = false): GuideStep[] {
-  if (solo) return [...SOLO_START, ...SOLO_GAME[game], ...HOST_GAME[game], ...SOLO_SETUP, ...SOLO_END]
+  if (solo) return game === 'uno' ? SOLO_GAME.uno : [...SOLO_START, ...SOLO_GAME[game], ...HOST_GAME[game], ...SOLO_SETUP, ...SOLO_END]
+  // Uno không tính kẹo: bỏ các bước trả / đòi kẹo
+  if (game === 'uno') return role === 'host' ? [BASICS[0], ...HOST_SETUP, ...HOST_GAME.uno] : [BASICS[0], ...PLAYER_GAME.uno]
   return role === 'host'
     ? [...HOST_START, ...BASICS, ...HOST_SETUP, ...HOST_GAME[game], ...HOST_END]
     : [...BASICS, ...PLAYER_GAME[game], ...PLAYER_END]

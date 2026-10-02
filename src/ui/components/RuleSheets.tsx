@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { CARD_GAMES, GAMES } from '../../core/games'
 import { lotoCalling, lotoMax, lotoPrice } from '../../core/games/loto'
 import { XIDACH_MAX_MULTIPLIER, xidachLimits } from '../../core/games/xidach'
+import { unoExpansion } from '../../core/games/uno'
+import { UnoRules } from './UnoPanel'
 import { tienlenBets, tienlenPigs } from '../../core/suggest'
 import type { Game } from '../../core/types'
 import { actions } from '../../store'
@@ -140,6 +142,45 @@ export function LotoSettingsSheet({ game, onDone }: { game: Game; onDone: (saved
   )
 }
 
+/** Uno: chơi bộ gốc hay kèm bộ mở rộng (Uno Storm + lá Đập tay). */
+export function UnoSettingsSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
+  const [on, setOn] = useState(unoExpansion(game))
+  const save = () => {
+    actions().setUnoExpansion(game.id, on)
+    onDone(true)
+  }
+  return (
+    <SettingsModal
+      title="⚙ Uno"
+      hint="Áp dụng từ ván sau. Uno chỉ chơi, không tính kẹo."
+      error={null}
+      onSave={save}
+      onClose={() => onDone(false)}
+    >
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            [true, 'Mở rộng', 'Thêm Lốc xoáy, Bỏ màu, 7 Đổi bài, Khiên, Leo số, Đập tay'],
+            [false, 'Bộ gốc', '108 lá Uno chuẩn'],
+          ] as const
+        ).map(([v, label, hint], i) => (
+          <button
+            key={label}
+            type="button"
+            aria-pressed={on === v}
+            onClick={() => setOn(v)}
+            className={`relative rounded-2xl border px-2 py-2 text-left transition ${on === v ? 'border-lemon bg-lemon/15' : 'border-line/60 bg-night/40 opacity-70'}`}
+          >
+            {i === 0 && <RecommendBadge />}
+            <div className="text-sm font-bold">{label}</div>
+            <div className="text-[11px] text-muted">{hint}</div>
+          </button>
+        ))}
+      </div>
+    </SettingsModal>
+  )
+}
+
 /** Xì dách: cược tối thiểu / tối đa (max tự tính = 5 × min, sửa riêng được). */
 export function XidachLimitsSheet({ game, onDone }: { game: Game; onDone: (saved: boolean) => void }) {
   const init = xidachLimits(game)
@@ -266,6 +307,7 @@ export function RulesSheet({
             </li>
           ))}
         </ul>
+        {game.type === 'uno' && <UnoRules expansion={unoExpansion(game)} />}
         {CARD_GAMES.includes(game.type) && <CardModeSwitch game={game} isHost={isHost} online={online} />}
         <div className="mt-4 flex gap-2">
           <Button className="flex-1" onClick={onClose}>

@@ -1,9 +1,10 @@
 import type { TienlenCards } from './games/tienlenPlay'
 import type { XidachCards } from './games/xidachPlay'
 import type { LotoState } from './games/lotoPlay'
+import type { UnoState } from './games/unoPlay'
 export type ID = string
 
-export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'free'
+export type GameType = 'tienlen' | 'xidach' | 'poker' | 'loto' | 'uno' | 'free'
 
 /** Id đặc biệt cho pot giữa bàn (Poker). */
 export const POT = 'pot'
@@ -111,6 +112,8 @@ export interface Round {
   xidach?: XidachCards
   /** Lô tô chơi bằng giấy trong app: tờ của từng người, người gọi số, số đã gọi, người kinh. */
   loto?: LotoState
+  /** Uno (chỉ bài trong app, không tính kẹo): bài, lượt, chiều, đòn đang chờ, ai đã hô UNO. */
+  uno?: UnoState
   /** Tính khi chốt ván. */
   transfers: Transfer[]
   tags: Tag[]
@@ -137,6 +140,8 @@ export interface Game {
   cardMode?: 'real' | 'app'
   /** Poker: small blind và mức all-in (tổng tối đa mỗi người một tay). */
   pokerSettings?: { sb: number; cap: number }
+  /** Uno: chơi kèm bộ mở rộng (Uno Storm + lá Đập tay); mặc định có. */
+  unoExpansion?: boolean
 }
 
 /** Đòi kẹo: `to` đòi `from` trả `amount` kẹo, chờ `from` bấm OK. */
@@ -206,8 +211,8 @@ export interface GameModule {
   label: string
   minPlayers: number
   maxPlayers: number
-  /** Cách đặt cược lúc mở ván. */
-  stakeMode: 'common' | 'dealer' | 'pot'
+  /** Cách đặt cược lúc mở ván; none = chỉ chơi, không tính kẹo (Uno). */
+  stakeMode: 'common' | 'dealer' | 'pot' | 'none'
   /** Chưa có luật riêng (sắp có): không mở ván, chỉ kéo kẹo chuyển tay. */
   soon?: boolean
   /** Ván có 2 bước: đặt cược/mua vé (betting) → Chốt → trả kẹo (playing). */

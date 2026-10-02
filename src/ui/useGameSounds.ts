@@ -14,11 +14,18 @@ interface Snapshot {
   called?: number
   winner?: ID
   waiting?: ID[]
+  unoPlayed?: number
+  unoHeld?: number
+  unoSeq?: number
+  unoSlap?: number
+  unoStack?: number
+  unoWinner?: ID
 }
 
 /**
  * Âm thanh theo diễn biến ván (máy nào cũng phát, ai thao tác cũng vậy): đánh bài / bỏ lượt / về Nhất (Tiến lên),
- * rút / lật bài (Xì dách), số vừa gọi + đọc số, kinh, đợi (Lô tô). Lần đầu thấy ván (mở màn, tải lại) thì không phát.
+ * rút / lật bài (Xì dách), số vừa gọi + đọc số, kinh, đợi (Lô tô); đánh / rút, cộng bài, hô / bắt UNO, đập tay, thắng (Uno).
+ * Lần đầu thấy ván (mở màn, tải lại) thì không phát.
  */
 export function useGameSounds(round: Round | undefined, players: Record<ID, Player>, me: ID | null) {
   const prev = useRef<Snapshot>({})
@@ -69,6 +76,36 @@ export function useGameSounds(round: Round | undefined, players: Record<ID, Play
         }
         const fresh = next.waiting.filter((id) => id !== me && !(p.waiting ?? []).includes(id))
         if (fresh.length && !lo.winner) speak(`${fresh.map(name).join(', ')} đợi`)
+      }
+    }
+    const uno = round?.uno
+    if (uno) {
+      next.unoPlayed = uno.discard.length
+      next.unoHeld = Object.values(uno.hands).reduce((n, h) => n + h.length, 0)
+      next.unoSeq = uno.seq
+      next.unoSlap = uno.slap?.id
+      next.unoStack = uno.attack?.kind === 'draw' ? uno.attack.n : 0
+      next.unoWinner = uno.winner
+      if (same && p.unoSeq !== undefined) {
+        if (next.unoPlayed > (p.unoPlayed ?? 0)) sfx.play(1)
+        else if (next.unoHeld > (p.unoHeld ?? 0)) sfx.draw()
+        if (next.unoStack > (p.unoStack ?? 0)) speak(`Cộng ${next.unoStack}!`)
+        if (next.unoSlap && next.unoSlap !== p.unoSlap) {
+          sfx.flip()
+          speak('Đập tay!')
+        }
+        const e = uno.event
+        if (e && next.unoSeq > (p.unoSeq ?? 0)) {
+          if (e.kind === 'uno') speak(`${name(e.who)}, UNO!`)
+          else if (e.kind === 'caught') speak(`${name(e.by)} bắt UNO ${name(e.who)}, rút hai lá`)
+          else if (e.kind === 'false-catch') speak(`${name(e.by)} bắt hớ, rút hai lá`)
+          else if (e.kind === 'slap-lose') speak(`${e.who.map(name).join(', ')} chậm, rút hai lá`)
+          else if (e.kind === 'swap') sfx.flip()
+        }
+        if (uno.winner && !p.unoWinner) {
+          sfx.win()
+          speak(`${name(uno.winner)} thắng!`)
+        }
       }
     }
     prev.current = next

@@ -35,8 +35,10 @@ export interface Seat {
   cards?: number
   /** Xì dách, lượt cái: xấp bài của con chạm được như chạm avatar (để xét); `ready` = xét được ngay → viền sáng. */
   checkable?: 'ready' | 'blocked'
-  /** Xì dách: con với con — chạm xấp bài người này để xem bài (chạm avatar vẫn là trả kẹo). */
+  /** Xì dách: con với con — chạm xấp bài người này để xem bài (chạm avatar vẫn là trả kẹo). Uno: chạm để bắt UNO. */
   peekable?: boolean
+  /** Nhãn của thao tác chạm xấp bài (mặc định "Xem bài …"). */
+  peekLabel?: string
   /** Bài đã lật cho cả bàn xem (Xì dách: đã được xét / bài cái) — thay cho xấp lưng bài. */
   faceUp?: number[]
   /** Làm nổi bật bài lật (bài của cái). */
@@ -635,8 +637,8 @@ export function Board({
                 {...(s.peekable && !s.checkable
                   ? {
                       role: 'button',
-                      'aria-label': `Xem bài ${s.player.name}`,
-                      title: `Xem bài ${s.player.name}`,
+                      'aria-label': s.peekLabel ?? `Xem bài ${s.player.name}`,
+                      title: s.peekLabel ?? `Xem bài ${s.player.name}`,
                       // Không cho chạm này thành kéo kẹo / trả kẹo của chỗ ngồi
                       onPointerDown: (e: ReactPointerEvent) => e.stopPropagation(),
                       onClick: (e: ReactMouseEvent) => {

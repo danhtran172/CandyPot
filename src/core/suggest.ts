@@ -35,7 +35,12 @@ function tienlenOptions(first: number, second: number, pigs?: { red: number; bla
   const main = dedupe([
     { amount: second, label: 'Nhì' },
     { amount: first, label: 'Nhất' },
-    ...(pigs ? [{ amount: pigs.black, label: 'Heo đen' }, { amount: pigs.red, label: 'Heo đỏ' }] : []),
+    ...(pigs
+      ? [
+          { amount: pigs.black, label: 'Heo đen' },
+          { amount: pigs.red, label: 'Heo đỏ' },
+        ]
+      : []),
   ])
   // Heo trùng giá Nhất/Nhì thì bù bằng Nhất × 1,5 / × 2 cho đủ 4 mức
   return dedupe([...main, ...scaledOptions(first).slice(1)])
@@ -63,5 +68,7 @@ export function suggestOptions({ game, round, from, to }: DragContext): Option[]
       return scaledOptions(round.bet)
     case 'loto':
       return scaledOptions(round.bet)
+    case 'uno':
+      return []
   }
 }

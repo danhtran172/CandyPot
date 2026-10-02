@@ -3,6 +3,20 @@ import { GAMES } from '../core/games'
 import { lotoCalling, lotoMax, lotoPrice } from '../core/games/loto'
 import { seatedOf } from '../core/games/tienlen'
 import { xidachLimits } from '../core/games/xidach'
+import { unoExpansion } from '../core/games/uno'
+import {
+  autoMove as autoUno,
+  catchUno,
+  dealUno,
+  draw as drawUno,
+  pass as passUno,
+  play as playUno,
+  sayUno,
+  slapDeck,
+  slapTimeout,
+  type UnoColor,
+  type UnoState,
+} from '../core/games/unoPlay'
 import { act, ALL_IN_MULTIPLIER, award, awardBest, DEFAULT_SB, nextButton, startHand, undoLast, type PokerAction } from '../core/games/pokerHand'
 import { assertZeroSum, netOf } from '../core/ledger'
 import { closeTransfers, contributions, normalizeSession, potOf } from '../core/round'
@@ -60,7 +74,7 @@ export function defaultDraft(session: Session, game: Game): OpenDraft {
   const participants = game.type === 'tienlen' ? seatedOf(session) : joined.slice(0, mod.maxPlayers)
   const tl = game.type === 'tienlen' ? tienlenBets(game) : undefined
   const price = game.type === 'loto' ? lotoPrice(game) : undefined
-  const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1 }[mod.stakeMode]
+  const bet = price || tl?.bet || prev?.bet || { common: 4, dealer: 5, pot: 1, none: 0 }[mod.stakeMode]
   const bet2 = tl?.bet2 || prev?.bet2 || Math.max(1, Math.round(bet / 2))
   // Xì dách bàn nhiều người: cái = host (đổi host ở ván trước thì ván này host mới làm cái)
   const hostDeals = game.type === 'xidach' && session.mode === 'multi' && !!session.hostId && participants.includes(session.hostId)
@@ -187,6 +201,24 @@ export interface AppState {
   xidachCheckAll(gameId: ID, by: ID): string[]
   /** Hết giờ lượt `step`: con tự dằn, cái tự xét tất. Lượt đã qua thì thôi. */
   xidachTimeout(gameId: ID, playerId: ID, step: number): string[]
+  /** Uno: đánh một lá (lá đen thì kèm màu chọn). */
+  unoPlay(gameId: ID, playerId: ID, card: number, color?: UnoColor): string[]
+  /** Uno: chạm bộ bài — rút 1 lá, hoặc chịu phạt khi đang bị cộng / Lốc xoáy / Leo số. */
+  unoDraw(gameId: ID, playerId: ID): string[]
+  /** Uno: vừa rút được lá đánh được mà không đánh → bỏ lượt. */
+  unoPass(gameId: ID, playerId: ID): string[]
+  /** Uno: hô UNO. */
+  unoSay(gameId: ID, playerId: ID): string[]
+  /** Uno: `by` bắt UNO `target` (đúng → target rút 2, hớ → by rút 2). */
+  unoCatch(gameId: ID, by: ID, target: ID): string[]
+  /** Uno: đập tay vào bộ bài (lá Đập tay). */
+  unoSlap(gameId: ID, playerId: ID): string[]
+  /** Uno: hết giờ đập tay `slapId` — ai chưa đập rút 2. */
+  unoSlapTimeout(gameId: ID, slapId: number): string[]
+  /** Uno: hết giờ lượt `step` của người này. Lượt đã qua thì thôi. */
+  unoTimeout(gameId: ID, playerId: ID, step: number): string[]
+  /** Uno: bật / tắt bộ mở rộng (áp dụng từ ván sau). */
+  setUnoExpansion(gameId: ID, on: boolean): string[]
   /** Xì dách: host bỏ chốt để cho đặt cược lại (chỉ khi chưa có lượt trả kẹo). */
   unlockBets(gameId: ID): string[]
   /** Chốt ván hiện tại rồi mở ngay ván sau với cài đặt cũ. */
@@ -543,6 +575,20 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       return []
     }
 
+    /** Một nước Uno: tính trên bản mới nhất (kể cả lúc chạy lại trên phòng); nước không còn hợp lệ thì thôi. */
+    const unoDo = (gameId: ID, fn: (s: UnoState) => UnoState | string): string[] => {
+      const open = openOf(gameId)
+      if (!open?.uno) return ['Chưa có ván Uno nào đang chơi.']
+      const first = fn(open.uno)
+      if (typeof first === 'string') return [first]
+      mapRound(gameId, open.id, (x) => {
+        if (!x.uno) return x
+        const r = fn(x.uno)
+        return typeof r === 'string' ? x : { ...x, uno: r }
+      })
+      return []
+    }
+
     /** Lô tô chơi bằng giấy trong app (bàn nhiều người, host gạt "Trên app"). */
     const lotoApp = (g: Game) => g.type === 'loto' && g.cardMode === 'app' && get().session?.mode === 'multi'
 
@@ -725,6 +771,7 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!g) return ['Không tìm thấy game.']
         const errors = validateOpen(g, draft)
         if (errors.length) return errors
+        if (g.type === 'uno' && get().session?.mode !== 'multi') return ['Uno chỉ chơi bằng bài trong app — cần bàn nhiều người (mã bàn 5 số).']
         // Người trong ván theo đúng chỗ ngồi quanh bàn (lượt bài trong app đi theo thứ tự này)
         draft = { ...draft, participants: [...draft.participants].sort(seatOrder(get().session)) }
         const mode = GAMES[g.type].stakeMode
@@ -769,6 +816,11 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
           Object.assign(round, { participants: order, bet: 2 * sb, stakes: {}, moves: hand.moves, poker: hand.hand })
         }
         if (g.type === 'tienlen' && g.cardMode === 'app' && get().session?.mode === 'multi') round.tienlen = dealTienlen(g, round.participants)
+        if (g.type === 'uno') {
+          // Người thắng ván trước đi trước
+          const prev = [...g.rounds].reverse().find((r) => r.uno?.winner)?.uno?.winner
+          round.uno = dealUno(round.participants, { expansion: unoExpansion(g), first: prev })
+        }
         if (lotoApp(g)) {
           // Giấy trong app: mỗi người giữ lại tờ ván trước (như giấy thật), số tờ = số tờ tự mua lại
           const prev = [...g.rounds].reverse().find((r) => r.loto)?.loto
@@ -976,6 +1028,36 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
       },
       xidachTimeout(gameId, playerId, step) {
         return xidachDo(gameId, (s) => (s.turn === playerId && s.step === step ? autoXidach(s, playerId) : 'Lượt đã qua.'))
+      },
+
+      unoPlay(gameId, playerId, card, color) {
+        return unoDo(gameId, (s) => playUno(s, playerId, card, color))
+      },
+      unoDraw(gameId, playerId) {
+        return unoDo(gameId, (s) => drawUno(s, playerId))
+      },
+      unoPass(gameId, playerId) {
+        return unoDo(gameId, (s) => passUno(s, playerId))
+      },
+      unoSay(gameId, playerId) {
+        return unoDo(gameId, (s) => sayUno(s, playerId))
+      },
+      unoCatch(gameId, by, target) {
+        return unoDo(gameId, (s) => catchUno(s, by, target))
+      },
+      unoSlap(gameId, playerId) {
+        return unoDo(gameId, (s) => slapDeck(s, playerId))
+      },
+      unoSlapTimeout(gameId, slapId) {
+        return unoDo(gameId, (s) => slapTimeout(s, slapId))
+      },
+      unoTimeout(gameId, playerId, step) {
+        return unoDo(gameId, (s) => (s.turn === playerId && s.step === step ? autoUno(s, playerId) : 'Lượt đã qua.'))
+      },
+      setUnoExpansion(gameId, on) {
+        if (!game(gameId)) return ['Không tìm thấy game.']
+        mapGame(gameId, (g) => ({ ...g, unoExpansion: on }))
+        return []
       },
 
       tienlenPayout(gameId) {
