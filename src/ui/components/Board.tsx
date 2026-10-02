@@ -346,8 +346,8 @@ export function Board({
   /** Đang hướng dẫn: Bot demo ngồi vào làm "người khác" cho bàn tay mẫu. */
   const hasDemo = seats.some((s) => s.demo)
   const land = useLandscape()
-  // Bàn xì dách: nhà cái ngồi góc trên bên trái (kể cả khi mình là cái); người chơi dọc theo cung phía dưới,
-  // mình (nếu không làm cái) ở giữa cung. Thứ tự ngồi vẫn theo chiều kim đồng hồ.
+  // Bàn xì dách: nhà cái ngồi góc trên bên trái (kể cả khi mình là cái); người chơi dọc theo cung phía dưới theo
+  // thứ tự lượt — mọi máy thấy cùng một cách xếp (mình được tô sáng, không bị đưa vào giữa).
   // `angle` = hướng từ tâm cạnh thẳng ra chỗ ngồi (để đặt bài / cược về phía bàn).
   const blackjack = (() => {
     if (shape !== 'blackjack') return undefined
@@ -356,7 +356,10 @@ export function Board({
     // Xoay ngang: cái ngồi sát mép trái, ngay dưới hàng nút đầu bàn
     if (dealer)
       pos.set(dealer.player.id, land ? { left: 6, top: 58, angle: (-3 * Math.PI) / 4 } : { left: 11, top: 17, angle: (-3 * Math.PI) / 4 })
-    const arc = ordered.filter((s) => s !== dealer)
+    // Các con theo đúng thứ tự lượt (vòng quanh bàn từ người ngồi sau cái) — máy nào cũng xếp y như nhau:
+    // người rút đầu tiên ở đầu cung bên phải, đi dần xuống đáy rồi sang đầu cung bên trái (sát cái)
+    const at = dealer ? seats.indexOf(dealer) : -1
+    const arc = (at < 0 ? seats : [...seats.slice(at + 1), ...seats.slice(0, at)]).filter((s) => s !== dealer)
     const k = arc.length
     // Ít người thì gom về giữa cung: 2 người 65–115°, 3 người 40–140°, từ 4 người 18–162°.
     // Xoay ngang (bàn thấp): cung chỉ 40–125° — hai đầu nằm dưới hàng nút đầu bàn, bên trái chừa chỗ cho cái và bài lật của cái
@@ -364,22 +367,7 @@ export function Board({
     const from = k <= 1 ? 90 : Math.max(18, 90 - 25 * (k - 1))
     const lo = land ? Math.max(40, from) : from
     const hi = Math.min(180 - from, dealer ? 148 : 162, land ? 125 : 180)
-    let degs: number[]
-    if (land && arc[0]?.isMe && k > 1) {
-      // Xoay ngang: bài / cược nằm bên phải mỗi ghế → các ghế cách đều trên cả cung; mình ở ghế giữa
-      const mid = Math.floor((k - 1) / 2)
-      degs = arc.map((_, i) => lo + ((hi - lo) * ((mid + i) % k)) / (k - 1))
-    } else if (arc[0]?.isMe) {
-      // Mình ngồi chính giữa cung (90°); người sau mình (chiều kim đồng hồ) lần lượt sang trái tới đầu cung,
-      // rồi tiếp từ đầu cung bên phải vòng về sát mình. Số người chẵn thì bên trái nhiều hơn một ghế
-      const left = Math.ceil((k - 1) / 2)
-      const right = k - 1 - left
-      degs = [
-        90,
-        ...Array.from({ length: left }, (_, j) => 90 + ((hi - 90) * (j + 1)) / left),
-        ...Array.from({ length: right }, (_, j) => 90 - ((90 - lo) * (right - j)) / right),
-      ]
-    } else degs = arc.map((_, i) => (k === 1 ? 90 : lo + ((hi - lo) * i) / (k - 1)))
+    const degs = arc.map((_, i) => (k === 1 ? 90 : lo + ((hi - lo) * i) / (k - 1)))
     const [cy, rx, ry] = land ? [12, 42, 72] : [14, 40, 66]
     arc.forEach((s, i) => {
       const angle = (degs[i] * Math.PI) / 180

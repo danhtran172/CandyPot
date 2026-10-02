@@ -38,7 +38,8 @@ describe('appStore — buổi & người chơi', () => {
     expect(open().participants).toEqual([a, b, d])
     s().updatePlayer(c, { active: false })
     s().updatePlayer(c, { active: true })
-    expect(open().participants).toEqual([a, b, d, c])
+    // Người trong ván luôn theo thứ tự chỗ ngồi của bàn
+    expect(open().participants).toEqual([a, b, c, d])
     s().lockBets(lo)
     s().addPlayer('Em', '🦊')
     expect(open().participants).toHaveLength(4)

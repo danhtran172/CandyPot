@@ -281,10 +281,20 @@ function findOpenIn(game: Game): Round | undefined {
 }
 
 /**
+ * So sánh theo chỗ ngồi quanh bàn (thứ tự người chơi của bàn) — người trong ván luôn xếp theo thứ tự này
+ * để lượt chơi (bài trong app) đi đúng vòng quanh bàn, máy nào cũng như nhau.
+ */
+function seatOrder(s: Session | null | undefined) {
+  const at = new Map((s?.players ?? []).map((p, i) => [p.id, i]))
+  return (a: ID, b: ID) => (at.get(a) ?? Infinity) - (at.get(b) ?? Infinity)
+}
+
+/**
  * Người vừa vào bàn / quay lại / thôi nghỉ: ván nào đang mở mà còn ở bước mua tờ / đặt cược (chưa chốt)
  * thì cho vào ván luôn, không phải chờ ván sau. Xì dách: cược mặc định bằng mức cược ván.
  */
 function joinBettingRounds(s: Session, id: ID): Session {
+  const seat = seatOrder(s)
   return {
     ...s,
     games: s.games.map((g) => {
@@ -298,7 +308,7 @@ function joinBettingRounds(s: Session, id: ID): Session {
             ? r
             : {
                 ...r,
-                participants: [...r.participants, id],
+                participants: [...r.participants, id].sort(seat),
                 stakes: g.type === 'xidach' && r.dealer !== id ? { ...r.stakes, [id]: r.stakes[id] ?? r.bet } : r.stakes,
               },
         ),
@@ -681,6 +691,8 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         if (!g) return ['Không tìm thấy game.']
         const errors = validateOpen(g, draft)
         if (errors.length) return errors
+        // Người trong ván theo đúng chỗ ngồi quanh bàn (lượt bài trong app đi theo thứ tự này)
+        draft = { ...draft, participants: [...draft.participants].sort(seatOrder(get().session)) }
         const mode = GAMES[g.type].stakeMode
         const stakes = Object.fromEntries(
           draft.participants

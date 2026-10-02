@@ -33,6 +33,13 @@ describe('xidach — tính điểm', () => {
   })
 })
 
+describe('xidach — thứ tự lượt', () => {
+  it('các con đi theo vòng quanh bàn, bắt đầu từ người ngồi ngay sau cái', () => {
+    expect(dealXidach(['a', 'b', 'D', 'c', 'd'], 'D').order).toEqual(['c', 'd', 'a', 'b'])
+    expect(dealXidach(['D', 'a', 'b'], 'D').order).toEqual(['a', 'b'])
+  })
+})
+
 describe('xidach — một ván', () => {
   it('con rút / dằn lần lượt, cái xét từng người rồi xét tất, tự tính kẹo', () => {
     // Chia: a, b, cái (D) — vòng 1 rồi vòng 2

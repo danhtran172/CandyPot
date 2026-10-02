@@ -109,14 +109,19 @@ export function compare(player: Card[], dealer: Card[]): XidachResult {
   const pNon = p.kind === 'points' && p.points < PLAYER_MIN
   const dNon = d.kind === 'points' && d.points < DEALER_MIN
   const dBad = d.kind === 'quac' || dNon
-  if (p.kind === 'quac') return d.kind === 'quac' ? { outcome: 'draw', mult: 1, note: 'Cùng quắc' } : { outcome: 'lose', mult: 1, note: 'Quắc' }
+  if (p.kind === 'quac')
+    return d.kind === 'quac' ? { outcome: 'draw', mult: 1, note: 'Cùng quắc' } : { outcome: 'lose', mult: 1, note: 'Quắc' }
   if (pNon) return dBad ? { outcome: 'draw', mult: 1, note: 'Cùng non / cái quắc' } : { outcome: 'lose', mult: 1, note: 'Non' }
   // Xì bàn / xì dách thắng bài thường bất kể cái còn non (vừa chia xong cái chưa rút)
   if (dBad && !special(p)) return { outcome: 'win', mult: MULT[p.kind], note: d.kind === 'quac' ? 'Cái quắc' : 'Cái non' }
   if (RANK[p.kind] !== RANK[d.kind]) {
     const win = RANK[p.kind] > RANK[d.kind]
     const top = win ? p : d
-    return { outcome: win ? 'win' : 'lose', mult: MULT[top.kind], note: top.kind === 'points' ? `${p.points} vs ${d.points}` : KIND_LABEL[top.kind] }
+    return {
+      outcome: win ? 'win' : 'lose',
+      mult: MULT[top.kind],
+      note: top.kind === 'points' ? `${p.points} vs ${d.points}` : KIND_LABEL[top.kind],
+    }
   }
   if (p.kind !== 'points' && p.kind !== 'ngulinh') return { outcome: 'draw', mult: 1, note: `Cùng ${KIND_LABEL[p.kind]}` }
   if (p.kind === 'ngulinh') {
@@ -139,7 +144,9 @@ function nextTurn(s: XidachCards): XidachCards {
 
 /** Chia 2 lá mỗi người (theo vòng: con trước, cái cuối), rồi xử lý xì bàn / xì dách ngay. */
 export function dealXidach(players: ID[], dealer: ID, deck: Card[] = shuffled()): XidachCards {
-  const order = players.filter((p) => p !== dealer)
+  // Các con theo vòng quanh bàn, bắt đầu từ người ngồi ngay sau cái (chiều kim đồng hồ)
+  const at = players.indexOf(dealer)
+  const order = (at < 0 ? players : [...players.slice(at + 1), ...players.slice(0, at)]).filter((p) => p !== dealer)
   const seats = [...order, dealer]
   const d = [...deck]
   const hands: Record<ID, Card[]> = Object.fromEntries(seats.map((id) => [id, [] as Card[]]))
