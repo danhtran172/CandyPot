@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { ID, Player, Round } from '../core/types'
-import { sfx, speak } from './sound'
+import { lotoCallText } from './lotoCall'
+import { sfx, soundPrefs, speak } from './sound'
 
 interface Snapshot {
   id?: ID
@@ -59,7 +60,8 @@ export function useGameSounds(round: Round | undefined, players: Record<ID, Play
       if (same) {
         if (next.called > (p.called ?? next.called)) {
           sfx.ball()
-          speak(`Số ${lo.called[lo.called.length - 1]}`)
+          // Rao lô tô (câu vần) hoặc đọc số — câu chọn theo mã ván nên mọi máy đọc giống nhau
+          speak(lotoCallText(lo.called[lo.called.length - 1], round!.id, soundPrefs().rhyme))
         }
         if (lo.winner && !p.winner) {
           sfx.win()

@@ -5,10 +5,16 @@ import { useSyncExternalStore } from 'react'
  * (không cần file) và giọng đọc tiếng Việt có sẵn của máy (Web Speech) — không tốn dung lượng, không tốn mạng.
  */
 
-export type SoundKind = 'music' | 'sfx' | 'voice'
+export type SoundKind = 'music' | 'sfx' | 'voice' | 'rhyme'
 export type SoundPrefs = Record<SoundKind, boolean>
 
-const KEYS: Record<SoundKind, string> = { music: 'candypot:music', sfx: 'candypot:sfx', voice: 'candypot:voice' }
+const KEYS: Record<SoundKind, string> = {
+  music: 'candypot:music',
+  sfx: 'candypot:sfx',
+  voice: 'candypot:voice',
+  /** Giọng đọc lô tô kiểu rao hội chợ (câu vần) thay vì chỉ đọc số. */
+  rhyme: 'candypot:loto-rhyme',
+}
 
 function read(): SoundPrefs {
   const get = (k: SoundKind) => {
@@ -18,7 +24,7 @@ function read(): SoundPrefs {
       return true
     }
   }
-  return { music: get('music'), sfx: get('sfx'), voice: get('voice') }
+  return { music: get('music'), sfx: get('sfx'), voice: get('voice'), rhyme: get('rhyme') }
 }
 
 let prefs = read()
@@ -34,6 +40,9 @@ export function setSoundPref(kind: SoundKind, on: boolean) {
   if (kind === 'voice' && !on) window.speechSynthesis?.cancel()
   listeners.forEach((l) => l())
 }
+
+/** Cài đặt âm thanh lúc này (đọc một lần, không theo dõi). */
+export const soundPrefs = () => prefs
 
 /** Cài đặt âm thanh hiện tại (tự cập nhật khi đổi). */
 export function useSoundPrefs(): SoundPrefs {
