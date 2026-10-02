@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
+import { onDuck, setSoundPref, useSoundPrefs } from './sound'
 
 /**
  * Nhạc nền lúc chơi: tự tạo bằng Web Audio (không cần file nhạc) — vòng hợp âm nhẹ kiểu lo-fi:
@@ -126,6 +127,14 @@ class Music {
     this.timer = window.setInterval(tick, 200)
   }
 
+  /** Đang đọc số / thông báo → nhỏ nhạc xuống cho nghe rõ; đọc xong thì to lại. */
+  duck(on: boolean) {
+    if (!this.ctx || !this.master) return
+    const t = this.ctx.currentTime
+    this.master.gain.cancelScheduledValues(t)
+    this.master.gain.setTargetAtTime(on ? 0.04 : 0.16, t, 0.15)
+  }
+
   stop() {
     if (!this.playing) return
     this.playing = false
@@ -138,29 +147,21 @@ class Music {
 }
 
 const music = new Music()
-const KEY = 'candypot:music'
-
-function readOn() {
-  try {
-    return localStorage.getItem(KEY) !== '0'
-  } catch {
-    return true
-  }
-}
+onDuck((on) => music.duck(on))
 
 /**
- * Nhạc nền ở màn đang dùng hook này: bật / tắt (nhớ trên máy, mặc định bật). Trình duyệt chỉ cho phát
- * sau lần chạm đầu tiên → chờ chạm rồi mới phát; ẩn app thì dừng, mở lại thì phát tiếp.
+ * Nhạc nền ở màn đang dùng hook này (bật / tắt trong bảng Âm thanh, nhớ trên máy, mặc định bật). Trình duyệt chỉ cho
+ * phát sau lần chạm đầu tiên → chờ chạm rồi mới phát; ẩn app thì dừng, mở lại thì phát tiếp.
  */
 export function useMusic() {
-  const [on, setOn] = useState(readOn)
+  const on = useSoundPrefs().music
   useEffect(() => {
     if (!on) return
     const play = () => {
       if (!document.hidden) music.start()
     }
     const onVisibility = () => (document.hidden ? music.stop() : play())
-    // Đã chạm vào trang rồi (vd vừa chuyển màn) thì phát luôn; chưa thì chờ một lần chạm (trình duyệt chặn tự phát)
+    // Đã chạm vào trang rồi (vd vừa chuyển màn / vừa bấm bật) thì phát luôn; chưa thì chờ một lần chạm (trình duyệt chặn tự phát)
     if ((navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation?.hasBeenActive) play()
     window.addEventListener('pointerdown', play, { once: true, capture: true })
     document.addEventListener('visibilitychange', onVisibility)
@@ -170,17 +171,5 @@ export function useMusic() {
       music.stop()
     }
   }, [on])
-  const toggle = () => {
-    const next = !on
-    setOn(next)
-    try {
-      localStorage.setItem(KEY, next ? '1' : '0')
-    } catch {
-      /* không nhớ được thì thôi */
-    }
-    // Bấm nút cũng là một lần chạm → bật thì phát luôn
-    if (next) music.start()
-    else music.stop()
-  }
-  return [on, toggle] as const
+  return [on, () => setSoundPref('music', !on)] as const
 }

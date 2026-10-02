@@ -38,6 +38,9 @@ import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { useCardsFolded, useHideHand } from '../cardsFold'
 import { useMusic } from '../music'
+import { sfx } from '../sound'
+import { useGameSounds } from '../useGameSounds'
+import { SoundSheet } from '../components/SoundSheet'
 import { EyeIcon, FoldIcon } from '../components/CardIcons'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
 import { introMs, shuffleKindOf } from '../shuffle'
@@ -150,8 +153,9 @@ export function Table() {
   const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
   /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
   const [cardsFolded, foldCards] = useCardsFolded()
-  /** Nhạc nền lúc chơi (bật / tắt, nhớ trên máy). */
-  const [musicOn, toggleMusic] = useMusic()
+  /** Nhạc nền lúc chơi (bật / tắt trong bảng Âm thanh, nhớ trên máy). */
+  const [musicOn] = useMusic()
+  const [showSound, setShowSound] = useState(false)
   /** Giấu bài trên tay (Xì dách): úp lưng, ẩn điểm. */
   const [handHidden, toggleHand] = useHideHand()
   /** Đang mở bài: bài chiếm phần dưới (Lô tô: cả màn hình), các nút thường ẩn đi. Lô tô không mua tờ thì coi như thu. */
@@ -597,6 +601,8 @@ export function Table() {
   }
 
   const roundDelta = round ? movesNet(round.moves) : {}
+  // Âm thanh theo diễn biến ván (đánh bài, rút bài, gọi số, kinh…)
+  useGameSounds(round, players, me ?? null)
   const pops = useCandyPops(session)
   // Mỗi ván bài trong app: mỗi máy xem hiệu ứng xào + chia bài đúng một lần, miễn là chưa ai đánh / rút lá nào
   // (vào màn lúc nào cũng được — đang ở tab khác lúc chia, quay lại vẫn thấy chia)
@@ -772,8 +778,8 @@ export function Table() {
       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowRules(true)}>
         📖 Luật & mode bài
       </Button>
-      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={toggleMusic}>
-        {musicOn ? '🔇 Tắt nhạc' : '🎵 Bật nhạc'}
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowSound(true)}>
+        🔊 Âm thanh
       </Button>
       {canHost && (
         <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
@@ -890,10 +896,9 @@ export function Table() {
               </Link>
               <button
                 type="button"
-                aria-label={musicOn ? 'Tắt nhạc' : 'Bật nhạc'}
-                aria-pressed={musicOn}
-                title={musicOn ? 'Tắt nhạc' : 'Bật nhạc'}
-                onClick={toggleMusic}
+                aria-label="Âm thanh"
+                title="Âm thanh: nhạc nền, hiệu ứng, giọng đọc"
+                onClick={() => setShowSound(true)}
                 className={`grid size-8 place-items-center rounded-full bg-plum-2 text-sm ${musicOn ? '' : 'opacity-50 grayscale'}`}
               >
                 🎵
@@ -1409,7 +1414,10 @@ export function Table() {
           kind={shuffleKindOf(shuffling)}
           order={dealOrder}
           perSeat={round?.xidach ? 2 : 13}
-          onDealt={(n) => setDealt({ id: shuffling, n })}
+          onDealt={(n) => {
+            sfx.tick()
+            setDealt({ id: shuffling, n })
+          }}
         />
       )}
 
@@ -1442,6 +1450,7 @@ export function Table() {
         </div>
       )}
 
+      {showSound && <SoundSheet onClose={() => setShowSound(false)} />}
       {guide && <GuideTour key={guide.map((s) => s.id).join()} steps={guide} onClose={closeGuide} />}
 
       {showRules && game && (
