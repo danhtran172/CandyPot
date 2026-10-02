@@ -12,22 +12,23 @@ export type CandyPop = { amount: number; key: number }
 function balances(session: Session): Record<ID, number> {
   const out = netOf(session)
   for (const g of session.games)
-    for (const r of g.rounds)
-      if (r.status === 'open') for (const [id, v] of Object.entries(movesNet(r.moves))) out[id] = (out[id] ?? 0) + v
+    for (const r of g.rounds) if (r.status === 'open') for (const [id, v] of Object.entries(movesNet(r.moves))) out[id] = (out[id] ?? 0) + v
   return out
 }
 
 /**
  * Số kẹo của ai vừa đổi (trả / nhận / cược / mua / hoàn tác — từ máy này hay máy khác) → ô "+N / −N" dưới avatar ~1 giây.
  * Chỉ so sánh dữ liệu bàn đã có trên máy — không đọc / ghi thêm gì lên Firebase.
- * Đổi liên tiếp khi ô còn hiện thì cộng dồn vào một ô.
+ * Đổi liên tiếp khi ô còn hiện thì cộng dồn vào một ô. `hold` = tạm chưa báo (thôi giữ thì báo dồn).
  */
-export function useCandyPops(session: Session): Record<ID, CandyPop> {
+export function useCandyPops(session: Session, hold = false): Record<ID, CandyPop> {
   const prev = useRef<{ sessionId: ID; bal: Record<ID, number> } | null>(null)
   const timers = useRef<Record<ID, number>>({})
   const [pops, setPops] = useState<Record<ID, CandyPop>>({})
 
   useEffect(() => {
+    // Đang giữ (vd đang chia bài): chưa báo, giữ mốc cũ — thôi giữ thì báo một lượt các thay đổi trong lúc đó
+    if (hold && prev.current?.sessionId === session.id) return
     const bal = balances(session)
     const before = prev.current
     prev.current = { sessionId: session.id, bal }
@@ -55,7 +56,7 @@ export function useCandyPops(session: Session): Record<ID, CandyPop> {
         })
       }, POP_MS)
     }
-  }, [session])
+  }, [session, hold])
 
   useEffect(() => {
     const t = timers.current

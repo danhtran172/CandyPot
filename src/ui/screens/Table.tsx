@@ -605,7 +605,6 @@ export function Table() {
   const roundDelta = round ? movesNet(round.moves) : {}
   // Âm thanh theo diễn biến ván (đánh bài, rút bài, gọi số, kinh…)
   useGameSounds(round, players, me ?? null)
-  const pops = useCandyPops(session)
   // Mỗi ván bài trong app: mỗi máy xem hiệu ứng xào + chia bài đúng một lần, miễn là chưa ai đánh / rút lá nào
   // (vào màn lúc nào cũng được — đang ở tab khác lúc chia, quay lại vẫn thấy chia)
   const [shuffledId, setShuffledId] = useState<ID | null>(null)
@@ -613,6 +612,8 @@ export function Table() {
   const [dealt, setDealt] = useState<{ id: ID; n: number } | null>(null)
   const fresh = (!!round?.tienlen && !round.tienlen.finished.length && !round.tienlen.table) || (!!round?.xidach && round.xidach.step === 0)
   const shuffling = fresh && round && shuffledId !== round.id && !dealSeen(round.id) ? round.id : null
+  // Đang chia bài: chưa báo kẹo (vd Xì dách có xì dách / xì bàn ngay lúc chia) — chia xong mới hiện
+  const pops = useCandyPops(session, !!shuffling)
   /** Thứ tự chia bài theo vòng (Xì dách: các con rồi tới cái). */
   const dealOrder = round?.tienlen ? round.tienlen.order : round?.xidach ? [...round.xidach.order, round.xidach.dealer] : null
   useEffect(() => {
@@ -691,7 +692,8 @@ export function Table() {
     player: p,
     isMe: p.id === me,
     online: onlineIds.has(p.id),
-    round: round && !waitingIds.has(p.id) ? (roundDelta[p.id] ?? 0) : undefined,
+    // Đang chia bài: chưa hiện được / mất (trả ngay lúc chia vẫn đợi chia xong mới hiện)
+    round: round && !waitingIds.has(p.id) ? (shuffling ? 0 : (roundDelta[p.id] ?? 0)) : undefined,
     waiting: waitingIds.has(p.id),
     pop: pops[p.id],
     badge: hand
@@ -699,7 +701,9 @@ export function Table() {
       : tlCards
         ? tienlenBadge(tlCards, p.id)
         : xdCards
-          ? xidachBadge(xdCards, p.id)
+          ? shuffling
+            ? undefined
+            : xidachBadge(xdCards, p.id)
           : lotoPlay && round?.loto?.waiting?.includes(p.id) && !round.loto.winner
             ? '🔔 Đang đợi'
             : undefined,
