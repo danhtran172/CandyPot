@@ -738,6 +738,39 @@ describe('appStore — Lô tô giấy trong app', () => {
   })
 })
 
+describe('appStore — đổi sang bài trong app lúc chưa chốt', () => {
+  it('Xì dách: mở ván kiểu đánh ngoài, đổi sang app rồi chốt cược → vẫn chia bài', () => {
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
+    const [x, y] = session().players.map((p) => p.id)
+    const g = s().addGame('xidach')
+    s().openRound(g, { participants: [x, y], bet: 2, stakes: { [y]: 2 }, dealer: x })
+    expect(s().setCardMode(g, 'app')).toEqual([])
+    s().lockBets(g)
+    const open = session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    expect(open.xidach?.hands[y]).toHaveLength(2)
+  })
+
+  it('Lô tô: đã mua kiểu đánh ngoài, đổi sang app → phát đúng số tờ đã mua; đổi lại đánh ngoài thì bỏ giấy, giữ tiền', () => {
+    s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')
+    const [x, y] = session().players.map((p) => p.id)
+    const g = s().addGame('loto')
+    s().openRound(g, { participants: [x, y], bet: 5, stakes: {}, dealer: null })
+    s().setLotoTickets(g, x, 2)
+    s().setLotoTickets(g, y, 1)
+    const open = () => session().games.find((gg) => gg.id === g)!.rounds.find((r) => r.status === 'open')!
+    s().setCardMode(g, 'app')
+    expect(open().loto!.sheets).toEqual({ [x]: [0, 1], [y]: [2] })
+    expect(potOf(open())).toBe(15)
+    s().setCardMode(g, 'real')
+    expect(open().loto).toBeUndefined()
+    expect(potOf(open())).toBe(15)
+    s().setCardMode(g, 'app')
+    s().lockBets(g)
+    expect(open().phase).toBe('playing')
+    expect(open().loto!.sheets[x]).toEqual([0, 1])
+  })
+})
+
 describe('appStore — Lô tô gọi ở ngoài', () => {
   it('báo kinh chưa ăn pot; host bác thì thôi, host xác nhận thì trao pot', () => {
     s().createSession('Nhóm', [{ name: 'X', emoji: '🐱' }, { name: 'Y', emoji: '🐶' }], 'multi')

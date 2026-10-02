@@ -307,6 +307,24 @@ function joinBettingRounds(s: Session, id: ID): Session {
   }
 }
 
+/**
+ * Lô tô đổi sang giấy trong app lúc đang mua (đã mua theo kiểu đánh ngoài): mỗi người nhận đúng số tờ đã mua
+ * (tối đa `max`), lấy lần lượt các tờ chưa ai cầm trong bộ giấy.
+ */
+function lotoFromPurchases(r: Round, max: number, host: ID | null): LotoState {
+  const loto = emptyLoto(host)
+  const paid = contributions(r)
+  const total = 2 * pairsFor(r.participants.length, max)
+  let next = 0
+  for (const p of r.participants) {
+    const count = Math.min(max, Math.floor((paid[p] ?? 0) / (r.bet || 1)))
+    const list: number[] = []
+    while (list.length < count && next < total) list.push(next++)
+    if (list.length) loto.sheets[p] = list
+  }
+  return loto
+}
+
 /** Chia bài Tiến lên; người về Nhất ván trước (có chia bài) đi trước. */
 function dealTienlen(g: Game, participants: ID[]) {
   const prev = [...g.rounds].reverse().find((r) => r.tienlen && r.tienlen.turn === null)?.tienlen
@@ -825,10 +843,24 @@ export function createAppStore(repo: SessionRepo, rooms?: RoomBackend) {
         // Ván đang mở chưa có lượt kẹo nào → chia bài / bỏ bài luôn cho ván này
         const fresh = open && !open.moves.length && g.type === 'tienlen'
         const cards = fresh && mode === 'app' ? dealTienlen(g, open.participants) : undefined
+        // Lô tô chưa chốt: sang app thì phát giấy cho đúng số tờ mỗi người đã mua; về đánh ngoài thì bỏ giấy (giữ tiền đã mua).
+        // Xì dách chưa chốt: không cần làm gì — chốt cược lúc đang ở app là chia bài.
+        const lotoBetting = g.type === 'loto' && open?.phase === 'betting'
+        const host = get().session?.hostId ?? null
         mapGame(gameId, (x) => ({
           ...x,
           cardMode: mode,
-          rounds: x.rounds.map((r) => (fresh && r.id === open.id ? { ...r, tienlen: cards } : r)),
+          rounds: x.rounds.map((r) => {
+            if (!open || r.id !== open.id) return r
+            if (fresh) return { ...r, tienlen: cards }
+            if (lotoBetting && mode === 'app' && !r.loto) return { ...r, loto: lotoFromPurchases(r, lotoMax(x), host) }
+            if (lotoBetting && mode === 'real' && r.loto) {
+              const next = { ...r }
+              delete next.loto
+              return next
+            }
+            return r
+          }),
         }))
         return []
       },
