@@ -37,6 +37,7 @@ import { CardModePill, LotoSettingsSheet, RulesSheet, XidachLimitsSheet } from '
 import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { useCardsFolded, useHideHand } from '../cardsFold'
+import { useMusic } from '../music'
 import { EyeIcon, FoldIcon } from '../components/CardIcons'
 import { ShuffleOverlay } from '../components/ShuffleOverlay'
 import { introMs, reducedMotion, shuffleKindOf } from '../shuffle'
@@ -149,6 +150,8 @@ export function Table() {
   const cardPlay = cardApp && (!!round?.tienlen || !!round?.xidach || lotoPlay)
   /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
   const [cardsFolded, foldCards] = useCardsFolded()
+  /** Nhạc nền lúc chơi (bật / tắt, nhớ trên máy). */
+  const [musicOn, toggleMusic] = useMusic()
   /** Giấu bài trên tay (Xì dách): úp lưng, ẩn điểm. */
   const [handHidden, toggleHand] = useHideHand()
   /** Đang mở bài: bài chiếm phần dưới (Lô tô: cả màn hình), các nút thường ẩn đi. Lô tô không mua tờ thì coi như thu. */
@@ -772,6 +775,9 @@ export function Table() {
       <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setShowRules(true)}>
         📖 Luật & mode bài
       </Button>
+      <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={toggleMusic}>
+        {musicOn ? '🔇 Tắt nhạc' : '🎵 Bật nhạc'}
+      </Button>
       {canHost && (
         <Button className="bg-night/90 px-3 py-1.5 text-sm" onClick={() => setGameMenu(true)}>
           🎮 Đổi game
@@ -885,6 +891,16 @@ export function Table() {
               <Link to={`${base}/players`} data-guide="players" className="rounded-full bg-plum-2 px-3 py-1.5 text-sm font-semibold">
                 👥 Người chơi
               </Link>
+              <button
+                type="button"
+                aria-label={musicOn ? 'Tắt nhạc' : 'Bật nhạc'}
+                aria-pressed={musicOn}
+                title={musicOn ? 'Tắt nhạc' : 'Bật nhạc'}
+                onClick={toggleMusic}
+                className={`grid size-8 place-items-center rounded-full bg-plum-2 text-sm ${musicOn ? '' : 'opacity-50 grayscale'}`}
+              >
+                🎵
+              </button>
               <button
                 type="button"
                 aria-label="Hướng dẫn"
