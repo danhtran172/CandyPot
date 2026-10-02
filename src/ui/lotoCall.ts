@@ -1,9 +1,10 @@
 /**
  * Câu gọi số lô tô cho giọng đọc.
  * - Đọc thường: "Số bốn mươi sáu".
- * - Rao lô tô (kiểu hội chợ): mở đầu + đọc số kiểu lô tô ("bốn sáu", "ba mốt", "hai lăm") + câu vần theo âm cuối,
- *   vd "Ra con gì đây? Bốn sáu! Bốn sáu ông táo!".
- * Câu chọn theo `seed` (mã ván) + số → mọi máy trong phòng đọc cùng một câu.
+ * - Kêu lô tô (theo cách kêu ở hội chợ / gánh lô tô miền Nam): mở đầu "Con mấy gì đây, con mấy gì đây, cờ ra con mấy…",
+ *   (số nào có câu hát dân gian quen thuộc mà chữ cuối đồng âm với con số thì hát câu đó), rồi chốt "là con số …".
+ *   Người kêu thật ứng tác câu hát tại chỗ — ở đây chỉ dùng những câu dân gian quen thuộc, không tự chế.
+ * Câu mở đầu chọn theo `seed` (mã ván) + số → mọi máy trong phòng đọc cùng một câu.
  */
 
 const DIGIT = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín']
@@ -25,26 +26,14 @@ export function fullReading(n: number): string {
   return n < 20 || n % 10 === 0 ? short : short.replace(' ', ' mươi ')
 }
 
-/** Câu vần theo tiếng cuối của số (vần gần giống là được, cho vui tai). */
-const RHYMES: Record<string, string[]> = {
-  một: ['cột đình làng', 'bánh bột lọc'],
-  mốt: ['cà rốt', 'trái ớt cay xè', 'gánh bột đi chợ'],
-  hai: ['trái xoài', 'củ khoai lang', 'bông lài thơm'],
-  ba: ['con gà trống', 'bông hoa nở', 'ông bà ngồi đó'],
-  bốn: ['con chồn', 'chơi trốn tìm'],
-  tư: ['cô Tư', 'ngồi lừ đừ', 'trái dưa hấu'],
-  năm: ['cái mâm đồng', 'hái tăm tre'],
-  lăm: ['rau răm', 'ngồi chăm chăm'],
-  sáu: ['ông táo', 'con sáo', 'cái áo mới'],
-  bảy: ['nhảy dây', 'máy bay', 'tay trong tay'],
-  tám: ['cá trám', 'bồ câu xám'],
-  chín: ['trái mít chín', 'ngồi nín thinh'],
-  mười: ['tươi cười', 'mười phân vẹn mười'],
-  mươi: ['tươi cười', 'chục người vui'],
-  không: ['ông không'],
-}
+/** Câu mở đầu quen thuộc khi bốc số. */
+const OPENERS = ['Con mấy gì đây, con mấy gì đây, cờ ra con mấy…', 'Cờ ra con mấy, con mấy gì ra…']
 
-const OPENERS = ['Ra con gì đây?', 'Lắc lắc lắc… ra con số mấy?', 'Bà con cô bác nghe đây!', 'Cờ ra con mấy?', 'Con gì đây, con gì đây?']
+/** Số có câu kêu dân gian quen thuộc (chữ cuối đồng âm với con số). */
+const FOLK: Record<number, string> = {
+  1: 'Đứng đầu lô tô là con số một!',
+  5: 'Lấy nhau chẳng đặng, thương hoài ngàn năm… Số năm là con số năm!',
+}
 
 /** Băm chuỗi ra số (ổn định giữa các máy). */
 function hash(s: string): number {
@@ -53,15 +42,12 @@ function hash(s: string): number {
   return h >>> 0
 }
 
-/** Câu gọi số `n` (rao lô tô hoặc đọc thường), chọn ổn định theo `seed`. */
+/** Câu gọi số `n` (kêu lô tô hoặc đọc thường), chọn ổn định theo `seed`. */
 export function lotoCallText(n: number, seed: string, rhyme: boolean): string {
   if (!rhyme) return `Số ${fullReading(n)}`
+  const opener = OPENERS[hash(`${seed}:${n}`) % OPENERS.length]
+  if (FOLK[n]) return `${opener} ${FOLK[n]}`
   const read = lotoReading(n)
-  const last = read.split(' ').at(-1)!
-  const h = hash(`${seed}:${n}`)
-  const opener = OPENERS[h % OPENERS.length]
-  const bank = RHYMES[last] ?? []
-  const nick = bank.length ? bank[Math.floor(h / 7) % bank.length] : ''
   const cap = read[0].toUpperCase() + read.slice(1)
-  return nick ? `${opener} ${cap}! ${cap} ${nick}!` : `${opener} ${cap}!`
+  return `${opener} ${cap}! Là con số ${read}!`
 }

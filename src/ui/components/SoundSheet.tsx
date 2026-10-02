@@ -8,7 +8,7 @@ const ROWS: { kind: SoundKind; icon: string; label: string; hint: string }[] = [
   { kind: 'music', icon: '🎵', label: 'Nhạc nền', hint: 'Nhạc êm lúc chơi' },
   { kind: 'sfx', icon: '🃏', label: 'Hiệu ứng', hint: 'Chia bài, đánh bài, rút bài, gọi số' },
   { kind: 'voice', icon: '🗣️', label: 'Giọng đọc', hint: 'Đọc số lô tô, báo kinh / đợi' },
-  { kind: 'rhyme', icon: '🎤', label: 'Rao lô tô', hint: 'Gọi số kiểu hội chợ: "Bốn sáu… ông táo!"' },
+  { kind: 'rhyme', icon: '🎤', label: 'Kêu lô tô', hint: 'Kiểu hội chợ: "Cờ ra con mấy… là con số bốn sáu!"' },
 ]
 
 /** Bảng Âm thanh: bật / tắt nhạc nền, hiệu ứng, giọng đọc (nhớ trên máy này). */
