@@ -8,6 +8,7 @@ import { cardLabel, rankOf, shuffled, type Card } from './tienlenPlay'
  * - Mỗi người 2 lá, cái 2 lá. Xì bàn (2 lá A) > Xì dách (A + 10/J/Q/K) > Ngũ linh (5 lá ≤ 21) > điểm thường.
  * - Điểm: 2–10 theo số, J/Q/K = 10, A = 1 hoặc 11 (tự lấy cách có lợi, không quá 21).
  * - Con phải đủ 16 điểm, cái đủ 15 — thiếu là "non"; quá 21 là "quắc". Tối đa 5 lá.
+ *   Con non / quắc mà cái cũng non / quắc thì hòa.
  * - Vừa chia xong: cái có xì bàn / xì dách thì lật luôn, xét cả bàn; con có xì bàn / xì dách thì lật, ăn luôn.
  * - Con lần lượt rút / dằn; xong hết tới cái. Cái đủ tuổi thì xét từng người (rút thêm xen giữa được), hoặc xét tất.
  *   Cái quắc hoặc đủ 5 lá thì tự xét tất.
@@ -109,8 +110,11 @@ export function compare(player: Card[], dealer: Card[]): XidachResult {
   const pNon = p.kind === 'points' && p.points < PLAYER_MIN
   const dNon = d.kind === 'points' && d.points < DEALER_MIN
   const dBad = d.kind === 'quac' || dNon
+  // Con quắc: cái cũng quắc hoặc cái non thì hòa, còn lại con thua
   if (p.kind === 'quac')
-    return d.kind === 'quac' ? { outcome: 'draw', mult: 1, note: 'Cùng quắc' } : { outcome: 'lose', mult: 1, note: 'Quắc' }
+    return dBad
+      ? { outcome: 'draw', mult: 1, note: d.kind === 'quac' ? 'Cùng quắc' : 'Quắc · cái non' }
+      : { outcome: 'lose', mult: 1, note: 'Quắc' }
   if (pNon) return dBad ? { outcome: 'draw', mult: 1, note: 'Cùng non / cái quắc' } : { outcome: 'lose', mult: 1, note: 'Non' }
   // Xì bàn / xì dách thắng bài thường bất kể cái còn non (vừa chia xong cái chưa rút)
   if (dBad && !special(p)) return { outcome: 'win', mult: MULT[p.kind], note: d.kind === 'quac' ? 'Cái quắc' : 'Cái non' }

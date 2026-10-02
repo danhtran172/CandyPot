@@ -30,6 +30,9 @@ describe('xidach — tính điểm', () => {
     expect(compare(cs('A♠ K♥'), cs('10♦ 9♣'))).toMatchObject({ outcome: 'win', mult: 2 })
     expect(compare(cs('10♠ 9♥'), cs('A♦ A♣'))).toMatchObject({ outcome: 'lose', mult: 3 })
     expect(compare(cs('9♠ 9♥'), cs('9♦ 9♣'))).toMatchObject({ outcome: 'draw' })
+    // Con quắc: cái non → hòa; cái đủ điểm → con thua
+    expect(compare(cs('K♠ Q♥ 5♦'), cs('10♦ 4♣'))).toMatchObject({ outcome: 'draw', note: 'Quắc · cái non' })
+    expect(compare(cs('K♠ Q♥ 5♦'), cs('10♦ 7♣'))).toMatchObject({ outcome: 'lose', note: 'Quắc' })
   })
 })
 
