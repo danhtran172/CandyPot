@@ -55,7 +55,7 @@ import potIcon from '../../assets/pot.webp'
 import { useSession } from '../components/useSession'
 import { useCandyPops } from '../components/useCandyPops'
 import { playCount, playerMap, roundNumber } from '../format'
-import { guideSteps, markStepsSeen, onScreen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
+import { canShow, DEMO_ID, guideSteps, markStepsSeen, unseenSteps, type GuideRole, type GuideStep } from '../guides'
 import { canHostOf, useMe } from '../me'
 import { confirmTakeHost, useHostAway, useOnlineIds } from '../presence'
 import { lockWarnings } from '../../core/lockCheck'
@@ -258,7 +258,8 @@ export function Table() {
   }
 
   const onTransfer = (from: ID, target: ID) => {
-    if (!game) return
+    // Bot demo (chỉ ngồi lúc hướng dẫn) không nhận / trả kẹo thật
+    if (!game || from === DEMO_ID || target === DEMO_ID) return
     // Lô tô: chỉ thả vào ô Mua mới mua tờ (kẹo vào Pot); thả thẳng vào Pot thì không
     if (isLoto && target === POT && from !== POT)
       return flash(round?.phase === 'playing' ? 'Đã chốt — không mua thêm tờ được nữa.' : 'Kéo vào ô Mua để mua tờ.', true)
@@ -340,7 +341,7 @@ export function Table() {
   }
 
   const onTap = (id: ID) => {
-    if (!game || !me) return
+    if (!game || !me || id === DEMO_ID) return
     // Bấm avatar của mình → 💤 tạm nghỉ / chơi lại + lời/lỗ của mình từng ván (Trả/nhận ở nút riêng)
     if (id === me) return setShowMe(true)
     // Xì dách bài trong app: cái tới lượt chạm vào một con (avatar hoặc xấp bài) = xét người đó — hỏi lại trước khi lật
@@ -581,7 +582,7 @@ export function Table() {
     const t = window.setTimeout(() => {
       // Popup khác (hộp xác nhận…) → để lúc khác
       if (document.querySelector('[role=dialog], [role=alertdialog]')) return
-      const fresh = unseenSteps(guideSteps(game.type, role, solo)).filter(onScreen)
+      const fresh = unseenSteps(guideSteps(game.type, role, solo)).filter(canShow)
       if (fresh.length) setGuide(fresh)
     }, 600)
     return () => window.clearTimeout(t)
@@ -956,7 +957,8 @@ export function Table() {
           </div>
 
           <Board
-            seats={seats}
+            // Đang hướng dẫn: 🤖 Bot demo ngồi vào để bàn tay mẫu làm thử
+            seats={guide ? [...seats, { player: { id: DEMO_ID, name: 'Bot demo', emoji: '🤖', active: true }, demo: true }] : seats}
             pot={
               game.type === 'loto' || game.type === 'free'
                 ? round

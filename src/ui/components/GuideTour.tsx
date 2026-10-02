@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import dragCandy from '../../assets/drag-candy.webp'
-import { elementsOf, onScreen, type GuideStep } from '../guides'
+import { canShow, elementsOf, type GuideStep } from '../guides'
 import { Button } from './kit'
 
 const PAD = 8
@@ -26,8 +26,8 @@ const center = (el: HTMLElement) => {
  * Bước có `demo` thì có bàn tay mẫu làm thử ngay trên bàn (bấm, hoặc kéo gói kẹo), lặp lại liên tục.
  */
 export function GuideTour({ steps, onClose }: { steps: GuideStep[]; onClose: (shown: GuideStep[]) => void }) {
-  // Chỉ giữ các bước có đủ phần tử trên màn hình
-  const [list] = useState(() => steps.filter(onScreen))
+  // Chỉ giữ các bước có đủ phần tử trên màn hình (chỗ Bot demo ngồi vào cùng lúc với hướng dẫn nên coi như có)
+  const [list] = useState(() => steps.filter(canShow))
   const close = () => onClose(list)
 
   // Không bước nào có trên màn hình → đóng luôn
@@ -212,7 +212,9 @@ function DemoHand({ kind, points }: { kind: 'tap' | 'drag'; points: { x: number;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      {kind === 'tap' && <div ref={ripple} className="absolute top-0 left-0 -mt-8 -ml-8 size-16 rounded-full border-4 border-lemon opacity-0" />}
+      {kind === 'tap' && (
+        <div ref={ripple} className="absolute top-0 left-0 -mt-8 -ml-8 size-16 rounded-full border-4 border-lemon opacity-0" />
+      )}
       <div ref={hand} className="absolute top-0 left-0 opacity-0">
         {kind === 'drag' && (
           <img ref={candy} src={dragCandy} alt="" className="absolute -top-9 -left-7 size-14 max-w-none opacity-0 drop-shadow-lg" />

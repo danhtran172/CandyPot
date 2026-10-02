@@ -44,6 +44,8 @@ export interface Seat {
   dealer?: boolean
   /** Nút nhỏ gắn bên phải, phía dưới avatar (vd hoàn tác Poker). */
   action?: ReactNode
+  /** 🤖 Bot demo: chỉ ngồi vào lúc hướng dẫn — bàn tay mẫu làm thử trên chỗ này. */
+  demo?: boolean
   /** Vào bàn lúc ván đang chơi: chưa tính ván này, tự vào từ ván sau — avatar mờ + ⏳. */
   waiting?: boolean
   /** Số kẹo vừa đổi (+/−) — ô nhỏ dưới avatar ~1 giây; `key` đổi thì chạy lại hiệu ứng. */
@@ -341,6 +343,8 @@ export function Board({
   const n = ordered.length
   const size = sizeFor(n)
   const square = shape === 'square' || shape === 'wood'
+  /** Đang hướng dẫn: Bot demo ngồi vào làm "người khác" cho bàn tay mẫu. */
+  const hasDemo = seats.some((s) => s.demo)
   const land = useLandscape()
   // Bàn xì dách: nhà cái ngồi góc trên bên trái (kể cả khi mình là cái); người chơi dọc theo cung phía dưới,
   // mình (nếu không làm cái) ở giữa cung. Thứ tự ngồi vẫn theo chiều kim đồng hồ.
@@ -652,7 +656,7 @@ export function Board({
                 key={s.player.id}
                 data-drop={s.player.id}
                 // Hướng dẫn: 'me' = mình; 'other' = người ngồi đối diện (bàn tay mẫu kéo / bấm vào đây)
-                data-guide={s.isMe ? 'me' : i === Math.ceil((n - 1) / 2) ? 'other' : undefined}
+                data-guide={s.isMe ? 'me' : s.demo || (!hasDemo && i === Math.ceil((n - 1) / 2)) ? 'other' : undefined}
                 onPointerDown={start(s.player.id)}
                 role="button"
                 tabIndex={0}
