@@ -2,12 +2,26 @@ import { useEffect } from 'react'
 import { onDuck, setSoundPref, useSoundPrefs } from './sound'
 
 /**
- * Nhạc nền lúc chơi: tự tạo bằng Web Audio (không cần file nhạc) — vòng hợp âm nhẹ kiểu lo-fi:
- * pad êm, bass, nốt rải và tiếng hi-hat nhỏ. Phát lặp vô hạn, nhỏ tiếng, không lấn tiếng nói chuyện.
+ * Nhạc nền lúc chơi: tự tạo bằng Web Audio (không cần file nhạc), hai kiểu:
+ * - êm dịu: vòng hợp âm nhẹ kiểu lo-fi — pad êm, bass, nốt rải, hi-hat nhỏ;
+ * - kịch tính: giọng thứ, nhanh hơn — trống dồn, bass móc đơn, nốt nhặt liên tục, dây căng.
+ * Phát lặp vô hạn, nhỏ tiếng. Đổi kiểu thì sang đúng đầu ô nhịp kế tiếp cho liền mạch.
  */
+
+export type MusicMood = 'calm' | 'tense'
 
 const BPM = 88
 const BEAT = 60 / BPM
+const TENSE_BEAT = 60 / 122
+/** Kịch tính: La thứ — Am · F · Dm · E (E trưởng kéo về Am cho căng). */
+const TENSE = [
+  [45, 52, 57, 60],
+  [41, 48, 53, 57],
+  [38, 50, 53, 57],
+  [40, 47, 52, 56],
+]
+/** Nốt nhặt 16 móc kép trong một ô nhịp (chỉ số vào hợp âm). */
+const OSTINATO = [0, 2, 3, 2, 1, 2, 3, 2, 0, 2, 3, 2, 1, 3, 2, 3]
 /** Mỗi ô nhịp một hợp âm (MIDI), hai vòng xen kẽ cho đỡ nhàm. */
 const PROGRESSIONS = [
   [
@@ -36,6 +50,8 @@ class Music {
   private nextBar = 0
   private bar = 0
   playing = false
+  /** Kiểu nhạc cho các ô nhịp sắp xếp lịch. */
+  mood: MusicMood = 'calm'
 
   private setup() {
     if (this.ctx) return this.ctx
@@ -88,8 +104,62 @@ class Music {
     src.stop(at + 0.08)
   }
 
-  /** Xếp lịch một ô nhịp bắt đầu ở `t`. */
-  private scheduleBar(t: number) {
+  /** Trống trầm: sóng sin tụt nhanh từ 150 xuống 45 Hz. */
+  private kick(at: number, vol: number) {
+    const ctx = this.ctx!
+    const osc = ctx.createOscillator()
+    const env = ctx.createGain()
+    osc.frequency.setValueAtTime(150, at)
+    osc.frequency.exponentialRampToValueAtTime(45, at + 0.16)
+    env.gain.setValueAtTime(vol, at)
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.2)
+    osc.connect(env).connect(this.master!)
+    osc.start(at)
+    osc.stop(at + 0.22)
+  }
+
+  /** Trống con: nhiễu dải giữa, ngắn. */
+  private snare(at: number, vol: number) {
+    const ctx = this.ctx!
+    const src = ctx.createBufferSource()
+    src.buffer = this.noise
+    const bp = ctx.createBiquadFilter()
+    bp.type = 'bandpass'
+    bp.frequency.value = 1800
+    const env = ctx.createGain()
+    env.gain.setValueAtTime(vol, at)
+    env.gain.exponentialRampToValueAtTime(0.0001, at + 0.12)
+    src.connect(bp).connect(env).connect(this.master!)
+    src.start(at)
+    src.stop(at + 0.14)
+  }
+
+  /** Xếp lịch một ô nhịp kịch tính bắt đầu ở `t`; trả về độ dài ô nhịp. */
+  private scheduleTense(t: number) {
+    const B = TENSE_BEAT
+    const chord = TENSE[this.bar % 4]
+    // Dây căng: hợp âm ngân cả ô nhịp
+    for (const m of chord.slice(1)) this.note(m + 12, t, 4 * B * 1.05, 'sawtooth', 0.012, 0.2)
+    for (let i = 0; i < 4; i++) {
+      const at = t + i * B
+      this.kick(at, 0.5)
+      if (i % 2) this.snare(at, 0.12)
+    }
+    // Bass móc đơn, nhảy quãng tám ở phách nghịch
+    for (let i = 0; i < 8; i++) this.note(chord[0] - 12 + (i % 2 ? 12 : 0), t + (i * B) / 2, B * 0.4, 'square', 0.05, 0.005)
+    // Nốt nhặt móc kép
+    OSTINATO.forEach((k, i) => this.note(chord[k] + 24, t + (i * B) / 4, B * 0.2, 'square', i % 4 === 0 ? 0.03 : 0.018, 0.004))
+    // Hi-hat móc đơn, nhấn phách nghịch
+    for (let i = 0; i < 8; i++) this.hat(t + (i * B) / 2, i % 2 ? 0.06 : 0.035)
+    // Ô cuối vòng: dồn trống con dẫn về đầu vòng
+    if (this.bar % 4 === 3) for (let i = 0; i < 4; i++) this.snare(t + 3 * B + (i * B) / 4, 0.06 + i * 0.03)
+    this.bar++
+    return 4 * B
+  }
+
+  /** Xếp lịch một ô nhịp bắt đầu ở `t` (theo kiểu nhạc hiện tại); trả về độ dài ô nhịp. */
+  private scheduleBar(t: number): number {
+    if (this.mood === 'tense') return this.scheduleTense(t)
     const prog = PROGRESSIONS[Math.floor(this.bar / 4) % PROGRESSIONS.length]
     const chord = prog[this.bar % 4]
     const barLen = 4 * BEAT
@@ -107,6 +177,7 @@ class Music {
     // Hi-hat nhẹ ở phách nghịch
     for (let i = 0; i < 4; i++) this.hat(t + i * BEAT + BEAT / 2, 0.035)
     this.bar++
+    return barLen
   }
 
   start() {
@@ -118,9 +189,9 @@ class Music {
     // Xếp lịch trước ~1 ô nhịp; kiểm tra mỗi 200ms
     const tick = () => {
       if (!this.ctx) return
-      while (this.nextBar < this.ctx.currentTime + 4 * BEAT) {
-        this.scheduleBar(this.nextBar)
-        this.nextBar += 4 * BEAT
+      // Chỉ xếp ô nhịp sắp tới (trước ~0.4 giây) → đổi kiểu nhạc là có hiệu lực ngay ô nhịp sau
+      while (this.nextBar < this.ctx.currentTime + 0.4) {
+        this.nextBar += this.scheduleBar(this.nextBar)
       }
     }
     tick()
@@ -150,11 +221,14 @@ const music = new Music()
 onDuck((on) => music.duck(on))
 
 /**
- * Nhạc nền ở màn đang dùng hook này (bật / tắt trong bảng Âm thanh, nhớ trên máy, mặc định bật). Trình duyệt chỉ cho
+ * Nhạc nền ở màn đang dùng hook này, kiểu `mood` (bật / tắt trong bảng Âm thanh, nhớ trên máy, mặc định bật). Trình duyệt chỉ cho
  * phát sau lần chạm đầu tiên → chờ chạm rồi mới phát; ẩn app thì dừng, mở lại thì phát tiếp.
  */
-export function useMusic() {
+export function useMusic(mood: MusicMood = 'calm') {
   const on = useSoundPrefs().music
+  useEffect(() => {
+    music.mood = mood
+  }, [mood])
   useEffect(() => {
     if (!on) return
     const play = () => {

@@ -38,6 +38,7 @@ import { PlayerPicker } from '../components/PlayerPicker'
 import { TienlenPanel, TienlenTableCards } from '../components/TienlenPanel'
 import { useCardsFolded, useHideHand } from '../cardsFold'
 import { useMusic } from '../music'
+import { musicMood } from '../musicMood'
 import { sfx } from '../sound'
 import { useGameSounds } from '../useGameSounds'
 import { SoundSheet } from '../components/SoundSheet'
@@ -154,7 +155,8 @@ export function Table() {
   /** Bài đang thu gọn (thanh nhỏ dưới đáy) — bàn và các nút thường hiện lại, bấm được. */
   const [cardsFolded, foldCards] = useCardsFolded()
   /** Nhạc nền lúc chơi (bật / tắt trong bảng Âm thanh, nhớ trên máy). */
-  const [musicOn] = useMusic()
+  // Ván tới hồi gay cấn → nhạc kịch tính
+  const [musicOn] = useMusic(musicMood(round))
   const [showSound, setShowSound] = useState(false)
   /** Giấu bài trên tay (Xì dách): úp lưng, ẩn điểm. */
   const [handHidden, toggleHand] = useHideHand()
