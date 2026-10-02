@@ -207,7 +207,8 @@ export function speak(text: string) {
   } catch {
     // Một số trình duyệt không cho gán giọng → đọc theo `lang`
   }
-  u.rate = 0.95
+  // Nhanh hơn mặc định một chút (0.95 × 1.25) cho gọn, đỡ sốt ruột lúc chờ số
+  u.rate = 1.19
   u.onstart = () => duckers.forEach((d) => d(true))
   u.onend = u.onerror = () => {
     if (!synth.speaking) duckers.forEach((d) => d(false))
