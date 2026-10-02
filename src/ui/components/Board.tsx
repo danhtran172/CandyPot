@@ -360,9 +360,10 @@ export function Board({
     const k = arc.length
     // Ít người thì gom về giữa cung: 2 người 65–115°, 3 người 40–140°, từ 4 người 18–162°.
     // Xoay ngang (bàn thấp): cung chỉ 40–125° — hai đầu nằm dưới hàng nút đầu bàn, bên trái chừa chỗ cho cái và bài lật của cái
+    // Màn dọc có cái ở góc trên trái: đầu cung bên trái dừng ở 148° để ghế đó không chạm tên / điểm / nhãn của cái
     const from = k <= 1 ? 90 : Math.max(18, 90 - 25 * (k - 1))
     const lo = land ? Math.max(40, from) : from
-    const hi = Math.min(180 - from, 162, land ? 125 : 180)
+    const hi = Math.min(180 - from, dealer ? 148 : 162, land ? 125 : 180)
     let degs: number[]
     if (land && arc[0]?.isMe && k > 1) {
       // Xoay ngang: bài / cược nằm bên phải mỗi ghế → các ghế cách đều trên cả cung; mình ở ghế giữa
@@ -612,7 +613,13 @@ export function Board({
                     </span>
                   ))}
                 </span>
-                {s.stake !== undefined && <span className="num ml-1 text-xs font-bold text-lemon">{s.stake}</span>}
+                {/* Tiền cược (kèm viên kẹo như lúc chưa lật bài) */}
+                {s.stake !== undefined && (
+                  <span className="num ml-1 flex items-center gap-0.5 text-xs font-bold text-lemon" title="Tiền cược">
+                    <img src={candyFor(s.player.id)} alt="" className="size-4" draggable={false} />
+                    {s.stake}
+                  </span>
+                )}
               </span>
             ) : s.cards !== undefined ? (
               <span
